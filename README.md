@@ -18,10 +18,11 @@ Pocket-Pixel is a Game Boy emulator designed to deliver a seamless gaming experi
 ### 1. Cross-Platform Gameplay
 - **Android App**: Play Game Boy games on the go, optimized for touch controls.
 - **Web App**: Enjoy gaming in your browser with WebAssembly for smooth performance.
-- **Powerful Emulator Core**: Built in C++ and powered by Raylib for rendering, ensuring high compatibility and performance.
+- **Powerful Emulator Core**: Built in C/C++ ensuring high performance.
 
 ### 2. ROM Management
-- **Server Integration**: Download popular ROMs directly within the Android app.
+- **Server Integration**: Download popular ROMs directly within the Android app and play offline
+- **Find Any ROM**: If it exists, it is here
 
 ### 3. Cloud Saves
 - **Save Progress Anywhere**: Sync your game saves to a secure web server using PostgreSQL.
@@ -40,11 +41,11 @@ Pocket-Pixel is a Game Boy emulator designed to deliver a seamless gaming experi
 ## Technology Stack
 
 ### Core Components
-- **Emulator Core**: C++ and Raylib for game emulation.
+- **Emulator Core**: C/C++ for game emulation.
 - **WebAssembly**: Bringing the emulator to the Web for a smooth in-browser experience.
 
 ### Android App
-- **Kotlin Multiplatform Mobile (KMM)**: Native Android development with Kotlin for shared code.
+- **Kotlin Multiplatform (KMP)**: Native Android development with Kotlin for shared code.
 - **JNI Integration**: Connecting the C++ emulator core to the Android app.
 
 ### Backend
@@ -52,7 +53,7 @@ Pocket-Pixel is a Game Boy emulator designed to deliver a seamless gaming experi
 - **Database**: PostgreSQL for storing user data, game saves, and leaderboards.
 
 ### Web App
-- **Frontend**: Kotlin/JS or JavaScript for an interactive user experience.
+- **Frontend**: Kotlin/JS for an interactive user experience.
 - **WebAssembly Integration**: Running the emulator core directly in the browser.
 
 ---
@@ -60,12 +61,9 @@ Pocket-Pixel is a Game Boy emulator designed to deliver a seamless gaming experi
 ## Repository Structure
 ```
 pocket-pixel/
-├── core/                   # Emulator core logic (C++/Raylib)
-├── android/                # Android app (Kotlin + JNI)
-├── web/                    # Web app (WebAssembly + Kotlin/JS)
-├── server/                 # Backend server (Spring Boot / Ktor)
-├── shared/                 # Shared assets (e.g., ROMs, save files)
-├── tools/                  # Development tools and scripts
+├── app/                    # The app for android, web and the C emulator Core
+├── server/                 # Backend server (Spring Boot / Ktor) and PostGreSQL server
+├── bin/                    # APK builds currently unstable
 ├── README.md               # Project documentation
 └── LICENSE                 # License file
 ```
@@ -74,14 +72,13 @@ pocket-pixel/
 
 ## Installation and Usage
 
-### Android App
+### Android App (Soon on Google Play Store)
 1. Clone the repository.
-2. Navigate to the `android/` directory.
 3. Build and run the app using Android Studio.
 
-### Web App
+### Web App (Soon on vercel)
 1. Clone the repository.
-2. Navigate to the `web/` directory.
+2. Navigate to the `wasmJSMain/` directory.
 3. Build the WebAssembly module and run the frontend using your preferred server.
 
 ### Server Setup
@@ -92,13 +89,11 @@ pocket-pixel/
 
 ---
 
-## Contributing
-Contributions are welcome! Please read our [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
----
 
 ## License
 This project is licensed under the [MIT License](LICENSE).
+The user is solely responsible for copyright breaking, from, and emulation laws. 
+Nintendo shouldn't know this exists
 
 ---
 

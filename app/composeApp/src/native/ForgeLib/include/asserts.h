@@ -1,8 +1,8 @@
 #pragma once
+#include "../../defines.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
-#include "../../defines.h"
 
 // - - - Assertion enable toggle
 #ifndef FORGE_ASSERTS_ENABLED

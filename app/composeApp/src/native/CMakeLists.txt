@@ -7,9 +7,9 @@ project("pocketPixel")
 file(GLOB_RECURSE PROJECT_SOURCES
         "${CMAKE_SOURCE_DIR}/*.c"
         "${CMAKE_SOURCE_DIR}/*.cpp"
-        "${CMAKE_SOURCE_DIR}/ForgeLib/**/*.c"
-        "${CMAKE_SOURCE_DIR}/ForgeLib/**/*.cpp"
+        "${CMAKE_SOURCE_DIR}/GameBoyCore.cpp"
 )
+
 
 # Default Android build
 add_library(${CMAKE_PROJECT_NAME} SHARED ${PROJECT_SOURCES})

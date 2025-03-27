@@ -1,8 +1,9 @@
 #pragma once 
+#ifdef __linux__
+#include "../../defines.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
-#include "../../defines.h"
 #include <pthread.h>
 
 
@@ -43,4 +44,5 @@ FORGE_API void          pushTask            (ThreadPool* POOL,      void (*FUNCT
 
 #ifdef __cplusplus
 }
+#endif
 #endif

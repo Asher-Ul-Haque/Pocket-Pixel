@@ -1,45 +1,29 @@
 package org.just_somebody.pocket_pixel
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import org.jetbrains.compose.resources.painterResource
-import org.jetbrains.compose.ui.tooling.preview.Preview
-import pocketpixel.composeapp.generated.resources.GameBoy
-import pocketpixel.composeapp.generated.resources.Res
-
+import androidx.compose.runtime.Composable
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import org.just_somebody.pocket_pixel.browseScreen.presentation.MainScreen
+import org.just_somebody.pocket_pixel.browseScreen.presentation.temp
+import org.just_somebody.pocket_pixel.core.Screens
+import org.just_somebody.pocket_pixel.depInj.getNavController
+import org.just_somebody.pocket_pixel.splashScreen.presentation.SplashScreen
 
 @Composable
-@Preview
-fun App() 
+fun App()
 {
-  MaterialTheme () 
+  NavHost(
+    navController     = getNavController(),
+    startDestination  = Screens.SplashScreen
+  )
   {
-    // - - - the content arrange in a column
-    Column(
-      Modifier.fillMaxWidth(), 
-      horizontalAlignment = Alignment.CenterHorizontally) 
-    {
-      Image(painterResource(Res.drawable.GameBoy), null);
-      GameScreen();
-    }
-  }
-}
-
-@Composable
-fun GameScreen()
-{
-  val display = remember { GameBoyDisplay() }
-  val platformName = display.bridge.platformName;
-
-  Column()
-  {
-    Text("Running on: $platformName")
-    display.render()
+    composable<Screens.SplashScreen>      { SplashScreen(); }
+    composable<Screens.MainScreen>        {  MainScreen();  }
+    composable<Screens.MePage>            {     temp();     }
+    composable<Screens.ExplorePage>       {     temp();     }
+    composable<Screens.FavoritesPage>     {     temp();     }
+    composable<Screens.SearchPage>        {     temp();     }
+    composable<Screens.DownloadsPage>     {     temp();     }
   }
 }

@@ -12,7 +12,6 @@ SCRIPT_DIR=$(dirname "$0")
 cd "$SCRIPT_DIR" || { echo "Failed to change directory"; exit 1; }
 
 # Clean and recreate build directories
-rm -rf $BUILD_DIR
 mkdir -p $BUILD_DIR $OUTPUT_DIR
 
 # Compile using emcc with the original command

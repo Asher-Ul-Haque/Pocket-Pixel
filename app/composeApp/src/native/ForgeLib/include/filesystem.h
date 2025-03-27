@@ -1,8 +1,8 @@
 #pragma once
+#include "../../defines.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
-#include "../../defines.h"
 #include <string.h>
 #include <sys/stat.h>
 

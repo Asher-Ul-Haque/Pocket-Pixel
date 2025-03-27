@@ -1,8 +1,8 @@
 #pragma once 
+#include "logger.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
-#include "logger.h"
 
 #define expectShouldBe(EXPECTED, ACTUAL)                                                                                                \
   if ((ACTUAL) != (EXPECTED))                                                                                                           \

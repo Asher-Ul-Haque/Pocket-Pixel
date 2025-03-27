@@ -2,6 +2,11 @@
 .kotlin
 .gradle
 **/build/
+.fleet
+composeApp/.cxx
+composeApp/build
+composeApp/src/wasmJsMain/resources/pocketPixel.js
+composeApp/src/wasmJsMain/resoucres/pocketPixel.wasm
 xcuserdata
 !src/**/build/
 local.properties
