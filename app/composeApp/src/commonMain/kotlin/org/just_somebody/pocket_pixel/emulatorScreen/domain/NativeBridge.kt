@@ -23,7 +23,11 @@ abstract class GameBoy
         BUTTON_LEFT,
         BUTTON_RIGHT,
         BUTTON_UP,
-        BUTTON_DOWN
+        BUTTON_DOWN,
+        BUTTON_TOP_LEFT,
+        BUTTON_TOP_RIGHT,
+        BUTTON_BOTTOM_RIGHT,
+        BUTTON_BOTTOM_LEFT
     }
     abstract fun sendButton(BUTTON : Buttons, IS_PRESSED : Boolean);
 }
