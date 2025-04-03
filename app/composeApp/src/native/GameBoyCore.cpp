@@ -10,6 +10,7 @@ void stopEmulator() { TODO }
 
 void getFrame(u8* BUFFER)
 {
+    frameCount++;
     u64 width  = 160;
     u64 height = 144;
 

@@ -1,4 +1,4 @@
-#include "cart.h"
+#include "cartridge.h"
 #include "../../GameBoyCore.h"
 #include "../../ForgeLib/include/asserts.h"
 #include "../../ForgeLib/include/logger.h"
@@ -129,7 +129,7 @@ const char* getCartType()
     else                                  return "UNKNOWN";
 }
 
-bool loadCartridge(u8* CARTRIDGE, u64 SIZE)
+bool cartridgeLoad(u8* CARTRIDGE, u64 SIZE)
 {
     FORGE_LOG_DEBUG("Trying to load a Cartridge of size : %d", SIZE);
     FORGE_ASSERT_MESSAGE(CARTRIDGE != NULL, "Cannot load a NULL CARTRIDGE");
@@ -158,4 +158,16 @@ bool loadCartridge(u8* CARTRIDGE, u64 SIZE)
     else                    { FORGE_LOG_ERROR("Checksum : %2.2X (%s)\n", cartCTX.metadata->checksum, "FAILED"); }
 
     return checkSumPassed;
+}
+
+u8 cartridgeRead (u16 ADDRESS)
+{
+    FORGE_LOG_WARNING("For now, only ROM ONLY type of reading is supported");
+    return cartCTX.romData[ADDRESS];
+}
+
+void cartridgeWrite(u16 ADDRESS, u8 VALUE)
+{
+    FORGE_LOG_WARNING("For now, only ROM ONLY type of reading is supported");
+    TODO
 }

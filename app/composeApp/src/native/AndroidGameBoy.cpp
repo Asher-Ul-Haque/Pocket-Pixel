@@ -47,7 +47,7 @@ Java_org_just_1somebody_pocket_1pixel_emulatorScreen_domain_AndroidGameBoy_nativ
     //jbyte* buffer = JVM->GetByteArrayElements(ROM, nullptr);
     //loadCartridge(reinterpret_cast<uint8_t *>(buffer), 1);
     //JVM->ReleaseByteArrayElements(ROM, buffer, JNI_ABORT);
-    loadCartridge((u8*)testRom, size); // - - - error occurs here
+    cartridgeLoad((u8*)testRom, size);
 }
 
 JNIEXPORT void JNICALL

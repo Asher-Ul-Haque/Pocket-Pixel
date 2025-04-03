@@ -1,7 +1,7 @@
 #pragma once
 
 #include "defines.h"
-#include "Machine/Parts/cart.h"
+#include "Machine/Parts/cartridge.h"
 #include "Machine/Parts/cpu.h"
 
 typedef struct GBContext

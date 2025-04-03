@@ -23,7 +23,11 @@ typedef struct CartridgeMetadata
 	u16 	globalChecksum; // - - - 2  bytes
 } CartridgeMetadata; 		// - - - total : 80 bytes
 
-FORGE_API bool 			loadCartridge(u8* CARTRIDGE, u64 SIZE);
+// - - - functions - - -
+
+FORGE_API bool 			cartridgeLoad (u8* CARTRIDGE, u64 SIZE);
+FORGE_API u8            cartridgeRead (u16 ADDRESS);
+FORGE_API void          cartridgeWrite(u16 ADDRESS, u8 VALUE);
 
 
 #ifdef __cplusplus

@@ -88,11 +88,11 @@ private fun mapColor(COLOR_INDEX: Int): Color
 {
     return when (COLOR_INDEX)
     {
-        0       -> Color.Black
-        1       -> Color.DarkGray
-        2       -> Color.LightGray
-        3       -> Color.White
-        else    -> Color.Yellow
+        0       -> GameBoyColors.DarkGreen
+        1       -> GameBoyColors.MediumGreen
+        2       -> GameBoyColors.Green
+        3       -> GameBoyColors.LightGreen
+        else    -> Color.White
     }
 }
 
