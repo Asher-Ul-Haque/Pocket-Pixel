@@ -102,3 +102,11 @@ void reportAssertionFailure(const char* EXPRESSION, const char* MESSAGE, const c
 {
   logOutput(LOG_LEVEL_FATAL, "ASSERT FAIL :     %s\nMESSAGE     :     %s\nLOCATION    :     file: %s at line: %d\n", EXPRESSION, MESSAGE, FILE, LINE);
 }
+
+void reportTODO(const char* COMMENT, const char* FILE, const char* FUNCTION, int LINE)
+{
+    logOutput(LOG_LEVEL_ERROR, "Oopsie!, you have a TODO!!!");
+    logOutput(LOG_LEVEL_ERROR, "At: %s:%d -> Function: %s", FILE, LINE, FUNCTION);
+    if (COMMENT) logOutput(LOG_LEVEL_WARNING, "COMMENT: %s", COMMENT);
+    debugBreak();
+}

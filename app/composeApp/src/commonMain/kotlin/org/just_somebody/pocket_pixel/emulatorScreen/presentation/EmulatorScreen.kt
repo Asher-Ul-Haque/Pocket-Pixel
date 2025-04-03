@@ -34,8 +34,11 @@ fun EmulatorScreen(
 
     LaunchedEffect(Unit)
     {
+        gameBoy.startEmulator()
+        gameBoy.loadROM(byteArrayOf())
         while (true)
         {
+            gameBoy.stepFrame()
             frame = renderFrame(gameBoy.getFrameBuffer())
             delay(16L)
         }
