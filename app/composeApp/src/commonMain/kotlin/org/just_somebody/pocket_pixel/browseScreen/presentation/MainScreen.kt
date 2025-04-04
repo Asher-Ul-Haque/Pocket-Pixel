@@ -25,7 +25,6 @@ import org.just_somebody.pocket_pixel.splashScreen.presentation.SplashScreen
 
 fun navigate(SCREEN : ScreensToInt, NAV_CONTROLLER : NavController)
 {
-  println("Navigating");
   when (SCREEN)
   {
     ScreensToInt.Search     -> NAV_CONTROLLER.navigate(Screens.SearchPage);
@@ -38,8 +37,7 @@ fun navigate(SCREEN : ScreensToInt, NAV_CONTROLLER : NavController)
 
 
 @Composable
-fun MainScreen(
-  MODIFIER  : Modifier = Modifier)
+fun MainScreen(MODIFIER  : Modifier = Modifier)
 {
   var selectedIndex by remember { mutableStateOf(2) }
   val navController = rememberNavController()
@@ -83,7 +81,7 @@ fun MainScreen(
         {
           NavHost(
             navController     = navController,
-            startDestination  = Screens.ExplorePage
+            startDestination  = Screens.FavoritesPage
           )
           {
             composable<Screens.MePage>            {         temp();         }
