@@ -1,4 +1,4 @@
-package org.just_somebody.pocket_pixel.exploreScreen.domain
+package org.just_somebody.pocket_pixel.core
 
 import kotlinx.serialization.Serializable
 

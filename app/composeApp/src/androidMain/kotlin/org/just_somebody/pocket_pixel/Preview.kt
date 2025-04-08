@@ -2,7 +2,7 @@ package org.just_somebody.pocket_pixel
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
-import org.just_somebody.pocket_pixel.exploreScreen.domain.Game
+import org.just_somebody.pocket_pixel.core.Game
 import org.just_somebody.pocket_pixel.exploreScreen.presentation.CartridgeUI
 
 @Preview

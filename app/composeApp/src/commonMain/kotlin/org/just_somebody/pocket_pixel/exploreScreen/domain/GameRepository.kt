@@ -1,6 +1,8 @@
 package org.just_somebody.pocket_pixel.exploreScreen.domain
 
 import org.just_somebody.pocket_pixel.core.DataError
+import org.just_somebody.pocket_pixel.core.Game
+import org.just_somebody.pocket_pixel.core.Gamer
 import org.just_somebody.pocket_pixel.core.Result
 
 interface GameRepository

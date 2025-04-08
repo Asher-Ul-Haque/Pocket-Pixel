@@ -1,13 +1,11 @@
 package org.just_somebody.pocket_pixel.exploreScreen.presentation
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -27,7 +25,7 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.rememberAsyncImagePainter
 import org.jetbrains.compose.resources.painterResource
 import org.just_somebody.pocket_pixel.core.theme.PokeFontFamily
-import org.just_somebody.pocket_pixel.exploreScreen.domain.Game
+import org.just_somebody.pocket_pixel.core.Game
 import pocketpixel.composeapp.generated.resources.Res
 import pocketpixel.composeapp.generated.resources.cartridge
 import pocketpixel.composeapp.generated.resources.ogreGirl
