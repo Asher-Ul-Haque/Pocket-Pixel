@@ -11,5 +11,5 @@ data class SplashState(
   val isLoggingIn     : Boolean                   = false,
   val isLoggedIn      : Boolean                   = false,
   val isLoginError    : Boolean                   = false,
-  val networkCalls    : NetworkCalls = getSplashNetworkCalls()
+  val networkCalls    : NetworkCalls              = getSplashNetworkCalls()
 )
