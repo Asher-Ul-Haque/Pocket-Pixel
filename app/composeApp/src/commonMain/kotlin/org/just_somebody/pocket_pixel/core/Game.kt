@@ -12,6 +12,15 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material3.SegmentedButtonDefaults.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -23,17 +32,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.rememberAsyncImagePainter
 import kotlinx.serialization.Serializable
+import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 import org.just_somebody.pocket_pixel.core.theme.GameBoyColors
 import org.just_somebody.pocket_pixel.core.theme.PokeFontFamily
 import pocketpixel.composeapp.generated.resources.NoInternet
 import pocketpixel.composeapp.generated.resources.Res
+import pocketpixel.composeapp.generated.resources.heart
+import pocketpixel.composeapp.generated.resources.trophy
 import kotlin.Result
 
 @Serializable
@@ -112,12 +126,60 @@ fun GameUI(
         Text(
           text          = GAME.title,
           color         = GameBoyColors.LightGreen,
-          fontSize      = 72.sp,
+          fontSize      = 16.sp,
+          fontFamily    = PokeFontFamily(),
+          maxLines      = 2,
+          overflow      = TextOverflow.Ellipsis
+        )
+        Text(
+          text          = GAME.publisher,
+          color         = GameBoyColors.LightGreen,
+          fontSize      = 16.sp,
           fontFamily    = PokeFontFamily(),
           maxLines      = 2,
           overflow      = TextOverflow.Ellipsis
         )
       }
+
+      // - - - the button
+      androidx.compose.material3.Icon(
+        painter             = painterResource(Res.drawable.trophy),
+        contentDescription  = "Play",
+        tint                = GameBoyColors.DarkGreen,
+        modifier            = Modifier.size(24.dp)
+      )
+    }
+  }
+}
+
+@Composable
+fun GameListUI(
+  GAMES          : List<Game>,
+  ON_CLICK      : (Game) -> Unit,
+  MODIFIER      : Modifier = Modifier,
+  SCROLL_STATE  : LazyListState = rememberLazyListState()
+)
+{
+  LazyColumn (
+    modifier            = MODIFIER,
+    state               = SCROLL_STATE,
+    verticalArrangement = Arrangement.spacedBy(12.dp),
+    horizontalAlignment = Alignment.CenterHorizontally
+  )
+  {
+    items(
+      items = GAMES,
+      key = { it.title }
+    )
+    { game ->
+      GameUI(
+        GAME      = game,
+        ON_CLICK  = { ON_CLICK(game) },
+        MODIFIER  = Modifier
+          .widthIn(max = 700.dp)
+          .fillMaxWidth()
+          .padding(horizontal = 16.dp)
+      )
     }
   }
 }
