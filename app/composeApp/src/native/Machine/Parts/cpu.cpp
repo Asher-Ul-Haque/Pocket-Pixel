@@ -20,7 +20,7 @@ static Instruction instructions[POSSIBLE_INSTRUCTION_COUNT] =
 
 FORGE_API void cpuInit()
 {
-    FORGE_ASSERT_MESSAGE(!started, "Cannot start the emulator when it is already running");
+    //FORGE_ASSERT_MESSAGE(!started, "Cannot start the emulator when it is already running");
     started = true;
     FORGE_LOG_INFO("Started the emulator");
 }

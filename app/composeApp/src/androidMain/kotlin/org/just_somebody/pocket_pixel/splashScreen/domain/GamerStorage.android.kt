@@ -3,6 +3,7 @@ package org.just_somebody.pocket_pixel.splashScreen.domain
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import android.content.Context
+import org.just_somebody.pocket_pixel.core.Gamer
 import org.just_somebody.pocket_pixel.splashScreen.depInj.getContext
 
 class AndroidGamerSessionStorage() : GamerSessionStorage()

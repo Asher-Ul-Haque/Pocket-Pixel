@@ -162,7 +162,7 @@ bool cartridgeLoad(u8* CARTRIDGE, u64 SIZE)
 
 u8 cartridgeRead (u16 ADDRESS)
 {
-    FORGE_LOG_WARNING("For now, only ROM ONLY type of reading is supported");
+    //FORGE_LOG_WARNING("For now, only ROM ONLY type of reading is supported");
     return cartCTX.romData[ADDRESS];
 }
 

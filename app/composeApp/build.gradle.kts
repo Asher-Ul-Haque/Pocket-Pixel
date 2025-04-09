@@ -52,6 +52,8 @@ kotlin {
             implementation(libs.androidx.room.runtime)
             implementation(libs.sqlite.bundled)
             implementation(libs.ktor.client.okhttp)
+            implementation(libs.coil.compose.v310)
+            implementation(libs.coil.network.okhttp)
         }
         commonMain.dependencies {
             implementation(libs.ktor.client.core)
@@ -67,6 +69,7 @@ kotlin {
             implementation(libs.androidx.lifecycle.runtime.compose)
             implementation(libs.jetbrains.compose.navigation)
             implementation(libs.bundles.ktor)
+
         }
         wasmJsMain.dependencies {
             implementation(libs.ktor.client.js)
@@ -83,7 +86,7 @@ kotlin {
 
 android {
     namespace = "org.just_somebody.pocket_pixel"
-    compileSdk = libs.versions.android.compileSdk.get().toInt()
+    compileSdk = 35
 
     defaultConfig {
 
