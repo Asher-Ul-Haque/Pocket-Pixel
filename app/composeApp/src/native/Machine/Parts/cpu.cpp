@@ -1,5 +1,7 @@
 #include "cpu.h"
+#include "bus.h"
 #include "cartridge.h"
+#include "emu.h"
 #include "../../ForgeLib/include/asserts.h"
 #include "../../ForgeLib/include/logger.h"
 
@@ -9,15 +11,32 @@ static CPUContext   cpuCTX  = {0};
 
 
 static Instruction instructions[POSSIBLE_INSTRUCTION_COUNT] =
-    {
-        // - - - Hex because easy to reference here: https://meganesulli.com/static/851d34afbc4673ee915a8233fda67922/78d47/opcode-tables-screenshot.png
-        [0x00] = {INSTRUCTION_NOP,          ADDRESS_MODE_IMP},
-        [0x05] = {INSTRUCTION_DECREMENT,    ADDRESS_MODE_R, REG_B},
-        [0x0E] = {INSTRUCTION_LOAD,         ADDRESS_MODE_R_D8, REG_C},
-        [0xAF] = {INSTRUCTION_XOR,          ADDRESS_MODE_R, REG_A},
-        [0xC3] = {INSTRUCTION_JUMP,         ADDRESS_MODE_D16},
-    };
+{
+    // - - - Hex because easy to reference here: https://meganesulli.com/static/851d34afbc4673ee915a8233fda67922/78d47/opcode-tables-screenshot.png
+    [0x00] = {INSTRUCTION_NOP,          ADDRESS_MODE_IMP},
+    [0x05] = {INSTRUCTION_DECREMENT,    ADDRESS_MODE_R, REG_B},
+    [0x0E] = {INSTRUCTION_LOAD,         ADDRESS_MODE_R_D8, REG_C},
+    [0xAF] = {INSTRUCTION_XOR,          ADDRESS_MODE_R, REG_A},
+    [0xC3] = {INSTRUCTION_JUMP,         ADDRESS_MODE_D16},
+};
 
+FORGE_API Instruction* InstructionByOpcode(u8 opCode)
+{
+    if(instructions[opCode].type == INSTRUCTION_NONE)
+    {
+        FORGE_LOG_DEBUG("INSTRUCTION TYPE IS NONE");
+        return nullptr;
+    }
+    return &instructions[opCode];
+}
+
+
+// - - - CPU IMPLEMENTATIONS
+
+
+// - - - CPU HELPER FUNCTIONS
+
+// - - - MAIN CPU FUNCTIONS
 FORGE_API void cpuInit()
 {
     //FORGE_ASSERT_MESSAGE(!started, "Cannot start the emulator when it is already running");
@@ -27,16 +46,42 @@ FORGE_API void cpuInit()
 
 FORGE_API void cpuTick()
 {
-    if (!cpuCTX.halted)
-    {
-        cpuCTX.currentOpcode    = cartridgeRead(cpuCTX.registerFile.programCounter++);
-        cpuCTX.memDest          = 0;
-        cpuCTX.destIsMemory     = false;
-
-        switch (instructions[cpuCTX.currentOpcode].mode)
-        {
-            case ADDRESS_MODE_IMP   : return; // - - - Nothing needs to be read
-            //default : TODO
-        }
-    }
+//    if (!cpuCTX.halted)
+//    {
+//        cpuCTX.currentOpcode    = cartridgeRead(cpuCTX.registerFile.programCounter++);
+//        cpuCTX.memDest          = 0;
+//        cpuCTX.destIsMemory     = false;
+//        cpuCTX.currInstruction = InstructionByOpcode(cpuCTX.currentOpcode);
+//
+//        switch (cpuCTX.currInstruction->mode) {
+//            case ADDRESS_MODE_IMP   :
+//                return; // - - - Nothing needs to be read
+//            case ADDRESS_MODE_R:
+//                // - - - manipulating current read data
+//               // cpuCTX.readData = cpuReadRegister(
+//                //        cpuCTX.currInstruction->reg1); //NOTE: IMPLEMENT CPU UTIL
+//            case ADDRESS_MODE_R_D8:
+//                cpuCTX.readData = busRead(cpuCTX.registerFile.programCounter);
+//                emuCycles(1);
+//                cpuCTX.registerFile.programCounter++;
+//                return;
+//            case ADDRESS_MODE_D16:
+//            {
+//                u16 lo = busRead(cpuCTX.registerFile.programCounter);
+//                emuCycles(1);
+//
+//                u16 hi = busRead(cpuCTX.registerFile.programCounter++);
+//                emuCycles(1);
+//
+//                cpuCTX.readData = lo | (hi << 8);
+//                cpuCTX.registerFile.programCounter += 2;
+//                return;
+//            }
+//            default:
+//                FORGE_LOG_FATAL("HOW DID YOU EVEN END UP HERE DUMMY - Sak");
+//                exit(-7);
+//                return;
+//        }
+//    }
+return;
 }

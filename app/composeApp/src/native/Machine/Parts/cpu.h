@@ -88,7 +88,7 @@ typedef enum
     INSTRUCTION_TYPE_COUNT
 } InstructionType;
 
-typedef enum 
+typedef enum
 {
     ADDRESS_MODE_IMP,
     ADDRESS_MODE_R_D16,
@@ -114,7 +114,7 @@ typedef enum
     ADDRESSING_MODE_COUNT
 } AddressMode;
 
-typedef enum 
+typedef enum
 {
     CONDITIONS_NONE,
     CONDITIONS_NZ,
@@ -135,16 +135,20 @@ typedef struct
 
 typedef struct
 {
-    RegisterFile    registerFile;
+    RegisterFile    registerFile; // - - - The CPU Registers as defined above
+
+    // - - - Current data fetchs
     u16             readData;
     u16             memDest;
     u8              currentOpcode;
+    Instruction*    currInstruction;
     bool            destIsMemory;
     bool            halted;
     bool            steppingMode;
 } CPUContext;
 
 
+FORGE_API Instruction* instructionByOpcode(u8 opCode);
 // - - - What the CPU does - - -
 
 // - - - start the cpu
