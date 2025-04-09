@@ -20,6 +20,7 @@ import org.just_somebody.pocket_pixel.core.isLandscape
 import org.just_somebody.pocket_pixel.core.theme.GameBoyColors
 import org.just_somebody.pocket_pixel.depInj.getMenuItems
 import org.just_somebody.pocket_pixel.depInj.getNavController
+import org.just_somebody.pocket_pixel.searchScreen.presentation.SearchScreen
 import org.just_somebody.pocket_pixel.splashScreen.presentation.SplashScreen
 
 
@@ -87,7 +88,7 @@ fun MainScreen(MODIFIER  : Modifier = Modifier)
             composable<Screens.MePage>            {         temp();         }
             composable<Screens.ExplorePage>       {     EmulatorScreen()    }
             composable<Screens.FavoritesPage>     {         temp();         }
-            composable<Screens.SearchPage>        {         temp();         }
+            composable<Screens.SearchPage>        {     SearchScreen();     }
             composable<Screens.DownloadsPage>     {         temp();         }
           }
         }

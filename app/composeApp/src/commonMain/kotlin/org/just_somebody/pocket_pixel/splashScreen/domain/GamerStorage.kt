@@ -1,5 +1,7 @@
 package org.just_somebody.pocket_pixel.splashScreen.domain
 
+import org.just_somebody.pocket_pixel.core.Gamer
+
 abstract class GamerSessionStorage
 {
   abstract suspend fun getGamer   () : Gamer?

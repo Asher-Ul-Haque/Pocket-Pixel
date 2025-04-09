@@ -21,10 +21,16 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -41,9 +47,12 @@ import pocketpixel.composeapp.generated.resources.searchIcon
 fun SearchBar(
   SEARCH_QUERY            : String,
   ON_SEARCH_QUERY_CHANGE  : (String) -> Unit,
+  ON_SEARCH_TRIGGER       : () -> Unit,
   MODIFIER                : Modifier = Modifier
 )
 {
+  val keyboardController = LocalSoftwareKeyboardController.current
+
   CompositionLocalProvider(
     LocalTextSelectionColors provides TextSelectionColors(
       handleColor     = GameBoyColors.LightGreen,
@@ -60,15 +69,31 @@ fun SearchBar(
         unfocusedBorderColor  = GameBoyColors.Green,
         cursorColor           = GameBoyColors.DarkGreen,
       ),
+      keyboardOptions = KeyboardOptions(
+        imeAction     = ImeAction.Search,
+        keyboardType  = KeyboardType.Text
+      ),
+      keyboardActions = KeyboardActions(
+        onSearch =
+          {
+            ON_SEARCH_TRIGGER()
+            keyboardController?.hide()
+          }
+      ),
       placeholder     =
       {
         Text(
           text        = "Search...",
           color       = GameBoyColors.MediumGreen,
-          fontSize    = 36.sp,
+          fontSize    = 24.sp,
           fontFamily  = PokeFontFamily(),
         )
       },
+      textStyle       = TextStyle(
+        color       = GameBoyColors.DarkGreen,
+        fontSize    = 24.sp,
+        fontFamily  = PokeFontFamily()
+      ),
       leadingIcon     =
       {
         Icon(
