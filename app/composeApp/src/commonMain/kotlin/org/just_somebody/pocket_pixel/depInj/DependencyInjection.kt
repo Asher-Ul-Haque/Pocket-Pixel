@@ -1,17 +1,11 @@
 package org.just_somebody.pocket_pixel.depInj
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.sharp.AccountBox
-import androidx.compose.material.icons.sharp.AccountCircle
-import androidx.compose.material.icons.sharp.Search
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
-import org.jetbrains.compose.resources.painterResource
 import org.just_somebody.pocket_pixel.browseScreen.presentation.navBar.NavItem
 import org.just_somebody.pocket_pixel.core.isLandscape
-import org.just_somebody.pocket_pixel.splashScreen.data.SplashScreenNetworkCalls
+import org.just_somebody.pocket_pixel.core.networking.NetworkCalls
 import pocketpixel.composeapp.generated.resources.Res
 import pocketpixel.composeapp.generated.resources.download
 import pocketpixel.composeapp.generated.resources.heart
@@ -53,10 +47,10 @@ val items          : List<NavItem>            = listOf(
 );
 
 
-private val splashNetCalls : SplashScreenNetworkCalls = SplashScreenNetworkCalls();
+private val splashNetCalls : NetworkCalls = NetworkCalls();
 private var navController  : NavHostController?       = null;
 
-fun getSplashNetworkCalls() : SplashScreenNetworkCalls
+fun getSplashNetworkCalls() : NetworkCalls
 {
   return splashNetCalls;
 }

@@ -9,7 +9,7 @@ sealed interface DataError : Error
     NO_INTERNET,
     SERVER_FAIL,
     SERIALIZATION,
-    UNKnOWN
+    UNKNOWN
   }
 
   enum class Local : DataError

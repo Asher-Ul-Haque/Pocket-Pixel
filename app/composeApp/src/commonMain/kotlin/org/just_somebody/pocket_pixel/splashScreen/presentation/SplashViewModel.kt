@@ -6,11 +6,10 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
-import org.just_somebody.pocket_pixel.core.networking.createHttpClient
+import org.just_somebody.pocket_pixel.core.Gamer
 import org.just_somebody.pocket_pixel.core.onError
 import org.just_somebody.pocket_pixel.core.onSuccess
 import org.just_somebody.pocket_pixel.depInj.getSplashNetworkCalls
-import org.just_somebody.pocket_pixel.splashScreen.domain.Gamer
 import org.just_somebody.pocket_pixel.splashScreen.domain.getGamerSessionStorage
 
 class SplashViewModel : ViewModel()
@@ -58,7 +57,7 @@ class SplashViewModel : ViewModel()
     viewModelScope.launch ()
     {
       state       = state.copy(isLoggingIn = true);
-      val result  = getSplashNetworkCalls().connectToServer(state.gamer)
+      val result  = getSplashNetworkCalls().loginGamer(state.gamer)
       result.onSuccess ()
         {
           getGamerSessionStorage().saveGamer(state.gamer)

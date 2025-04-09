@@ -1,0 +1,11 @@
+/home/nadeem/Documents/Pixel-Pocket/src/main/java/org/example/Gamer.java
+/home/nadeem/Documents/Pixel-Pocket/src/main/java/org/example/RequestPage/AuthControll.java
+/home/nadeem/Documents/Pixel-Pocket/src/main/java/org/example/Main.java
+/home/nadeem/Documents/Pixel-Pocket/src/main/java/org/example/Security/JwtUtils.java
+/home/nadeem/Documents/Pixel-Pocket/src/main/java/org/example/Security/JwtAuthenticationEntryPoint.java
+/home/nadeem/Documents/Pixel-Pocket/src/main/java/org/example/Security/JwtAuthenticationFilter.java
+/home/nadeem/Documents/Pixel-Pocket/src/main/java/org/example/Security/SecurityConfig.java
+/home/nadeem/Documents/Pixel-Pocket/src/main/java/org/example/ExceptionHndler.java
+/home/nadeem/Documents/Pixel-Pocket/src/main/java/org/example/Security/GamerDetailsServiceImpl.java
+/home/nadeem/Documents/Pixel-Pocket/src/main/java/org/example/RequestPage/AuthDto.java
+/home/nadeem/Documents/Pixel-Pocket/src/main/java/org/example/repo/GamerRepo.java
