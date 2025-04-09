@@ -19,6 +19,34 @@ data class SearchState(
       publisher = "Nintendo",
       description = "Gotta catch em all",
       imageUrl = "https://upload.wikimedia.org/wikipedia/en/c/c1/Link%27s_Awakening.png"
+    ),
+    Game(
+      releaseYear = 1985,
+      title = "Mario",
+      publisher = "Nintendo",
+      description = "Tadam tum tadum tum",
+      imageUrl = "https://upload.wikimedia.org/wikipedia/en/c/c1/Link%27s_Awakening.png"
+    ),
+    Game(
+      releaseYear = 1985,
+      title = "Contra",
+      publisher = "Nintendo",
+      description = "Gotta catch em all",
+      imageUrl = "https://upload.wikimedia.org/wikipedia/en/c/c1/Link%27s_Awakening.png"
+    ),
+    Game(
+      releaseYear = 1985,
+      title = "Kirby",
+      publisher = "Nintendo",
+      description = "Tadam tum tadum tum",
+      imageUrl = "https://upload.wikimedia.org/wikipedia/en/c/c1/Link%27s_Awakening.png"
+    ),
+    Game(
+      releaseYear = 1985,
+      title = "DMG-Acid",
+      publisher = "Nintendo",
+      description = "Gotta catch em all",
+      imageUrl = "https://upload.wikimedia.org/wikipedia/en/c/c1/Link%27s_Awakening.png"
     )
   )
 )

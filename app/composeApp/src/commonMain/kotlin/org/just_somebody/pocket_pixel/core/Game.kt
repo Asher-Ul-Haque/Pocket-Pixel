@@ -1,6 +1,7 @@
 package org.just_somebody.pocket_pixel.core
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,7 +31,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
@@ -70,7 +75,7 @@ fun GameUI(
   Surface(
     shape     = RectangleShape,
     modifier  = MODIFIER.clickable(onClick = ON_CLICK),
-    color     = GameBoyColors.Green
+    color     = GameBoyColors.MediumGreen
   )
   {
     Row(
@@ -84,9 +89,8 @@ fun GameUI(
     {
       // - - - the box art
       Box(
-        modifier = Modifier
-          .height(100.dp),
-        contentAlignment = Alignment.Center
+        modifier          = Modifier.height(100.dp),
+        contentAlignment  = Alignment.Center
       )
       {
         var imageLoadResult by remember { mutableStateOf<Result<Painter>?>(null) }
@@ -106,35 +110,46 @@ fun GameUI(
             contentScale        =
               if (imageLoadResult!!.isSuccess)  ContentScale.Crop
               else                              ContentScale.Fit,
-            modifier = Modifier
-              .aspectRatio(
-                ratio                       = 0.65f,
-                matchHeightConstraintsFirst = true
-              )
+            modifier            = Modifier
+              .aspectRatio(1f)
+              .height(64.dp)
+              .border(4.dp, Color.Black)
+              .graphicsLayer { this.alpha = 0.8f } ,
+            colorFilter = (ColorFilter.tint(GameBoyColors.Green, BlendMode.Multiply))
           )
         }
       }
 
       // - - - title
       Column(
+        verticalArrangement = Arrangement.Center,
         modifier            = Modifier
           .fillMaxHeight()
           .weight(1f),
-        verticalArrangement = Arrangement.Center
       )
       {
         Text(
           text          = GAME.title,
           color         = GameBoyColors.LightGreen,
-          fontSize      = 16.sp,
+          fontSize      = 32.sp,
           fontFamily    = PokeFontFamily(),
           maxLines      = 2,
           overflow      = TextOverflow.Ellipsis
         )
+
         Text(
           text          = GAME.publisher,
           color         = GameBoyColors.LightGreen,
-          fontSize      = 16.sp,
+          fontSize      = 24.sp,
+          fontFamily    = PokeFontFamily(),
+          maxLines      = 2,
+          overflow      = TextOverflow.Ellipsis
+        )
+
+        Text(
+          text          = GAME.description,
+          color         = GameBoyColors.LightGreen,
+          fontSize      = 24.sp,
           fontFamily    = PokeFontFamily(),
           maxLines      = 2,
           overflow      = TextOverflow.Ellipsis
@@ -145,7 +160,7 @@ fun GameUI(
       androidx.compose.material3.Icon(
         painter             = painterResource(Res.drawable.trophy),
         contentDescription  = "Play",
-        tint                = GameBoyColors.DarkGreen,
+        tint                = GameBoyColors.LightGreen,
         modifier            = Modifier.size(24.dp)
       )
     }

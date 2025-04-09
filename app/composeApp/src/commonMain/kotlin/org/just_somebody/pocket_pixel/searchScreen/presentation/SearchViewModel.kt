@@ -26,12 +26,15 @@ class SearchViewModel : ViewModel()
       is SearchActions.Search ->
         viewModelScope.launch ()
         {
-/*          getSplashNetworkCalls().searchGames(state.value.searchQuery)
+          getSplashNetworkCalls().searchGames(state.value.searchQuery)
             .onSuccess { result ->   state.update { newState -> newState.copy(searchResults = result) } }
-            .onError   { error  ->   state.update { newState -> newState.copy(searchResults = emptyList(), errorMessage = error.toString()) } }*/
+            .onError   { error  ->   state.update { newState -> newState.copy(searchResults = emptyList(), errorMessage = error.toString()) } }
         }
 
-      is SearchActions.GoToGame -> { TODO() }
+      is SearchActions.GoToGame ->
+        {
+
+        }
     }
   }
 }
