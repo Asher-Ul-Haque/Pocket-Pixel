@@ -2,7 +2,7 @@
 #include <jni.h>
 #include "defines.h"
 #include "GameBoyCore.h"
-#include "Machine/testRoms/Zelda.h"
+#include "Machine/testRoms/Kirby.h"
 #ifdef __cplusplus
 extern "C" {
 #endif

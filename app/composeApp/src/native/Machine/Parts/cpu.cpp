@@ -36,7 +36,7 @@ FORGE_API void cpuTick()
         switch (instructions[cpuCTX.currentOpcode].mode)
         {
             case ADDRESS_MODE_IMP   : return; // - - - Nothing needs to be read
-//            default : TODO
+            //default : TODO
         }
     }
 }

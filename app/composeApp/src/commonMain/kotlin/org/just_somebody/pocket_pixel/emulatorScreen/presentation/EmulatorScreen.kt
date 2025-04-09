@@ -74,10 +74,10 @@ private fun renderFrame(BUFFER: ByteArray): Array<Array<Color>>
     {
         for (shift in 6 downTo 0 step 2)
         {
-            val colorIndex  = (byte.toInt() shr shift) and 0b11
-            val row         = pixelIndex / width
-            val col         = pixelIndex % width
-            colors[row][col] = mapColor(colorIndex)
+            val colorIndex      = (byte.toInt() shr shift) and 0b11
+            val row             = pixelIndex / width
+            val col             = pixelIndex % width
+            colors[row][col]    = mapColor(colorIndex)
             pixelIndex++
         }
     }
