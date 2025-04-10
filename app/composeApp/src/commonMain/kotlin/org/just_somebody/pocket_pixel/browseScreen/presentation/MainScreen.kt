@@ -19,9 +19,7 @@ import org.just_somebody.pocket_pixel.core.Screens
 import org.just_somebody.pocket_pixel.core.isLandscape
 import org.just_somebody.pocket_pixel.core.theme.GameBoyColors
 import org.just_somebody.pocket_pixel.depInj.getMenuItems
-import org.just_somebody.pocket_pixel.depInj.getNavController
-import org.just_somebody.pocket_pixel.searchScreen.presentation.SearchScreen
-import org.just_somebody.pocket_pixel.splashScreen.presentation.SplashScreen
+import org.just_somebody.pocket_pixel.favoritesScreen.presentation.SearchScreen
 
 
 fun navigate(SCREEN : ScreensToInt, NAV_CONTROLLER : NavController)

@@ -1,8 +1,5 @@
 package org.just_somebody.pocket_pixel.searchScreen.presentation
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -11,19 +8,21 @@ import kotlinx.coroutines.launch
 import org.just_somebody.pocket_pixel.core.onError
 import org.just_somebody.pocket_pixel.core.onSuccess
 import org.just_somebody.pocket_pixel.depInj.getSplashNetworkCalls
+import org.just_somebody.pocket_pixel.favoritesScreen.presentation.FavoriteActions
+import org.just_somebody.pocket_pixel.favoritesScreen.presentation.FavoritesState
 
 class SearchViewModel : ViewModel()
 {
-  val state = MutableStateFlow(SearchState())
+  val state = MutableStateFlow(FavoritesState())
 
-  fun onAction(ACTION : SearchActions)
+  fun onAction(ACTION : FavoriteActions)
   {
     when (ACTION)
     {
-      is SearchActions.ChangeSearchTerm ->
+      is FavoriteActions.ChangeFavoriteTerm ->
         state.update { newState -> newState.copy(searchQuery = ACTION.SEARCH_TERM) }
 
-      is SearchActions.Search ->
+      is FavoriteActions.Favorite ->
         viewModelScope.launch ()
         {
           getSplashNetworkCalls().searchGames(state.value.searchQuery)
@@ -31,7 +30,7 @@ class SearchViewModel : ViewModel()
             .onError   { error  ->   state.update { newState -> newState.copy(searchResults = emptyList(), errorMessage = error.toString()) } }
         }
 
-      is SearchActions.GoToGame ->
+      is FavoriteActions.GoToGame ->
         {
 
         }
