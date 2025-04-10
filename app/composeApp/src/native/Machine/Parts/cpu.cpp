@@ -18,15 +18,11 @@ static Instruction instructions[POSSIBLE_INSTRUCTION_COUNT] =
     [0x0E] = {INSTRUCTION_LOAD,         ADDRESS_MODE_R_D8, REG_C},
     [0xAF] = {INSTRUCTION_XOR,          ADDRESS_MODE_R, REG_A},
     [0xC3] = {INSTRUCTION_JUMP,         ADDRESS_MODE_D16},
+    [0xF3] = {INSTRUCTION_DI}
 };
 
 FORGE_API Instruction* InstructionByOpcode(u8 opCode)
 {
-    if(instructions[opCode].type == INSTRUCTION_NONE)
-    {
-        FORGE_LOG_DEBUG("INSTRUCTION TYPE IS NONE");
-        return nullptr;
-    }
     return &instructions[opCode];
 }
 
@@ -39,6 +35,8 @@ FORGE_API Instruction* InstructionByOpcode(u8 opCode)
 // - - - MAIN CPU FUNCTIONS
 FORGE_API void cpuInit()
 {
+    cpuCTX.registerFile.programCounter = 0x100;
+    cpuCTX.registerFile.accumulator = 0x01;
     //FORGE_ASSERT_MESSAGE(!started, "Cannot start the emulator when it is already running");
     started = true;
     FORGE_LOG_INFO("Started the emulator");
