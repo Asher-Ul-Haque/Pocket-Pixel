@@ -58,9 +58,25 @@ static void NONE_PROCESS(CPUContext* ctx)
 }
 
 // - - - CPU gives load instruction
-static void LOAD_PROCESS(CPUContext* ctx)
-{
-    TODO
+static void LOAD_PROCESS(CPUContext* ctx) {
+    if (ctx->destIsMemory) {
+        if (ctx->currInstruction->reg2 >= REG_AF) {
+            emuCycles(1);
+            busWrite16(ctx->memDest, ctx->readData);
+        } else {
+            busWrite(ctx->memDest, ctx->readData);
+        }
+        return;
+    }
+    if (ctx->currInstruction->mode == ADDRESS_MODE_HL_SPR)
+    {
+        u8 hflag = (cpuReadRegister(ctx->currInstruction->reg2) & 0xF)+(ctx->readData&0xF) >= 0x10;
+        u8 cflag = (cpuReadRegister(ctx->currInstruction->reg2) & 0xFF)+(ctx->readData&0xF) >= 0x100;
+        cpuSetFlag(ctx, 0,0,hflag,cflag);
+        cpuSetRegister(ctx->currInstruction->reg1, cpuReadRegister(ctx->currInstruction->reg2) + (char)ctx->readData);
+        return;
+    }
+    cpuSetRegister(ctx->currInstruction->reg1, ctx->readData);
 }
 
 // - - - CPU gives jump instruction

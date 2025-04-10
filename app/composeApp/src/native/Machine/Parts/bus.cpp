@@ -1,6 +1,6 @@
 #include "bus.h"
 #include "cartridge.h"
-#include "../../ForgeLib/include/asserts.h"
+#include "../../ForgeLib/include/logger.h"
 
 // 0x0000 - 0x3FFF : ROM Bank 0
 // 0x4000 - 0x7FFF : ROM Bank 1 - Switchable
@@ -23,7 +23,7 @@ u8 busRead(u16 address)
     {
         return cartridgeRead(address);
     }
-    TODO
+    FORGE_LOG_DEBUG("BUS WENT OUT OF SUPPORTED RANGE");
 }
 
 void busWrite(u16 address, u8 value)
@@ -31,7 +31,20 @@ void busWrite(u16 address, u8 value)
     if(address< 0x8000)
     {
         cartridgeWrite(address, value);
+        return;
     }
-    TODO
     // - - - NOTE: We have to do both cartridge and bus operations
+}
+
+u16 busRead16(u16 address)
+{
+    u16 low = busRead(address);
+    u16 high = busRead(address+1);
+    return low | (high << 8);
+}
+
+void busWrite16(u16 address, u16 value)
+{
+    busWrite(address+1, (value >> 8) & 0xFF);
+    busWrite(address, value & 0xFF);
 }

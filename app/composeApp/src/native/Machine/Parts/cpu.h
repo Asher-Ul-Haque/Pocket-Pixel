@@ -171,6 +171,9 @@ INSTRUCTION_PROCESS instructionGetProcessor(InstructionType type);
 #define CPU_FLAG_C IS_BIT_SET(ctx->registerFile.flags, 4);
 
 u16 cpuReadRegister(RegisterType register_);
+void cpuSetRegister(RegisterType, u16 val);
+
+void readData();
 #ifdef __cplusplus
 }
 #endif
