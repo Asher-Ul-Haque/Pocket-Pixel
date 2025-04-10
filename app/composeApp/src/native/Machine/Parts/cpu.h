@@ -1,5 +1,6 @@
 #pragma once
 #include "../../defines.h"
+#include "../Utils/bit.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -12,10 +13,12 @@ typedef struct
     u8 flags;
     u8 b;
     u8 c;
+    u8 d;
+    u8 e;
     u8 h;
     u8 l;
-    u8 stackPointer;
-    u8 programCounter;
+    u16 stackPointer;
+    u16 programCounter;
 } RegisterFile;
 
 typedef enum 
@@ -145,6 +148,7 @@ typedef struct
     bool            destIsMemory;
     bool            halted;
     bool            steppingMode;
+    bool            instructionMasterEnabled;
 } CPUContext;
 
 
@@ -155,8 +159,18 @@ FORGE_API Instruction* instructionByOpcode(u8 opCode);
 FORGE_API void cpuInit();
 
 // - - - tick the clock and update the CPU
-FORGE_API void cpuTick();
+FORGE_API bool cpuTick();
 
+
+// - - - instruction processor
+FORGE_API typedef void(*INSTRUCTION_PROCESS)(CPUContext *);
+INSTRUCTION_PROCESS instructionGetProcessor(InstructionType type);
+
+
+#define CPU_FLAG_Z IS_BIT_SET(ctx->registerFile.flags, 7);
+#define CPU_FLAG_C IS_BIT_SET(ctx->registerFile.flags, 4);
+
+u16 cpuReadRegister(RegisterType register_);
 #ifdef __cplusplus
 }
 #endif

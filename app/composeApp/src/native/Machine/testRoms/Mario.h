@@ -1,3 +1,5 @@
+#include "../../defines.h"
+
 static const u64 size      = 65536;
 static const u8 testRom[]  =
 {
