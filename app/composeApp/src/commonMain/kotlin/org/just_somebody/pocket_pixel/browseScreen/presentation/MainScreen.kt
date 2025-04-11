@@ -84,18 +84,20 @@ fun MainScreen(MODIFIER  : Modifier = Modifier)
         {
           NavHost(
             navController     = navController,
-            startDestination  = Screens.FavoritesPage
+            startDestination  = Screens.SearchPage
           )
           {
             composable<Screens.MePage>            {         temp();         }
-            composable<Screens.ExplorePage>       {    EmulatorScreen();    }
+            composable<Screens.ExplorePage>       {         temp();         }
+            composable<Screens.DownloadsPage>     {         temp();         }
+            composable<Screens.EmulatorPage>      {     EmulatorScreen();   }
             composable<Screens.FavoritesPage>
             { FavoritesScreen(GO_TO_GAME = { navController.navigate(Screens.CartridgePage) }); }
             composable<Screens.SearchPage>
             { SearchScreen(GO_TO_GAME = { navController.navigate(Screens.CartridgePage) }); }
-            composable<Screens.DownloadsPage>     {         temp();         }
             composable<Screens.CartridgePage>
             { CartridgeUI(START_GAME = { navController.navigate(Screens.EmulatorPage) }) }
+
           }
         }
       }
