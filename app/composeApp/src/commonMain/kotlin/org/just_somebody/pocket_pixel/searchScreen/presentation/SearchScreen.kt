@@ -58,7 +58,7 @@ fun SearchScreen(
         {
             GameListUI(
                 GAMES       = state.searchResults,
-                ON_CLICK    = GO_TO_GAME
+                ON_CLICK    = { game -> viewModel.onAction(SearchActions.GoToGame(game)); GO_TO_GAME(game) }
             )
         }
     }

@@ -45,7 +45,10 @@ import pocketpixel.composeapp.generated.resources.Res
 import pocketpixel.composeapp.generated.resources.cartridge
 
 @Composable
-fun CartridgeUI(MODIFIER: Modifier = Modifier) {
+fun CartridgeUI(
+    MODIFIER    : Modifier = Modifier,
+    START_GAME  : () -> Unit)
+{
     val game = getGame()
 
     BoxWithConstraints(
@@ -147,7 +150,7 @@ fun CartridgeUI(MODIFIER: Modifier = Modifier) {
             Spacer(modifier = Modifier.height(boxHeight * 0.16f))
 
             CustomButton(
-                ON_CLICK    = {},
+                ON_CLICK    = START_GAME,
                 CONTENT     =
                     {
                         Text(

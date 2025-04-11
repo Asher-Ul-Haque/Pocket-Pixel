@@ -34,6 +34,7 @@ fun navigate(SCREEN : ScreensToInt, NAV_CONTROLLER : NavController)
     ScreensToInt.Me         -> NAV_CONTROLLER.navigate(Screens.MePage);
     ScreensToInt.Downloads  -> NAV_CONTROLLER.navigate(Screens.DownloadsPage);
     ScreensToInt.Cartridge  -> NAV_CONTROLLER.navigate(Screens.CartridgePage)
+    ScreensToInt.Emulator   -> NAV_CONTROLLER.navigate(Screens.EmulatorPage)
   }
 }
 
@@ -93,7 +94,8 @@ fun MainScreen(MODIFIER  : Modifier = Modifier)
             composable<Screens.SearchPage>
             { SearchScreen(GO_TO_GAME = { navController.navigate(Screens.CartridgePage) }); }
             composable<Screens.DownloadsPage>     {         temp();         }
-            composable<Screens.CartridgePage>     {      CartridgeUI()      }
+            composable<Screens.CartridgePage>
+            { CartridgeUI(START_GAME = { navController.navigate(Screens.EmulatorPage) }) }
           }
         }
       }
