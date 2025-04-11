@@ -8,6 +8,7 @@ import kotlinx.coroutines.launch
 import org.just_somebody.pocket_pixel.core.onError
 import org.just_somebody.pocket_pixel.core.onSuccess
 import org.just_somebody.pocket_pixel.depInj.getNetworkCalls
+import org.just_somebody.pocket_pixel.depInj.setGame
 
 class SearchViewModel : ViewModel()
 {
@@ -28,10 +29,7 @@ class SearchViewModel : ViewModel()
             .onError   { error  ->   state.update { newState -> newState.copy(searchResults = emptyList(), errorMessage = error.toString()) } }
         }
 
-      is SearchActions.GoToGame ->
-        {
-
-        }
+      is SearchActions.GoToGame -> setGame(ACTION.GAME)
     }
   }
 }

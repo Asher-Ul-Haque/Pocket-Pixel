@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import org.just_somebody.pocket_pixel.browseScreen.presentation.navBar.NavItem
+import org.just_somebody.pocket_pixel.core.Game
 import org.just_somebody.pocket_pixel.core.Gamer
 import org.just_somebody.pocket_pixel.core.isLandscape
 import org.just_somebody.pocket_pixel.core.networking.NetworkCalls
@@ -51,6 +52,7 @@ val items          : List<NavItem>            = listOf(
 private val splashNetCalls : NetworkCalls             = NetworkCalls();
 private var navController  : NavHostController?       = null;
 private var gamer          : Gamer                    = Gamer("Just_Somebody", "password")
+private var game           : Game                     = Game()
 
 fun getNetworkCalls() : NetworkCalls { return splashNetCalls; }
 
@@ -67,8 +69,8 @@ fun getMenuItems()      : List<NavItem>
   return items.subList(
     fromIndex = 0,
     toIndex   =
-        if (isLandscape())  items.size - 2;
-        else                items.size - 1
+        if (isLandscape())  items.size - 1;
+        else                items.size
   )
 }
 
@@ -76,3 +78,5 @@ fun setGamerTag (GAMER_TAG  : String)   { gamer = Gamer(GAMER_TAG , gamer.passwo
 fun setGamerPass(GAMER_PASS : String)   { gamer = Gamer(gamer.name, GAMER_PASS) }
 fun setGamer    (GAMER      : Gamer)    { gamer = GAMER }
 fun getGamer    ()          : Gamer     { return gamer }
+fun setGame     (GAME       : Game)     { game = GAME}
+fun getGame     ()          : Game      { return game }

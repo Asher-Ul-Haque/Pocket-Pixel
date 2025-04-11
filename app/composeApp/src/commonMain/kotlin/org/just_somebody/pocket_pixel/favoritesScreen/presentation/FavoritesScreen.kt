@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.jetbrains.compose.resources.painterResource
+import org.just_somebody.pocket_pixel.core.Game
 import org.just_somebody.pocket_pixel.core.GameListUI
 import org.just_somebody.pocket_pixel.core.theme.GameBoyColors
 import org.just_somebody.pocket_pixel.core.theme.PokeFontFamily
@@ -31,7 +32,9 @@ import pocketpixel.composeapp.generated.resources.Res
 
 
 @Composable
-fun FavoritesScreen(MODIFIER : Modifier = Modifier)
+fun FavoritesScreen(
+    MODIFIER    : Modifier = Modifier,
+    GO_TO_GAME  : (Game) -> Unit)
 {
     val viewModel : FavoritesViewModel = viewModel()
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -74,7 +77,7 @@ fun FavoritesScreen(MODIFIER : Modifier = Modifier)
         {
             GameListUI(
                 GAMES       = state.filteredResults,
-                ON_CLICK    = { game -> viewModel.onAction(FavoriteActions.GoToGame(game)) }
+                ON_CLICK    = { game -> viewModel.onAction(FavoriteActions.GoToGame(game)); GO_TO_GAME(game) }
             )
         }
     }

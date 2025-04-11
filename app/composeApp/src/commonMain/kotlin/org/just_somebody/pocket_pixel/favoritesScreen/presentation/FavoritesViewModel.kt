@@ -8,6 +8,7 @@ import kotlinx.coroutines.launch
 import org.just_somebody.pocket_pixel.core.onError
 import org.just_somebody.pocket_pixel.core.onSuccess
 import org.just_somebody.pocket_pixel.depInj.getNetworkCalls
+import org.just_somebody.pocket_pixel.depInj.setGame
 
 class FavoritesViewModel() : ViewModel()
 {
@@ -45,10 +46,7 @@ class FavoritesViewModel() : ViewModel()
       is FavoriteActions.ChangeSearchTerm ->
         { state.update { newState -> newState.copy(searchQuery = ACTION.SERACH_TERM) } }
 
-      is FavoriteActions.GoToGame ->
-        {
-
-        }
+      is FavoriteActions.GoToGame -> setGame(ACTION.GAME)
     }
   }
 }

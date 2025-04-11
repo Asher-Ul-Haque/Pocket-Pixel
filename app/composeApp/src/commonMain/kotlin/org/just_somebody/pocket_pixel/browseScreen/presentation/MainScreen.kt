@@ -15,6 +15,7 @@ import androidx.navigation.compose.rememberNavController
 import org.just_somebody.pocket_pixel.EmulatorScreen
 import org.just_somebody.pocket_pixel.browseScreen.data.ScreensToInt
 import org.just_somebody.pocket_pixel.browseScreen.data.intToScreen
+import org.just_somebody.pocket_pixel.cartridgeScreen.presentation.CartridgeUI
 import org.just_somebody.pocket_pixel.core.Screens
 import org.just_somebody.pocket_pixel.core.isLandscape
 import org.just_somebody.pocket_pixel.core.theme.GameBoyColors
@@ -87,10 +88,12 @@ fun MainScreen(MODIFIER  : Modifier = Modifier)
           {
             composable<Screens.MePage>            {         temp();         }
             composable<Screens.ExplorePage>       {    EmulatorScreen();    }
-            composable<Screens.FavoritesPage>     {   FavoritesScreen();    }
-            composable<Screens.SearchPage>        {     SearchScreen();     }
+            composable<Screens.FavoritesPage>
+            { FavoritesScreen(GO_TO_GAME = { navController.navigate(Screens.CartridgePage) }); }
+            composable<Screens.SearchPage>
+            { SearchScreen(GO_TO_GAME = { navController.navigate(Screens.CartridgePage) }); }
             composable<Screens.DownloadsPage>     {         temp();         }
-            composable<Screens.CartridgePage>     {   }
+            composable<Screens.CartridgePage>     {      CartridgeUI()      }
           }
         }
       }

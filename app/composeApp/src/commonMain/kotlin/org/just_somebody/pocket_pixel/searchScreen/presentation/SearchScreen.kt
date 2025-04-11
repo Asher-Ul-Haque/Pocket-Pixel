@@ -16,13 +16,18 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.jetbrains.compose.resources.painterResource
+import org.just_somebody.pocket_pixel.core.Game
 import org.just_somebody.pocket_pixel.core.GameListUI
+import org.just_somebody.pocket_pixel.favoritesScreen.presentation.FavoriteActions
 import pocketpixel.composeapp.generated.resources.NoInternet
 import pocketpixel.composeapp.generated.resources.Res
 
 
 @Composable
-fun SearchScreen(MODIFIER     : Modifier         = Modifier)
+fun SearchScreen(
+    MODIFIER   : Modifier = Modifier,
+    GO_TO_GAME : (Game) -> Unit,
+)
 {
     val viewModel : SearchViewModel = viewModel()
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -54,7 +59,7 @@ fun SearchScreen(MODIFIER     : Modifier         = Modifier)
         {
             GameListUI(
                 GAMES       = state.searchResults,
-                ON_CLICK    = { game -> viewModel.onAction(SearchActions.GoToGame(game)) }
+                ON_CLICK    = { game -> viewModel.onAction(SearchActions.GoToGame(game)); GO_TO_GAME(game) }
             )
         }
     }

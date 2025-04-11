@@ -58,11 +58,11 @@ import kotlin.Result
 @Serializable
 data class Game
 (
-  val releaseYear : Int,
-  val title       : String,
-  val publisher   : String,
-  val description : String,
-  val imageUrl    : String
+  val releaseYear : Int     = 0,
+  val title       : String  = "",
+  val publisher   : String  = "",
+  val description : String  = "",
+  val imageUrl    : String  = ""
 );
 
 @Composable
