@@ -38,8 +38,8 @@ fun SearchScreen(MODIFIER     : Modifier         = Modifier)
                 .padding(16.dp)
                 .fillMaxWidth(),
             SEARCH_QUERY            = state.searchQuery,
-            ON_SEARCH_QUERY_CHANGE  = { newQuery -> viewModel.onAction(FavoriteActions.ChangeFavoriteTerm(newQuery)) },
-            ON_SEARCH_TRIGGER       = { viewModel.onAction(FavoriteActions.Favorite) }
+            ON_SEARCH_QUERY_CHANGE  = { newQuery -> viewModel.onAction(SearchActions.ChangeSearchTerm(newQuery)) },
+            ON_SEARCH_TRIGGER       = { viewModel.onAction(SearchActions.Search) }
         )
 
         if (state.errorMessage != null || state.searchResults.isEmpty())
@@ -54,7 +54,7 @@ fun SearchScreen(MODIFIER     : Modifier         = Modifier)
         {
             GameListUI(
                 GAMES       = state.searchResults,
-                ON_CLICK    = { game -> viewModel.onAction(FavoriteActions.GoToGame(game)) }
+                ON_CLICK    = { game -> viewModel.onAction(SearchActions.GoToGame(game)) }
             )
         }
     }

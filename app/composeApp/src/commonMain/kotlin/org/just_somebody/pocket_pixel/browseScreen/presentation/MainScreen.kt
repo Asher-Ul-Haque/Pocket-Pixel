@@ -19,7 +19,8 @@ import org.just_somebody.pocket_pixel.core.Screens
 import org.just_somebody.pocket_pixel.core.isLandscape
 import org.just_somebody.pocket_pixel.core.theme.GameBoyColors
 import org.just_somebody.pocket_pixel.depInj.getMenuItems
-import org.just_somebody.pocket_pixel.favoritesScreen.presentation.SearchScreen
+import org.just_somebody.pocket_pixel.favoritesScreen.presentation.FavoritesScreen
+import org.just_somebody.pocket_pixel.searchScreen.presentation.SearchScreen
 
 
 fun navigate(SCREEN : ScreensToInt, NAV_CONTROLLER : NavController)
@@ -84,8 +85,8 @@ fun MainScreen(MODIFIER  : Modifier = Modifier)
           )
           {
             composable<Screens.MePage>            {         temp();         }
-            composable<Screens.ExplorePage>       {     EmulatorScreen()    }
-            composable<Screens.FavoritesPage>     {         temp();         }
+            composable<Screens.ExplorePage>       {    EmulatorScreen();    }
+            composable<Screens.FavoritesPage>     {   FavoritesScreen();    }
             composable<Screens.SearchPage>        {     SearchScreen();     }
             composable<Screens.DownloadsPage>     {         temp();         }
           }

@@ -10,10 +10,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -23,16 +23,22 @@ import org.jetbrains.compose.resources.painterResource
 import org.just_somebody.pocket_pixel.core.GameListUI
 import org.just_somebody.pocket_pixel.core.theme.GameBoyColors
 import org.just_somebody.pocket_pixel.core.theme.PokeFontFamily
+import org.just_somebody.pocket_pixel.depInj.getGamer
+import org.just_somebody.pocket_pixel.searchScreen.presentation.SearchActions
 import org.just_somebody.pocket_pixel.searchScreen.presentation.SearchBar
 import pocketpixel.composeapp.generated.resources.NoInternet
 import pocketpixel.composeapp.generated.resources.Res
 
 
 @Composable
-fun FavoritesScreen(MODIFIER     : Modifier         = Modifier)
+fun FavoritesScreen(MODIFIER : Modifier = Modifier)
 {
     val viewModel : FavoritesViewModel = viewModel()
     val state by viewModel.state.collectAsStateWithLifecycle()
+
+
+
+    LaunchedEffect(true) { viewModel.onAction(FavoriteActions.GetFavorites(getGamer())) }
 
     Column(
         modifier            = Modifier.fillMaxSize(),
@@ -49,7 +55,16 @@ fun FavoritesScreen(MODIFIER     : Modifier         = Modifier)
             fontFamily  = PokeFontFamily(),
         )
 
-        if (state.errorMessage != null || state.favoritesResult.isEmpty())
+        SearchBar(
+            MODIFIER                = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            SEARCH_QUERY            = state.searchQuery,
+            ON_SEARCH_QUERY_CHANGE  = { newQuery -> viewModel.onAction(FavoriteActions.ChangeSearchTerm(newQuery)) },
+            ON_SEARCH_TRIGGER       = { viewModel.onAction(FavoriteActions.Filter) }
+        )
+
+        if (state.errorMessage != null || state.filteredResults.isEmpty())
         {
             Image(
                 painter             = painterResource(Res.drawable.NoInternet),
@@ -60,7 +75,7 @@ fun FavoritesScreen(MODIFIER     : Modifier         = Modifier)
         else
         {
             GameListUI(
-                GAMES       = state.favoritesResult,
+                GAMES       = state.filteredResults,
                 ON_CLICK    = { game -> viewModel.onAction(FavoriteActions.GoToGame(game)) }
             )
         }

@@ -7,30 +7,28 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.just_somebody.pocket_pixel.core.onError
 import org.just_somebody.pocket_pixel.core.onSuccess
-import org.just_somebody.pocket_pixel.depInj.getSplashNetworkCalls
-import org.just_somebody.pocket_pixel.favoritesScreen.presentation.FavoriteActions
-import org.just_somebody.pocket_pixel.favoritesScreen.presentation.FavoritesState
+import org.just_somebody.pocket_pixel.depInj.getNetworkCalls
 
 class SearchViewModel : ViewModel()
 {
-  val state = MutableStateFlow(FavoritesState())
+  val state = MutableStateFlow(SearchState())
 
-  fun onAction(ACTION : FavoriteActions)
+  fun onAction(ACTION : SearchActions)
   {
     when (ACTION)
     {
-      is FavoriteActions.ChangeFavoriteTerm ->
+      is SearchActions.ChangeSearchTerm ->
         state.update { newState -> newState.copy(searchQuery = ACTION.SEARCH_TERM) }
 
-      is FavoriteActions.Favorite ->
+      is SearchActions.Search ->
         viewModelScope.launch ()
         {
-          getSplashNetworkCalls().searchGames(state.value.searchQuery)
+          getNetworkCalls().searchGames(state.value.searchQuery)
             .onSuccess { result ->   state.update { newState -> newState.copy(searchResults = result) } }
             .onError   { error  ->   state.update { newState -> newState.copy(searchResults = emptyList(), errorMessage = error.toString()) } }
         }
 
-      is FavoriteActions.GoToGame ->
+      is SearchActions.GoToGame ->
         {
 
         }

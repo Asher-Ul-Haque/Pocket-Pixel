@@ -4,48 +4,7 @@ import org.just_somebody.pocket_pixel.core.Game
 
 data class FavoritesState(
   val errorMessage    : String?     = null,
-  val favoritesResult : List<Game>  = listOf(
-    Game(
-      releaseYear = 1985,
-      title = "The Legend of Zelda",
-      publisher = "Capcom",
-      description = "Wake up at the beach, beware the racoon",
-      imageUrl = "https://upload.wikimedia.org/wikipedia/en/c/c1/Link%27s_Awakening.png"
-    ),
-    Game(
-      releaseYear = 1985,
-      title = "Pokemon Red",
-      publisher = "Nintendo",
-      description = "Gotta catch em all",
-      imageUrl = "https://upload.wikimedia.org/wikipedia/en/c/c1/Link%27s_Awakening.png"
-    ),
-    Game(
-      releaseYear = 1985,
-      title = "Mario",
-      publisher = "Nintendo",
-      description = "Tadam tum tadum tum",
-      imageUrl = "https://upload.wikimedia.org/wikipedia/en/c/c1/Link%27s_Awakening.png"
-    ),
-    Game(
-      releaseYear = 1985,
-      title = "Contra",
-      publisher = "Nintendo",
-      description = "Gotta catch em all",
-      imageUrl = "https://upload.wikimedia.org/wikipedia/en/c/c1/Link%27s_Awakening.png"
-    ),
-    Game(
-      releaseYear = 1985,
-      title = "Kirby",
-      publisher = "Nintendo",
-      description = "Tadam tum tadum tum",
-      imageUrl = "https://upload.wikimedia.org/wikipedia/en/c/c1/Link%27s_Awakening.png"
-    ),
-    Game(
-      releaseYear = 1985,
-      title = "DMG-Acid",
-      publisher = "Nintendo",
-      description = "Gotta catch em all",
-      imageUrl = "https://upload.wikimedia.org/wikipedia/en/c/c1/Link%27s_Awakening.png"
-    )
-  )
+  val searchQuery     : String      = "",
+  val filteredResults : List<Game>  = emptyList(),
+  val favoritesResult : List<Game>  = emptyList()
 )
