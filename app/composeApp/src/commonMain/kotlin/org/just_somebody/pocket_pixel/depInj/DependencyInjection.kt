@@ -67,8 +67,8 @@ fun getMenuItems()      : List<NavItem>
   return items.subList(
     fromIndex = 0,
     toIndex   =
-        if (isLandscape())  items.size - 1;
-        else                items.size
+        if (isLandscape())  items.size - 2;
+        else                items.size - 1
   )
 }
 

@@ -36,8 +36,6 @@ fun FavoritesScreen(MODIFIER : Modifier = Modifier)
     val viewModel : FavoritesViewModel = viewModel()
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-
-
     LaunchedEffect(true) { viewModel.onAction(FavoriteActions.GetFavorites(getGamer())) }
 
     Column(

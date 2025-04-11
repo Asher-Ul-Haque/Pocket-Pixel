@@ -32,6 +32,7 @@ fun navigate(SCREEN : ScreensToInt, NAV_CONTROLLER : NavController)
     ScreensToInt.Favorites  -> NAV_CONTROLLER.navigate(Screens.FavoritesPage);
     ScreensToInt.Me         -> NAV_CONTROLLER.navigate(Screens.MePage);
     ScreensToInt.Downloads  -> NAV_CONTROLLER.navigate(Screens.DownloadsPage);
+    ScreensToInt.Cartridge  -> NAV_CONTROLLER.navigate(Screens.CartridgePage)
   }
 }
 
@@ -89,6 +90,7 @@ fun MainScreen(MODIFIER  : Modifier = Modifier)
             composable<Screens.FavoritesPage>     {   FavoritesScreen();    }
             composable<Screens.SearchPage>        {     SearchScreen();     }
             composable<Screens.DownloadsPage>     {         temp();         }
+            composable<Screens.CartridgePage>     {   }
           }
         }
       }
