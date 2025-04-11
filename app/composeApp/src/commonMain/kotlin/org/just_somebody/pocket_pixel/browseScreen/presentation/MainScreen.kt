@@ -12,7 +12,7 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import org.just_somebody.pocket_pixel.EmulatorScreen
+import org.just_somebody.pocket_pixel.emulatorScreen.presentation.EmulatorScreen
 import org.just_somebody.pocket_pixel.browseScreen.data.ScreensToInt
 import org.just_somebody.pocket_pixel.browseScreen.data.intToScreen
 import org.just_somebody.pocket_pixel.cartridgeScreen.presentation.CartridgeUI

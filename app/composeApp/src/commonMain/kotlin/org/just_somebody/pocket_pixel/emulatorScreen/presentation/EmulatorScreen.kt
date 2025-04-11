@@ -1,4 +1,4 @@
-package org.just_somebody.pocket_pixel
+package org.just_somebody.pocket_pixel.emulatorScreen.presentation
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
@@ -21,7 +21,6 @@ import kotlinx.coroutines.delay
 import org.just_somebody.pocket_pixel.core.theme.GameBoyColors
 import org.just_somebody.pocket_pixel.core.theme.PokeFontFamily
 import org.just_somebody.pocket_pixel.emulatorScreen.domain.GameBoy
-import org.just_somebody.pocket_pixel.emulatorScreen.presentation.EmulatorViewModel
 
 @Composable
 fun EmulatorScreen(

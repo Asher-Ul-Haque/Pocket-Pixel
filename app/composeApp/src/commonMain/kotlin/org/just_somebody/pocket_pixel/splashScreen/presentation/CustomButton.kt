@@ -7,6 +7,8 @@ import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.unit.Dp
@@ -23,10 +25,17 @@ fun CustomButton(
   Box(
     modifier = MODIFIER
       .minimumInteractiveComponentSize()
+      .shadow(
+        elevation       = 4.dp,
+        shape           = RectangleShape,
+        ambientColor    = Color.Black,
+        spotColor       = Color.Black
+      )
       .padding(8.dp)
       .background(GameBoyColors.MediumGreen)
       .border(4.dp, GameBoyColors.Green, RectangleShape)
-      .clickable(onClick = ON_CLICK),
+      .clickable(onClick = ON_CLICK)
+      ,
     contentAlignment = Alignment.Center
   )
   {

@@ -39,6 +39,7 @@ import org.jetbrains.compose.resources.painterResource
 import org.just_somebody.pocket_pixel.core.theme.GameBoyColors
 import org.just_somebody.pocket_pixel.core.theme.PokeFontFamily
 import org.just_somebody.pocket_pixel.depInj.getGame
+import pocketpixel.composeapp.generated.resources.NoImage
 import pocketpixel.composeapp.generated.resources.NoInternet
 import pocketpixel.composeapp.generated.resources.Res
 import pocketpixel.composeapp.generated.resources.cartridge
@@ -49,12 +50,11 @@ fun CartridgeUI(MODIFIER: Modifier = Modifier) {
 
     BoxWithConstraints(
         modifier = MODIFIER
-            .padding(horizontal = 16.dp)
             .fillMaxSize()
             .shadow(
-                elevation = 8.dp,
-                ambientColor = GameBoyColors.DarkGreen,
-                spotColor = GameBoyColors.DarkGreen
+                elevation       = 8.dp,
+                ambientColor    = GameBoyColors.DarkGreen,
+                spotColor       = GameBoyColors.DarkGreen
             )
     )
     {
@@ -72,8 +72,7 @@ fun CartridgeUI(MODIFIER: Modifier = Modifier) {
         Column(
             modifier            = Modifier
                 .fillMaxSize()
-                .padding(
-                    top     = boxHeight * 0.2f),
+                .padding(top     = boxHeight * 0.2f),
             horizontalAlignment = Alignment.CenterHorizontally
         )
         {
@@ -86,21 +85,25 @@ fun CartridgeUI(MODIFIER: Modifier = Modifier) {
                 overflow    = TextOverflow.Ellipsis,
                 textAlign   = TextAlign.Center,
                 fontWeight  = FontWeight.ExtraBold,
-                modifier    = Modifier.fillMaxWidth(0.7f)
+                modifier    = Modifier
+                    .fillMaxWidth(0.7f)
+                    .offset(y = -(5).dp)
             )
 
             Text(
                 text        = game.publisher.ifEmpty { "No Publisher" },
-                color       = GameBoyColors.DarkGreen,
+                color       = GameBoyColors.MediumGreen,
                 fontSize    = 24.sp,
                 fontFamily  = PokeFontFamily(),
                 maxLines    = 1,
                 overflow    = TextOverflow.Ellipsis,
                 textAlign   = TextAlign.Center,
-                modifier    = Modifier.fillMaxWidth(0.6f)
+                modifier    = Modifier
+                    .fillMaxWidth(0.6f)
+                    .offset(y = -(5).dp)
             )
 
-            Spacer(modifier = Modifier.height(boxHeight * 0.065f))
+            Spacer(modifier = Modifier.height(boxHeight * 0.05f))
 
             var imageLoadResult by remember { mutableStateOf<Result<Painter>?>(null) }
             val painter = rememberAsyncImagePainter(
@@ -114,14 +117,15 @@ fun CartridgeUI(MODIFIER: Modifier = Modifier) {
                 Image(
                     painter             =
                         if (imageLoadResult!!.isSuccess) painter
-                        else                             { painterResource(Res.drawable.NoInternet) },
+                        else                             { painterResource(Res.drawable.NoImage) },
                     contentDescription  = game.title,
-                    contentScale        =
-                        if (imageLoadResult!!.isSuccess)  ContentScale.Fit
-                        else                              ContentScale.Fit,
+                    contentScale        = ContentScale.Fit,
                     modifier            = Modifier
-                        .fillMaxWidth(0.6f)
-                        .fillMaxHeight(0.6f),
+                        .width(210.dp)
+                        .height(210.dp)
+                        .offset(
+                            x = (-2).dp,
+                            y = (12.dp)),
                     colorFilter         =
                         if (imageLoadResult!!.isSuccess) (ColorFilter.tint(GameBoyColors.Green, BlendMode.Multiply))
                         else                             null
@@ -136,13 +140,11 @@ fun CartridgeUI(MODIFIER: Modifier = Modifier) {
                 textAlign   = TextAlign.Center,
                 fontSize    = 20.sp,
                 fontFamily  = PokeFontFamily(),
-                maxLines    = 1,
+                maxLines    = 3,
                 overflow    = TextOverflow.Ellipsis,
-                modifier    = Modifier
-                    .fillMaxWidth(0.6f),
-                )
+                modifier    = Modifier.fillMaxWidth(0.7f) )
 
-            Spacer(modifier = Modifier.height(boxHeight * 0.03f))
+            Spacer(modifier = Modifier.height(boxHeight * 0.16f))
 
             CustomButton(
                 ON_CLICK    = {},
@@ -159,12 +161,6 @@ fun CartridgeUI(MODIFIER: Modifier = Modifier) {
                     },
                 MODIFIER    = Modifier
                     .width(256.dp)
-                    .shadow(
-                        elevation       = 4.dp,
-                        shape           = RectangleShape,
-                        ambientColor    = Color.Black,
-                        spotColor       = Color.Black
-                    )
             )
         }
     }

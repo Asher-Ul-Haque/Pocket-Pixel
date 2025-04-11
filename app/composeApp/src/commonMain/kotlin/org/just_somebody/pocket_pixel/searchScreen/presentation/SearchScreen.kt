@@ -18,7 +18,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import org.jetbrains.compose.resources.painterResource
 import org.just_somebody.pocket_pixel.core.Game
 import org.just_somebody.pocket_pixel.core.GameListUI
-import org.just_somebody.pocket_pixel.favoritesScreen.presentation.FavoriteActions
 import pocketpixel.composeapp.generated.resources.NoInternet
 import pocketpixel.composeapp.generated.resources.Res
 
@@ -59,7 +58,7 @@ fun SearchScreen(
         {
             GameListUI(
                 GAMES       = state.searchResults,
-                ON_CLICK    = { game -> viewModel.onAction(SearchActions.GoToGame(game)); GO_TO_GAME(game) }
+                ON_CLICK    = GO_TO_GAME
             )
         }
     }
