@@ -80,15 +80,44 @@ static void LOAD_PROCESS(CPUContext* ctx) {
     cpuSetRegister(ctx->currInstruction->reg1, ctx->readData);
 }
 
-// - - - CPU gives jump instruction
-static void JUMP_PROCESS(CPUContext* ctx)
+// - - - HELPER FUNCTION FOR JUMP INSTRUCTION
+static void GOTO_ADDRESS(CPUContext* ctx, u16 addr, bool pushpc)
 {
     if(checkCondition(ctx))
     {
-        ctx->registerFile.programCounter = ctx->readData;
-        emuCycles(1);
-
+        if(pushpc)
+        {
+            emuCycles(2); // - - - 16 BITS so 2 cycles
+            stackPush16(ctx->registerFile.programCounter);
+        }
     }
+    ctx->registerFile.programCounter = addr;
+    emuCycles(1);
+}
+
+// - - - CPU gives jump instruction
+static void JUMP_PROCESS(CPUContext* ctx)
+{
+    GOTO_ADDRESS(ctx, ctx->readData, false);
+}
+
+// - - - CPU gives JUMP with PUSH (CALL FUNCTION)
+static void CALL_PROCESS(CPUContext* ctx)
+{
+    GOTO_ADDRESS(ctx, ctx->readData, true);
+}
+
+// - - - CPU gives JUMP_R
+static void JR_PROCESS(CPUContext* ctx)
+{
+    char rel = (char)(ctx->readData & 0xFF);
+    u16 addr = ctx->registerFile.programCounter + rel;
+    GOTO_ADDRESS(ctx, addr, false);
+}
+
+static void RST_PROCESS(CPUContext* ctx)
+{
+    GOTO_ADDRESS(ctx, ctx->currInstruction->param, true);
 }
 
 // - - - CPU gives NOP instruction
@@ -139,6 +168,8 @@ static void PUSH_PROCESS(CPUContext* ctx)
     emuCycles(1);
 }
 
+
+
 static void POP_PROCESS(CPUContext* ctx)
 {
     u16 lo = stackPop();
@@ -155,16 +186,51 @@ static void POP_PROCESS(CPUContext* ctx)
     }
 }
 
+// - - - When the CPU returns to a register
+static void RET_PROCESS(CPUContext* ctx)
+{
+    if(ctx->currInstruction->cond != CONDITION_NONE)
+    {
+        emuCycles(1);
+    }
+    if(checkCondition(ctx))
+    {
+        u16 lo = stackPop();
+        emuCycles(1);
+        u16 hi = stackPop();
+        emuCycles(2);
+
+        u16 n = (hi << 8) | lo;
+        ctx->registerFile.programCounter = n;
+
+        emuCycles(1);
+    }
+}
+
+// - - - Renable the master Reg
+static void RETI_PROCESS(CPUContext* ctx)
+{
+    ctx->instructionMasterEnabled = true;
+    RET_PROCESS(ctx);
+}
+
 // - - - fix bad identation later thanks to Andriod Development studio
 static INSTRUCTION_PROCESS process[] =
         {
-               [INSTRUCTION_NONE] =  NONE_PROCESS,
-               [INSTRUCTION_NOP] = NOP_PROCESS,
-               [INSTRUCTION_LOAD] = LOAD_PROCESS,
-               [INSTRUCTION_LDH] = LDH_PROCESS,
-               [INSTRUCTION_JUMP] = JUMP_PROCESS,
-               [INSTRUCTION_DI] = DI_PROCESS,
-               [INSTRUCTION_XOR] = XOR_PROCESS,
+               [INSTRUCTION_NONE]  = NONE_PROCESS,
+               [INSTRUCTION_NOP]   = NOP_PROCESS,
+               [INSTRUCTION_LOAD]  = LOAD_PROCESS,
+               [INSTRUCTION_LDH]   = LDH_PROCESS,
+               [INSTRUCTION_JUMP]  = JUMP_PROCESS,
+               [INSTRUCTION_DI]    = DI_PROCESS,
+               [INSTRUCTION_POP]   = POP_PROCESS,
+               [INSTRUCTION_PUSH]  = PUSH_PROCESS,
+               [INSTRUCTION_JR]    = JR_PROCESS,
+               [INSTRUCTION_CALL]  = CALL_PROCESS,
+               [INSTRUCTION_RET]   = RET_PROCESS,
+               [INSTRUCTION_RST]   = RST_PROCESS,
+               [INSTRUCTION_RETI]  = RETI_PROCESS,
+               [INSTRUCTION_XOR]   = XOR_PROCESS,
 
         };
 
