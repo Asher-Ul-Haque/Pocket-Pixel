@@ -163,7 +163,7 @@ FORGE_API bool cpuTick();
 
 
 // - - - instruction processor
-FORGE_API typedef void(*INSTRUCTION_PROCESS)(CPUContext *);
+typedef void(*INSTRUCTION_PROCESS)(CPUContext *);
 INSTRUCTION_PROCESS instructionGetProcessor(InstructionType type);
 
 

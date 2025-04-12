@@ -121,7 +121,7 @@ static INSTRUCTION_PROCESS process[] =
 
         };
 
-INSTRUCTION_PROCESS instructionGetProcess(InstructionType type)
+INSTRUCTION_PROCESS instructionGetProcessor(InstructionType type)
 {
     return process[type];
 }

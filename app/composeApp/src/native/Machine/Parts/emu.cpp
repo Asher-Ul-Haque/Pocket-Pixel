@@ -24,18 +24,13 @@ void delay(u32 ms) {
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 }
 
-int emuRunning(int argc, char **argv) {
-    if (argc < 3) {
-        printf("Usage: emu <rom_file>, <rom_size>\n");
-        return -1;
-    }
-
-    if (!cartridgeLoad(argv[1], argv[2])) {
-        printf("Failed to load ROM file: %s\n", argv[1]);
+int emuRunning(u8* rom, u64 romSize) {
+    if (!cartridgeLoad(rom, romSize)) {
+        printf("Failed to load ROM file at EMU RUNNING");
         return -2;
     }
 
-    printf("Cart loaded..\n");
+    FORGE_LOG_DEBUG("Cart loaded...");
     // NOTE: NEED TO IMPLEMENT LOGIC FOR BUFFER IN KOTLIN
     cpuInit();
 
