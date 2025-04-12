@@ -16,8 +16,8 @@ typedef struct
     u64 ticks;
 }emuContext;
 
-int emuRunning(int argc, char** argv);
-emuContext *emuGetStatus();
+int emuRunning(u8* rom, u64 size);
+emuContext *emuGetContext();
 void emuCycles(int cpuCycles);
 
 #ifdef __cplusplus

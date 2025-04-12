@@ -158,51 +158,25 @@ FORGE_API void cpuInit()
     FORGE_LOG_INFO("Started the emulator");
 }
 
-FORGE_API bool cpuTick()
-{
-    if (!cpuCTX.halted)
-    {
-        cpuCTX.currentOpcode    = cartridgeRead(cpuCTX.registerFile.programCounter++);
-        cpuCTX.memDest          = 0;
-        cpuCTX.destIsMemory     = false;
+FORGE_API void readData(); //FETCH_DATA() EQUIVALENT IN CPU_READ
+
+FORGE_API bool cpuTick() {
+    if (!cpuCTX.halted) {
+        u16 programCounter = cpuCTX.registerFile.programCounter;
+
+        cpuCTX.currentOpcode = busRead(cpuCTX.registerFile.programCounter++);
+        cpuCTX.memDest = 0;
+        cpuCTX.destIsMemory = false;
         cpuCTX.currInstruction = InstructionByOpcode(cpuCTX.currentOpcode);
+        readData();
 
-        switch (cpuCTX.currInstruction->mode) {
-            case ADDRESS_MODE_IMP   :
-                break; // - - - Nothing needs to be read
-            case ADDRESS_MODE_R:
-                // - - - manipulating current read data
-                cpuCTX.readData = cpuReadRegister(
-                        cpuCTX.currInstruction->reg1); //NOTE: IMPLEMENT CPU UTIL
-            case ADDRESS_MODE_R_D8:
-                cpuCTX.readData = busRead(cpuCTX.registerFile.programCounter);
-                emuCycles(1);
-                cpuCTX.registerFile.programCounter++;
-                break;
-            case ADDRESS_MODE_D16:
-            {
-                u16 lo = busRead(cpuCTX.registerFile.programCounter);
-                emuCycles(1);
-
-                u16 hi = busRead(cpuCTX.registerFile.programCounter++);
-                emuCycles(1);
-
-                cpuCTX.readData = lo | (hi << 8);
-                cpuCTX.registerFile.programCounter += 2;
-                break;
-            }
-            default:
-                FORGE_LOG_FATAL("HOW DID YOU EVEN END UP HERE DUMMY - Sak");
-                exit(-7);
-                break;
+        if (cpuCTX.currInstruction == NULL) {
+            FORGE_LOG_FATAL("UNKNOWN INSTRUCTION AT %02X\n", cpuCTX.currInstruction);
+            exit(-7);
         }
+    }
 
-    }
-    if(cpuCTX.currInstruction == NULL)
-    {
-        FORGE_LOG_FATAL("UNKNOWN INSTRUCTION AT %02X\n", cpuCTX.currInstruction);
-        exit(-7);
-    }
+    //EXECUTE
     INSTRUCTION_PROCESS process = instructionGetProcessor(cpuCTX.currInstruction->type);
     if(!process)
     {

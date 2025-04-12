@@ -1,5 +1,8 @@
 #include "bus.h"
 #include "cartridge.h"
+#include "ram.h"
+#include "../../ForgeLib/include/logger.h"
+#include "../../ForgeLib/include/asserts.h"
 
 // 0x0000 - 0x3FFF : ROM Bank 0
 // 0x4000 - 0x7FFF : ROM Bank 1 - Switchable
@@ -17,22 +20,110 @@
 
 u8 busRead(u16 address) {
     if (address < 0x8000) {
-        //ROM Data
+        // - - - ROM Data
         return cartridgeRead(address);
     }
+    else if (address < 0xA000)
+    {
+        // - - - CHAR/MAP DATA
+        TODO
+    }
+    else if(address < 0xC000)
+    {
+        //- - - CARTRAIDGE RAM
+        return cartridgeRead(address);
+    }
+    else if (address < 0xE000)
+    {
+        // - - - WORKING RAM
+        return wramRead(address);
+    }
+    else if (address < 0xFE00)
+    {
+        // - - - Reserved Echo Ram
+        return 0;
+    }
+    else if (address < 0xFEA0)
+    {
+        // - - - OAM
+        FORGE_LOG_ERROR("UNSUPPORTED bus_read(%04X)\n", address);
+        TODO
+    }
+    else if (address < 0xFF00)
+    {
+        // - - - RESERVED UNUSABLE
+        return 0;
+    }
+    else if (address < 0xFF80)
+    {
+        // - - - IO REGISTERS FOR KOTLIN TOO
+        FORGE_LOG_ERROR("UNSUPPORTED bus_read(%04X)\n", address);
+        TODO
+    }
+    else if (address  == 0xFFFF)
+    {
+        // - - - CPU Enable Register
+        FORGE_LOG_ERROR("UNSUPPORTED bus_read(%04X)\n", address);
+        TODO
+    }
 
-    printf("UNSUPPORTED bus_read(%04X)\n", address);
     //NO_IMPL
+    return hramRead(address);
 }
 
 void busWrite(u16 address, u8 value) {
     if (address < 0x8000) {
-        //ROM Data
+        // - - - ROM Data
         cartridgeWrite(address, value);
-        return;
+    }
+    else if (address < 0xA000)
+    {
+        // - - - CHAR/MAP
+        TODO
+        FORGE_LOG_ERROR("UNSUPPORTED bus_read(%04X)\n", address);
+    }
+    else if (address < 0xC000)
+    {
+        // - - - EXT_RAM
+        cartridgeWrite(address, value);
+    }
+    else if (address < 0xE000)
+    {
+        // - - - WRAM
+         wramWrite(address, value);
+    }
+    else if (address < 0xFE00)
+    {
+        // - - - RESERVED ECHO RAM
+    }
+    else if (address < 0xFEA0)
+    {
+        // - - - ORAM
+        FORGE_LOG_ERROR("UNSUPPORTED bus_read(%04X)\n", address);
+        TODO
+    }
+    else if (address < 0xFF00)
+    {
+        // - - - UNUSABLE RAM
+    }
+    else if (address < 0xFF80)
+    {
+        // - - - IO REGISTERS FOR KOTLIN
+        FORGE_LOG_ERROR("UNSUPPORTED bus_read(%04X)\n", address);
+        TODO
+    }
+    else if (address == 0xFFFF)
+    {
+        //  - - - CPU ENABLE REGISTER
+        FORGE_LOG_ERROR("UNSUPPORTED bus_read(%04X)\n", address);
+        TODO
+    }
+    else
+    {
+        hramWrite(address, value);
     }
 
-    printf("UNSUPPORTED bus_write(%04X)\n", address);
+    FORGE_LOG_ERROR("UNSUPPORTED bus_read(%04X)\n", address);
     //NO_IMPL
 }
 
