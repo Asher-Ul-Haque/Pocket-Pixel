@@ -1,9 +1,8 @@
 #include <cstdio>
 #include "emu.h"
+#include <thread>
 #include "cartridge.h"
 #include "cpu.h"
-#include "SDL2/SDL.h"
-#include "SDL2/"
 /*
   Emu components:
 
@@ -17,12 +16,12 @@
 
 static emuContext ctx;
 
-emuContext *emu_get_context() {
+emuContext *emuGetContext() {
     return &ctx;
 }
 
 void delay(u32 ms) {
-    SDL_Delay(ms);
+    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 }
 
 int emuRunning(int argc, char **argv) {
@@ -37,12 +36,7 @@ int emuRunning(int argc, char **argv) {
     }
 
     printf("Cart loaded..\n");
-
-    SDL_Init(SDL_INIT_VIDEO);
-    printf("SDL INIT\n");
-    TTF_Init();
-    printf("TTF INIT\n");
-
+    // NOTE: NEED TO IMPLEMENT LOGIC FOR BUFFER IN KOTLIN
     cpuInit();
 
     ctx.running = true;
