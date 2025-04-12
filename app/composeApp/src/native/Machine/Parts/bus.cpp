@@ -1,6 +1,5 @@
 #include "bus.h"
 #include "cartridge.h"
-#include "../../ForgeLib/include/logger.h"
 
 // 0x0000 - 0x3FFF : ROM Bank 0
 // 0x4000 - 0x7FFF : ROM Bank 1 - Switchable
@@ -15,36 +14,36 @@
 // 0xFEA0 - 0xFEFF : Reserved - Unusable
 // 0xFF00 - 0xFF7F : I/O Registers
 // 0xFF80 - 0xFFFE : Zero Page
-// The above are the possible instructions that we can have for the BUS
 
-u8 busRead(u16 address)
-{
-    if(address<0x8000)
-    {
+u8 bus_read(u16 address) {
+    if (address < 0x8000) {
+        //ROM Data
         return cartridgeRead(address);
     }
-    FORGE_LOG_DEBUG("BUS WENT OUT OF SUPPORTED RANGE");
+
+    printf("UNSUPPORTED bus_read(%04X)\n", address);
+    //NO_IMPL
 }
 
-void busWrite(u16 address, u8 value)
-{
-    if(address< 0x8000)
-    {
+void bus_write(u16 address, u8 value) {
+    if (address < 0x8000) {
+        //ROM Data
         cartridgeWrite(address, value);
         return;
     }
-    // - - - NOTE: We have to do both cartridge and bus operations
+
+    printf("UNSUPPORTED bus_write(%04X)\n", address);
+    //NO_IMPL
 }
 
-u16 busRead16(u16 address)
-{
-    u16 low = busRead(address);
-    u16 high = busRead(address+1);
-    return low | (high << 8);
+u16 bus_read16(u16 address) {
+    u16 lo = bus_read(address);
+    u16 hi = bus_read(address + 1);
+
+    return lo | (hi << 8);
 }
 
-void busWrite16(u16 address, u16 value)
-{
-    busWrite(address+1, (value >> 8) & 0xFF);
-    busWrite(address, value & 0xFF);
+void bus_write16(u16 address, u16 value) {
+    bus_write(address + 1, (value >> 8) & 0xFF);
+    bus_write(address, value & 0xFF);
 }

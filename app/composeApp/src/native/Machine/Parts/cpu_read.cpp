@@ -2,168 +2,168 @@
 #include "bus.h"
 #include "emu.h"
 
-extern CPUContext ctx;
+extern CPUContext cpuCTX;
 
 void readData() {
-    ctx.memDest = 0;
-    ctx.destIsMemory = false;
+    cpuCTX.memDest = 0;
+    cpuCTX.destIsMemory = false;
 
-    if (ctx.currInstruction == NULL) {
+    if (cpuCTX.currInstruction == NULL) {
         return;
     }
 
-    switch(ctx.currInstruction->mode) {
+    switch(cpuCTX.currInstruction->mode) {
         case ADDRESS_MODE_IMP:
             return;
 
         case ADDRESS_MODE_R:
-            ctx.readData = cpuReadRegister(ctx.currInstruction->reg1);
+            cpuCTX.readData = cpuReadRegister(cpuCTX.currInstruction->reg1);
             return;
 
         case ADDRESS_MODE_R_R:
-            ctx.readData = cpuReadRegister(ctx.currInstruction->reg2);
+            cpuCTX.readData = cpuReadRegister(cpuCTX.currInstruction->reg2);
             return;
 
         case ADDRESS_MODE_R_D8:
-            ctx.readData = busRead(ctx.registerFile.programCounter);
+            cpuCTX.readData = busRead(cpuCTX.registerFile.programCounter);
             emuCycles(1);
-            ctx.registerFile.programCounter++;
+            cpuCTX.registerFile.programCounter++;
             return;
 
         case ADDRESS_MODE_R_D16:
         case ADDRESS_MODE_D16: {
-            u16 lo = busRead(ctx.registerFile.programCounter);
+            u16 lo = busRead(cpuCTX.registerFile.programCounter);
             emuCycles(1);
 
-            u16 hi = busRead(ctx.registerFile.programCounter + 1);
+            u16 hi = busRead(cpuCTX.registerFile.programCounter + 1);
             emuCycles(1);
 
-            ctx.readData = lo | (hi << 8);
-            ctx.registerFile.programCounter += 2;
+            cpuCTX.readData = lo | (hi << 8);
+            cpuCTX.registerFile.programCounter += 2;
             return;
         }
 
         case ADDRESS_MODE_MR_R:
-            ctx.readData = cpuReadRegister(ctx.currInstruction->reg2);
-            ctx.memDest = cpuReadRegister(ctx.currInstruction->reg1);
-            ctx.destIsMemory = true;
+            cpuCTX.readData = cpuReadRegister(cpuCTX.currInstruction->reg2);
+            cpuCTX.memDest = cpuReadRegister(cpuCTX.currInstruction->reg1);
+            cpuCTX.destIsMemory = true;
 
-            if (ctx.currInstruction->reg1 == REG_C) {
-                ctx.memDest |= 0xFF00;
+            if (cpuCTX.currInstruction->reg1 == REG_C) {
+                cpuCTX.memDest |= 0xFF00;
             }
             return;
 
         case ADDRESS_MODE_R_MR: {
-            u16 addr = cpuReadRegister(ctx.currInstruction->reg2);
+            u16 addr = cpuReadRegister(cpuCTX.currInstruction->reg2);
 
-            if (ctx.currInstruction->reg2 == REG_C) {
+            if (cpuCTX.currInstruction->reg2 == REG_C) {
                 addr |= 0xFF00;
             }
 
-            ctx.readData = busRead(addr);
+            cpuCTX.readData = busRead(addr);
             emuCycles(1);
             return;
         }
 
         case ADDRESS_MODE_R_HLI:
-            ctx.readData = busRead(cpuReadRegister(ctx.currInstruction->reg2));
+            cpuCTX.readData = busRead(cpuReadRegister(cpuCTX.currInstruction->reg2));
             emuCycles(1);
             cpuSetRegister(REG_HL, cpuReadRegister(REG_HL) + 1);
             return;
 
         case ADDRESS_MODE_R_HLD:
-            ctx.readData = busRead(cpuReadRegister(ctx.currInstruction->reg2));
+            cpuCTX.readData = busRead(cpuReadRegister(cpuCTX.currInstruction->reg2));
             emuCycles(1);
             cpuSetRegister(REG_HL, cpuReadRegister(REG_HL) - 1);
             return;
 
         case ADDRESS_MODE_HLI_R:
-            ctx.readData = cpuReadRegister(ctx.currInstruction->reg2);
-            ctx.memDest = cpuReadRegister(ctx.currInstruction->reg1);
-            ctx.destIsMemory = true;
+            cpuCTX.readData = cpuReadRegister(cpuCTX.currInstruction->reg2);
+            cpuCTX.memDest = cpuReadRegister(cpuCTX.currInstruction->reg1);
+            cpuCTX.destIsMemory = true;
             cpuSetRegister(REG_HL, cpuReadRegister(REG_HL) + 1);
             return;
 
         case ADDRESS_MODE_HLD_R:
-            ctx.readData = cpuReadRegister(ctx.currInstruction->reg2);
-            ctx.memDest = cpuReadRegister(ctx.currInstruction->reg1);
-            ctx.destIsMemory = true;
+            cpuCTX.readData = cpuReadRegister(cpuCTX.currInstruction->reg2);
+            cpuCTX.memDest = cpuReadRegister(cpuCTX.currInstruction->reg1);
+            cpuCTX.destIsMemory = true;
             cpuSetRegister(REG_HL, cpuReadRegister(REG_HL) - 1);
             return;
 
         case ADDRESS_MODE_R_A8:
-            ctx.readData = busRead(ctx.registerFile.programCounter);
+            cpuCTX.readData = busRead(cpuCTX.registerFile.programCounter);
             emuCycles(1);
-            ctx.registerFile.programCounter++;
+            cpuCTX.registerFile.programCounter++;
             return;
 
         case ADDRESS_MODE_A8_R:
-            ctx.memDest = busRead(ctx.registerFile.programCounter) | 0xFF00;
-            ctx.destIsMemory = true;
+            cpuCTX.memDest = busRead(cpuCTX.registerFile.programCounter) | 0xFF00;
+            cpuCTX.destIsMemory = true;
             emuCycles(1);
-            ctx.registerFile.programCounter++;
+            cpuCTX.registerFile.programCounter++;
             return;
 
         case ADDRESS_MODE_HL_SPR:
-            ctx.readData = busRead(ctx.registerFile.programCounter);
+            cpuCTX.readData = busRead(cpuCTX.registerFile.programCounter);
             emuCycles(1);
-            ctx.registerFile.programCounter++;
+            cpuCTX.registerFile.programCounter++;
             return;
 
         case ADDRESS_MODE_D8:
-            ctx.readData = busRead(ctx.registerFile.programCounter);
+            cpuCTX.readData = busRead(cpuCTX.registerFile.programCounter);
             emuCycles(1);
-            ctx.registerFile.programCounter++;
+            cpuCTX.registerFile.programCounter++;
             return;
 
         case ADDRESS_MODE_A16_R:
         case ADDRESS_MODE_D16_R: {
-            u16 lo = busRead(ctx.registerFile.programCounter);
+            u16 lo = busRead(cpuCTX.registerFile.programCounter);
             emuCycles(1);
 
-            u16 hi = busRead(ctx.registerFile.programCounter + 1);
+            u16 hi = busRead(cpuCTX.registerFile.programCounter + 1);
             emuCycles(1);
 
-            ctx.memDest = lo | (hi << 8);
-            ctx.destIsMemory = true;
+            cpuCTX.memDest = lo | (hi << 8);
+            cpuCTX.destIsMemory = true;
 
-            ctx.registerFile.programCounter += 2;
-            ctx.readData = cpuReadRegister(ctx.currInstruction->reg2);
+            cpuCTX.registerFile.programCounter += 2;
+            cpuCTX.readData = cpuReadRegister(cpuCTX.currInstruction->reg2);
             return;
         }
 
         case ADDRESS_MODE_MR_D8:
-            ctx.readData = busRead(ctx.registerFile.programCounter);
+            cpuCTX.readData = busRead(cpuCTX.registerFile.programCounter);
             emuCycles(1);
-            ctx.registerFile.programCounter++;
-            ctx.memDest = cpuReadRegister(ctx.currInstruction->reg1);
-            ctx.destIsMemory = true;
+            cpuCTX.registerFile.programCounter++;
+            cpuCTX.memDest = cpuReadRegister(cpuCTX.currInstruction->reg1);
+            cpuCTX.destIsMemory = true;
             return;
 
         case ADDRESS_MODE_MR:
-            ctx.memDest = cpuReadRegister(ctx.currInstruction->reg1);
-            ctx.destIsMemory = true;
-            ctx.readData = busRead(cpuReadRegister(ctx.currInstruction->reg1));
+            cpuCTX.memDest = cpuReadRegister(cpuCTX.currInstruction->reg1);
+            cpuCTX.destIsMemory = true;
+            cpuCTX.readData = busRead(cpuReadRegister(cpuCTX.currInstruction->reg1));
             emuCycles(1);
             return;
 
         case ADDRESS_MODE_R_A16: {
-            u16 lo = busRead(ctx.registerFile.programCounter);
+            u16 lo = busRead(cpuCTX.registerFile.programCounter);
             emuCycles(1);
 
-            u16 hi = busRead(ctx.registerFile.programCounter + 1);
+            u16 hi = busRead(cpuCTX.registerFile.programCounter + 1);
             emuCycles(1);
 
             u16 addr = lo | (hi << 8);
 
-            ctx.registerFile.programCounter += 2;
-            ctx.readData = busRead(addr);
+            cpuCTX.registerFile.programCounter += 2;
+            cpuCTX.readData = busRead(addr);
             emuCycles(1);
             return;
         }
 
         default:
-            printf("Unknown Addressing Mode! %d (%02X)\n", ctx.currInstruction->mode, ctx.currentOpcode);
+            printf("Unknown Addressing Mode! %d (%02X)\n", cpuCTX.currInstruction->mode, cpuCTX.currentOpcode);
             exit(-7);
             return;
     }

@@ -6,7 +6,7 @@
 #include "../../ForgeLib/include/logger.h"
 
 static bool         started = false;
-static CPUContext   cpuCTX  = {0};
+CPUContext   cpuCTX  = {0};
 #define POSSIBLE_INSTRUCTION_COUNT 256
 
 

@@ -3,6 +3,9 @@
 #include "../../ForgeLib/include/logger.h"
 #include "../../defines.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 
 // - - - METHODS AND STRUCTS TO CHECK EMU STATE
@@ -16,3 +19,7 @@ typedef struct
 int emuRunning(int argc, char** argv);
 emuContext *emuGetStatus();
 void emuCycles(int cpuCycles);
+
+#ifdef __cplusplus
+}
+#endif
