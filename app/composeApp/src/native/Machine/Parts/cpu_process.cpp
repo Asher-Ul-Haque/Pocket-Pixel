@@ -2,6 +2,7 @@
 #include "bus.h"
 #include "cartridge.h"
 #include "emu.h"
+#include "stack.h"
 #include "../../ForgeLib/include/asserts.h"
 #include "../../ForgeLib/include/logger.h"
 
@@ -122,6 +123,36 @@ static void LDH_PROCESS(CPUContext* ctx)
         busWrite(0xFF00|ctx->readData, ctx->registerFile.accumulator);
     }
     emuCycles(1);
+}
+
+
+static void PUSH_PROCESS(CPUContext* ctx)
+{
+    u16 hi = (cpuReadRegister(ctx->currInstruction->reg1) >> 8) & 0xFF;
+    emuCycles(1);
+    stackPush(hi);
+
+    u16 lo = cpuReadRegister(ctx->currInstruction->reg1) & 0xFF;
+    emuCycles(1);
+    stackPush(lo);
+
+    emuCycles(1);
+}
+
+static void POP_PROCESS(CPUContext* ctx)
+{
+    u16 lo = stackPop();
+    emuCycles(1);
+    u16 hi = stackPop();
+    emuCycles(1);
+
+    u16 n = (hi << 8) | lo;
+    cpuSetRegister(ctx->currInstruction->reg1, n);
+
+    if(ctx->currInstruction->reg1 == REG_AF)
+    {
+        cpuSetRegister(ctx->currInstruction->reg1, n & 0xFFF0);
+    }
 }
 
 // - - - fix bad identation later thanks to Andriod Development studio

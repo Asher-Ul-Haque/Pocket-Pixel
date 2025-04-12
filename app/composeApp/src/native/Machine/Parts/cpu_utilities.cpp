@@ -53,3 +53,8 @@ void cpuSetRegister(RegisterType rt, u16 val) {
         case REG_NONE: break;
     }
 }
+
+FORGE_API RegisterFile *cpuGetRegister()
+{
+    return &cpuCTX.registerFile;
+}

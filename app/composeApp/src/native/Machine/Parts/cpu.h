@@ -162,6 +162,8 @@ FORGE_API void cpuInit();
 // - - - tick the clock and update the CPU
 FORGE_API bool cpuTick();
 
+// - - - cpu_registers
+FORGE_API RegisterFile *cpuGetRegister();
 
 // - - - instruction processor
 typedef void(*INSTRUCTION_PROCESS)(CPUContext *);
