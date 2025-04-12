@@ -221,6 +221,73 @@ static void RETI_PROCESS(CPUContext* ctx)
 
 // - - - ARITHEMATIC INSTRUCTIONS
 
+static void SUB_PROCESS(CPUContext* ctx)
+{
+    u16 val = cpuReadRegister(ctx->currInstruction->reg1) - ctx->readData;
+
+    int z = val == 0;
+    int h = ((int)cpuReadRegister(ctx->currInstruction->reg1) & 0xF) - ((int)ctx->readData & 0xF) < 0;
+    int c = ((int)cpuReadRegister(ctx->currInstruction->reg1)) - ((int)ctx->readData) < 0;
+
+    cpuSetRegister(ctx->currInstruction->reg1, val);
+    cpuSetFlag(ctx, z, 1, h, c);
+}
+
+static void SBC_PROCESS(CPUContext* ctx)
+{
+    u8 val = ctx->readData + CPU_FLAG_C;
+
+    int z = cpuReadRegister(ctx->currInstruction->reg1) - val == 0;
+    int h = ((int)cpuReadRegister(ctx->currInstruction->reg1) & 0xF) - ((int)ctx->readData & 0xF) - ((int)CPU_FLAG_C) < 0;
+    int c = ((int)cpuReadRegister(ctx->currInstruction->reg1)) - ((int)ctx->readData ) - ((int)CPU_FLAG_C) < 0;
+    cpuSetRegister(ctx->currInstruction->reg1, cpuReadRegister(ctx->currInstruction->reg1) - val);
+    cpuSetFlag(ctx, z, 1, h, c);
+}
+
+static void ADC_PROCESS(CPUContext* ctx)
+{
+    u16 u = ctx->readData;
+    u16 a = ctx->registerFile.accumulator;
+    u16 c = CPU_FLAG_C;
+
+    ctx->registerFile.accumulator = (a+u+c) && 0xFF;
+
+    cpuSetFlag(ctx, ctx->registerFile.accumulator == 0, 0, (a&0xF) + (u&0xF) + c > 0xF, a+ u + c > 0xFF);
+}
+
+static void ADD_PROCESS(CPUContext* ctx)
+{
+    u32 val = cpuReadRegister(ctx->currInstruction->reg1) + ctx->readData;
+    bool is16 = is16Bit(ctx->currInstruction->reg1);
+    if(is16){ emuCycles(1);}
+    if(ctx->currInstruction->reg1 == REG_SP)
+    {
+        val = cpuReadRegister(ctx->currInstruction->reg1) + (char)ctx->readData;
+    }
+
+    int z = (val&0xFF) == 0;
+    int h = (cpuReadRegister(ctx->currInstruction->reg1) & 0xF) + (ctx->readData & 0xF) >= 0x10;
+    int c = (int)(cpuReadRegister(ctx->currInstruction->reg1) & 0xFF) + (int)(ctx->readData & 0xFF) >= 0x100;
+
+    if(is16)
+    {
+        z=-1;
+        h = (cpuReadRegister(ctx->currInstruction->reg1)&0xFFF) + (ctx->readData & 0xFFF)>= 0x1000;
+        u32 n = ((u32) cpuReadRegister(ctx->currInstruction->reg1)) + ((u32)ctx->readData);
+        c = n>=0x10000;
+    }
+
+    if(ctx->currInstruction->reg1 == REG_SP)
+    {
+        z = 0;
+        h = (cpuReadRegister(ctx->currInstruction->reg1) & 0xF) + (ctx->readData & 0xF) >= 0x10;
+        c = (int)(cpuReadRegister(ctx->currInstruction->reg1) & 0xFF) + (int)(ctx->readData & 0xFF) >= 0x100;
+    }
+
+    cpuSetRegister(ctx->currInstruction->reg1, val & 0xFFFF);
+    cpuSetFlag(ctx,z,0,h,c);
+}
+
 static void INCREMENT_PROCESS(CPUContext* ctx)
 {
     u16 val = cpuReadRegister(ctx->currInstruction->reg1) + 1;
@@ -283,6 +350,10 @@ static INSTRUCTION_PROCESS process[] =
                [INSTRUCTION_RST]   = RST_PROCESS,
                [INSTRUCTION_DECREMENT] = DECREMENT_PROCESS,
                [INSTRUCTION_INCREMENT] = INCREMENT_PROCESS,
+               [INSTRUCTION_ADD]   = ADD_PROCESS,
+               [INSTRUCTION_ADC]   = ADC_PROCESS,
+               [INSTRUCTION_SUB]   = SUB_PROCESS,
+               [INSTRUCTION_SBC]   = SBC_PROCESS,
                [INSTRUCTION_RETI]  = RETI_PROCESS,
                [INSTRUCTION_XOR]   = XOR_PROCESS,
 
