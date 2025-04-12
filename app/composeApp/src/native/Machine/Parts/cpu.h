@@ -149,6 +149,7 @@ typedef struct
     bool            halted;
     bool            steppingMode;
     bool            instructionMasterEnabled;
+    u8              ieRegister;
 } CPUContext;
 
 
@@ -172,6 +173,9 @@ INSTRUCTION_PROCESS instructionGetProcessor(InstructionType type);
 
 u16 cpuReadRegister(RegisterType register_);
 void cpuSetRegister(RegisterType, u16 val);
+
+u8 cpuGetIeRegister();
+void cpuSetIeRegister(u8 n);
 
 void readData();
 #ifdef __cplusplus

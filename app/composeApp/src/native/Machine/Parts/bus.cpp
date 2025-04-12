@@ -1,6 +1,7 @@
 #include "bus.h"
 #include "cartridge.h"
 #include "ram.h"
+#include "cpu.h"
 #include "../../ForgeLib/include/logger.h"
 #include "../../ForgeLib/include/asserts.h"
 
@@ -63,8 +64,7 @@ u8 busRead(u16 address) {
     else if (address  == 0xFFFF)
     {
         // - - - CPU Enable Register
-        FORGE_LOG_ERROR("UNSUPPORTED bus_read(%04X)\n", address);
-        TODO
+        return cpuGetIeRegister();
     }
 
     //NO_IMPL
@@ -114,9 +114,8 @@ void busWrite(u16 address, u8 value) {
     }
     else if (address == 0xFFFF)
     {
-        //  - - - CPU ENABLE REGISTER
-        FORGE_LOG_ERROR("UNSUPPORTED bus_read(%04X)\n", address);
-        TODO
+        //  - - - CPU SET ENABLE REGISTER
+        cpuSetIeRegister(value);
     }
     else
     {

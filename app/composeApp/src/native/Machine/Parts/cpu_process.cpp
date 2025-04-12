@@ -109,15 +109,31 @@ static void XOR_PROCESS(CPUContext* ctx)
     cpuSetFlag(ctx, ctx->registerFile.accumulator == 0,0,0,0);
 }
 
+
+// - - -  CPU gives STATIC LOAD
+static void LDH_PROCESS(CPUContext* ctx)
+{
+    if(ctx->currInstruction->reg1 == REG_A)
+    {
+        cpuSetRegister(ctx->currInstruction->reg1, busRead(0xFF00 | ctx->readData));
+    }
+    else
+    {
+        busWrite(0xFF00|ctx->readData, ctx->registerFile.accumulator);
+    }
+    emuCycles(1);
+}
+
 // - - - fix bad identation later thanks to Andriod Development studio
 static INSTRUCTION_PROCESS process[] =
         {
                [INSTRUCTION_NONE] =  NONE_PROCESS,
                [INSTRUCTION_NOP] = NOP_PROCESS,
+               [INSTRUCTION_LOAD] = LOAD_PROCESS,
+               [INSTRUCTION_LDH] = LDH_PROCESS,
+               [INSTRUCTION_JUMP] = JUMP_PROCESS,
                [INSTRUCTION_DI] = DI_PROCESS,
                [INSTRUCTION_XOR] = XOR_PROCESS,
-               [INSTRUCTION_LOAD] = LOAD_PROCESS,
-               [INSTRUCTION_JUMP] = JUMP_PROCESS,
 
         };
 

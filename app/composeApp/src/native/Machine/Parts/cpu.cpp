@@ -127,11 +127,13 @@ static Instruction instructions[POSSIBLE_INSTRUCTION_COUNT] =
         [0xC3] = {INSTRUCTION_JUMP, ADDRESS_MODE_D16},
 
         //0xEX
+        [0xE0] = {INSTRUCTION_LDH, ADDRESS_MODE_A8_R, REG_NONE, REG_A},
         [0xE2] = {INSTRUCTION_LOAD, ADDRESS_MODE_MR_R, REG_C, REG_A},
         [0xEA] = {INSTRUCTION_LOAD, ADDRESS_MODE_A16_R, REG_NONE, REG_A},
 
 
         //0xFX
+        [0xF0] = {INSTRUCTION_LDH, ADDRESS_MODE_R_A8, REG_A},
         [0xF2] = {INSTRUCTION_LOAD, ADDRESS_MODE_R_MR, REG_A, REG_C},
         [0xF3] = {INSTRUCTION_DI},
         [0xFA] = {INSTRUCTION_LOAD, ADDRESS_MODE_R_A16, REG_A},
@@ -142,6 +144,15 @@ FORGE_API Instruction* InstructionByOpcode(u8 opCode)
     return &instructions[opCode];
 }
 
+FORGE_API u8 cpuGetIeRegister()
+{
+    return cpuCTX.ieRegister;
+}
+
+FORGE_API void cpuSetIeRegister(u8 n)
+{
+    cpuCTX.ieRegister = n;
+}
 
 // - - - CPU IMPLEMENTATIONS
 
