@@ -10,6 +10,10 @@
 
 
 // - - - Helper functions
+static bool is16Bit(RegisterType rt)
+{
+    return rt>=REG_AF;
+}
 
 static bool checkCondition(CPUContext* ctx)
 {
@@ -189,7 +193,7 @@ static void POP_PROCESS(CPUContext* ctx)
 // - - - When the CPU returns to a register
 static void RET_PROCESS(CPUContext* ctx)
 {
-    if(ctx->currInstruction->cond != CONDITION_NONE)
+    if(ctx->currInstruction->cond != CONDITIONS_NONE)
     {
         emuCycles(1);
     }
@@ -214,6 +218,54 @@ static void RETI_PROCESS(CPUContext* ctx)
     RET_PROCESS(ctx);
 }
 
+
+// - - - ARITHEMATIC INSTRUCTIONS
+
+static void INCREMENT_PROCESS(CPUContext* ctx)
+{
+    u16 val = cpuReadRegister(ctx->currInstruction->reg1) + 1;
+    if(is16Bit(ctx->currInstruction->reg1))
+    {
+        emuCycles(1);
+    }
+    if(ctx->currInstruction->reg1 == REG_HL && ctx->currInstruction->mode == ADDRESS_MODE_MR)
+    {
+        val = busRead(cpuReadRegister(REG_HL))+1;
+        val&= 0xFF;
+        busWrite(cpuReadRegister(REG_HL), val);
+    }
+    else
+    {
+        cpuSetRegister(ctx->currInstruction->reg1, val);
+        val = cpuReadRegister(ctx->currInstruction->reg1);
+    }
+
+    if((ctx->currentOpcode & 0x03) == 0x03) {return;}
+    cpuSetFlag(ctx, val == 0, 0, (val& 0x0F), -1);
+}
+
+static void DECREMENT_PROCESS(CPUContext* ctx)
+{
+    u16 val = cpuReadRegister(ctx->currInstruction->reg1) - 1;
+    if(is16Bit(ctx->currInstruction->reg1))
+    {
+        emuCycles(1);
+    }
+    if(ctx->currInstruction->reg1 == REG_HL && ctx->currInstruction->mode == ADDRESS_MODE_MR)
+    {
+        val = busRead(cpuReadRegister(REG_HL))-1;
+        busWrite(cpuReadRegister(REG_HL), val);
+    }
+    else
+    {
+        cpuSetRegister(ctx->currInstruction->reg1, val);
+        val = cpuReadRegister(ctx->currInstruction->reg1);
+    }
+
+    if((ctx->currentOpcode & 0x0B) == 0x0B) {return;}
+    cpuSetFlag(ctx, val == 0, 1, (val& 0x0F) == 0x0F, -1);
+}
+
 // - - - fix bad identation later thanks to Andriod Development studio
 static INSTRUCTION_PROCESS process[] =
         {
@@ -229,6 +281,8 @@ static INSTRUCTION_PROCESS process[] =
                [INSTRUCTION_CALL]  = CALL_PROCESS,
                [INSTRUCTION_RET]   = RET_PROCESS,
                [INSTRUCTION_RST]   = RST_PROCESS,
+               [INSTRUCTION_DECREMENT] = DECREMENT_PROCESS,
+               [INSTRUCTION_INCREMENT] = INCREMENT_PROCESS,
                [INSTRUCTION_RETI]  = RETI_PROCESS,
                [INSTRUCTION_XOR]   = XOR_PROCESS,
 
