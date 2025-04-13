@@ -1,5 +1,6 @@
 #include "cpu.h"
 #include "bus.h"
+#include "interrupts.h"
 #include "cartridge.h"
 #include "emu.h"
 #include "../../ForgeLib/include/asserts.h"
@@ -287,7 +288,7 @@ static Instruction instructions[POSSIBLE_INSTRUCTION_COUNT] =
         [0xF5] = {INSTRUCTION_PUSH, ADDRESS_MODE_R, REG_AF},
         [0xF6] = {INSTRUCTION_OR,ADDRESS_MODE_D8},
         [0xF7] = {INSTRUCTION_RST, ADDRESS_MODE_IMP, REG_NONE, REG_NONE, CONDITIONS_NONE, 0x30},
-        [0xF8] = {INSTRUCTION_LD, ADDRESS_MODE_HL_SPR, REG_HL, REG_SP},
+        [0xF8] = {INSTRUCTION_LOAD, ADDRESS_MODE_HL_SPR, REG_HL, REG_SP},
         [0xF9] = {INSTRUCTION_LOAD, ADDRESS_MODE_R_R, REG_SP, REG_HL},
         [0xFA] = {INSTRUCTION_LOAD, ADDRESS_MODE_R_A16, REG_A},
         [0xFB] = {INSTRUCTION_EI},
@@ -341,15 +342,35 @@ FORGE_API bool cpuTick() {
             FORGE_LOG_FATAL("UNKNOWN INSTRUCTION AT %02X\n", cpuCTX.currInstruction);
             exit(-7);
         }
+        // - - - EXECUTE
+        INSTRUCTION_PROCESS process = instructionGetProcessor(cpuCTX.currInstruction->type);
+        if(!process)
+        {
+            FORGE_LOG_DEBUG("NO PROCESS GIVEN FROM CPU");
+            exit(-7);
+        }
+        process(&cpuCTX);
+    }
+    else
+    {
+        // - - - Is Halted
+        emuCycles(1);
+
+        if(cpuCTX.intFlags)
+        {
+            cpuCTX.halted = false;
+        }
     }
 
-    //EXECUTE
-    INSTRUCTION_PROCESS process = instructionGetProcessor(cpuCTX.currInstruction->type);
-    if(!process)
+    if(cpuCTX.instructionMasterEnabled)
     {
-        FORGE_LOG_DEBUG("NO PROCESS GIVEN FROM CPU");
-        exit(-7);
+        cpuHandleInterrupts(&cpuCTX);
+        cpuCTX.enablingIME = false;
     }
-    process(&cpuCTX);
+
+    if(cpuCTX.enablingIME)
+    {
+        cpuCTX.instructionMasterEnabled = true;
+    }
     return true;
 }

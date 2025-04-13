@@ -151,6 +151,7 @@ typedef struct
     bool            instructionMasterEnabled;
     bool            enablingIME;
     u8              ieRegister;
+    u8              intFlags;
 } CPUContext;
 
 
@@ -183,6 +184,9 @@ void cpuSetRegister8(RegisterType registerType_, u8 val);
 
 u8 cpuGetIeRegister();
 void cpuSetIeRegister(u8 n);
+
+u8  cpuGetIntFlags();
+void cpuSetIntFlags(u8 val);
 
 void readData();
 #ifdef __cplusplus

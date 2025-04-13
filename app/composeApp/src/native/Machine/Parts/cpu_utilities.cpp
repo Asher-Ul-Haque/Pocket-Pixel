@@ -102,3 +102,13 @@ FORGE_API RegisterFile *cpuGetRegister()
 {
     return &cpuCTX.registerFile;
 }
+
+FORGE_API u8 cpuGetIntFlags()
+{
+        return cpuCTX.intFlags;
+}
+
+FORGE_API void cpuSetIntFlags(u8 val)
+{
+    cpuCTX.intFlags = val;
+}

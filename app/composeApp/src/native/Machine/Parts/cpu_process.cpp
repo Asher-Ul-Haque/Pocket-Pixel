@@ -606,6 +606,7 @@ static INSTRUCTION_PROCESS process[] =
                [INSTRUCTION_CPL]   = CPL_PROCESS,
                [INSTRUCTION_SCF]   = SCF_PROCESS,
                [INSTRUCTION_CCF]   = CCF_PROCESS,
+               [INSTRUCTION_EI]    = EI_PROCESS,
                [INSTRUCTION_RETI]  = RETI_PROCESS,
 
         };
