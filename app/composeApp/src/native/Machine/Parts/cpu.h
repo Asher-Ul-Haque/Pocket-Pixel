@@ -149,6 +149,7 @@ typedef struct
     bool            halted;
     bool            steppingMode;
     bool            instructionMasterEnabled;
+    bool            enablingIME;
     u8              ieRegister;
 } CPUContext;
 
@@ -171,6 +172,8 @@ INSTRUCTION_PROCESS instructionGetProcessor(InstructionType type);
 
 
 #define CPU_FLAG_Z IS_BIT_SET(ctx->registerFile.flags, 7)
+#define CPU_FLAG_N IS_BIT_SET(ctx->registerFile.flags, 6)
+#define CPU_FLAG_H IS_BIT_SET(ctx->registerFile.flags, 5)
 #define CPU_FLAG_C IS_BIT_SET(ctx->registerFile.flags, 4)
 
 u16 cpuReadRegister(RegisterType register_);

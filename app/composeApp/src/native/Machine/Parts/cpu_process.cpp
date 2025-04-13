@@ -158,6 +158,12 @@ static void DI_PROCESS(CPUContext* ctx)
     ctx->instructionMasterEnabled = false;
 }
 
+// - - - CPU gives EI instruction
+static void EI_PROCESS(CPUContext* ctx)
+{
+    ctx->enablingIME = true;
+}
+
 // - - -  CPU gives STATIC LOAD
 static void LDH_PROCESS(CPUContext* ctx)
 {
@@ -481,6 +487,89 @@ static void DECREMENT_PROCESS(CPUContext* ctx)
     cpuSetFlag(ctx, val == 0, 1, (val& 0x0F) == 0x0F, -1);
 }
 
+static void RLCA_PROCESS(CPUContext* ctx)
+{
+    u8 u = ctx->registerFile.accumulator;
+    bool c = (u >>7) & 1;
+    u = (u << 1) | c;
+    ctx->registerFile.accumulator = u;
+    cpuSetFlag(ctx, 0,0,0,c);
+}
+
+static void RRCA_PROCESS(CPUContext* ctx)
+{
+    u8 b = ctx->registerFile.accumulator & 1;
+    ctx->registerFile.accumulator >>=1;
+    ctx->registerFile.accumulator |= (b<<7);
+    cpuSetFlag(ctx, 0, 0, 0, b);
+}
+
+static void RLA_PROCESS(CPUContext* ctx)
+{
+    u8 u = ctx->registerFile.accumulator;
+    u8 cf = CPU_FLAG_C;
+    u8 c = (u>>7) &1;
+    ctx->registerFile.accumulator = (u <<1) | cf;
+    cpuSetFlag(ctx, 0,0,0,c);
+}
+
+static void RRA_PROCESS(CPUContext* ctx)
+{
+    u8 carry = CPU_FLAG_C;
+    u8 new_c = ctx->registerFile.accumulator & 1;
+
+    ctx->registerFile.accumulator >>=1;
+    ctx->registerFile.accumulator |= (carry << 7);
+
+    cpuSetFlag(ctx, 0, 0, 0, new_c);
+}
+
+static void STOP_PROCESS(CPUContext* ctx)
+{
+    FORGE_LOG_TRACE("STOPPING");
+    exit(-1);
+}
+
+static void DAA_PROCESS(CPUContext* ctx)
+{
+    u8 u = 0;
+    int fc = 0;
+
+    if(CPU_FLAG_H || (!CPU_FLAG_N && (ctx->registerFile.accumulator & 0xF) > 9))
+    {
+        u = 6;
+    }
+
+    if(CPU_FLAG_C || (!CPU_FLAG_N && ctx->registerFile.accumulator > 0x99))
+    {
+        u |= 0x60;
+        fc = 1;
+    }
+
+    ctx->registerFile.accumulator += CPU_FLAG_N ? -u : u;
+    cpuSetFlag(ctx, ctx->registerFile.accumulator == 0, -1, 0 ,fc);
+}
+
+static void CPL_PROCESS(CPUContext* ctx)
+{
+    ctx->registerFile.accumulator = ~ctx->registerFile.accumulator;
+    cpuSetFlag(ctx, -1, 1, 1, -1);
+}
+
+static void SCF_PROCESS(CPUContext* ctx)
+{
+    cpuSetFlag(ctx, -1, 0, 0, 1);
+}
+
+static void CCF_PROCESS(CPUContext* ctx)
+{
+    cpuSetFlag(ctx, -1, 0,0,CPU_FLAG_C ^ 1);
+}
+
+static void HALT_PROCESS(CPUContext* ctx)
+{
+    ctx->halted = true;
+}
 // - - - fix bad identation later thanks to Andriod Development studio
 static INSTRUCTION_PROCESS process[] =
         {
@@ -503,11 +592,21 @@ static INSTRUCTION_PROCESS process[] =
                [INSTRUCTION_SUB]   = SUB_PROCESS,
                [INSTRUCTION_SBC]   = SBC_PROCESS,
                [INSTRUCTION_AND]   = AND_PROCESS,
+               [INSTRUCTION_XOR]   = XOR_PROCESS,
                [INSTRUCTION_OR]    = OR_PROCESS,
                [INSTRUCTION_CP]    = CP_PROCESS,
                [INSTRUCTION_CB]    = CB_PROCESS,
+               [INSTRUCTION_RRCA]  = RRCA_PROCESS,
+               [INSTRUCTION_RLCA]  = RLCA_PROCESS,
+               [INSTRUCTION_RRA]   = RRA_PROCESS,
+               [INSTRUCTION_RLA]   = RLA_PROCESS,
+               [INSTRUCTION_STOP]  = STOP_PROCESS,
+               [INSTRUCTION_HALT]  = HALT_PROCESS,
+               [INSTRUCTION_DAA]   = DAA_PROCESS,
+               [INSTRUCTION_CPL]   = CPL_PROCESS,
+               [INSTRUCTION_SCF]   = SCF_PROCESS,
+               [INSTRUCTION_CCF]   = CCF_PROCESS,
                [INSTRUCTION_RETI]  = RETI_PROCESS,
-               [INSTRUCTION_XOR]   = XOR_PROCESS,
 
         };
 
