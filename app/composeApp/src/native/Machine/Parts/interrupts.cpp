@@ -21,6 +21,7 @@ bool intCheck(CPUContext* ctx, u16 addr, interrupt_type it)
     }
     return false;
 }
+
 void cpuHandleInterrupts(CPUContext* ctx)
 {
     if (intCheck(ctx, 0x40, IT_VBLANK)) {}
