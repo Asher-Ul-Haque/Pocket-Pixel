@@ -7,8 +7,7 @@
 int main(int argc, char const *argv[])
 {
     emuRunning(nullptr, 0);
-	cartridgeLoad(nullptr, 0);
-	FORGE_LOG_INFO("Hello World");
+	FORGE_LOG_INFO("EMU STARTED");
 	return 0;
 }
 #endif
