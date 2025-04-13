@@ -1,12 +1,12 @@
 # Compiler settings
 CC = clang
 CXX = clang++
-CFLAGS = -Wall -I. -I../../ForgeLib/include  -I../Parts -I../Utils
-CXXFLAGS = -Wall -I. -I../../ForgeLib/include  -I../Parts -I../Utils
+CFLAGS = -Wall -I../../../native/
+CXXFLAGS = -Wall -I../../../native/
 LDFLAGS =
 
 # Source directories
-SRC_DIRS = . ../../ForgeLib/implement ../Utils 
+SRC_DIRS = ../../../native/ 
 
 # Find all .c and .cpp files in the source directories
 C_SRCS := $(shell find $(SRC_DIRS) -name '*.c')
