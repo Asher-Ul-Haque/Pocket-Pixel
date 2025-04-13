@@ -12,6 +12,7 @@ extern "C" {
 typedef struct
 {
     bool paused;
+    bool die;
     bool running;
     u64 ticks;
 }emuContext;

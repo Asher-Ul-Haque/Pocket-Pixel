@@ -2,6 +2,9 @@
 #include "emu.h"
 #include <thread>
 #include "cartridge.h"
+#include "ui.h"
+#include <pthread.h>
+#include <unistd.h>
 #include "cpu.h"
 /*
   Emu components:
@@ -24,16 +27,10 @@ void delay(u32 ms) {
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 }
 
-int emuRunning(u8* rom, u64 romSize) {
-    if (!cartridgeLoad(rom, romSize)) {
-        printf("Failed to load ROM file at EMU RUNNING");
-        return -2;
-    }
-
-    FORGE_LOG_DEBUG("Cart loaded...");
-    // NOTE: NEED TO IMPLEMENT LOGIC FOR BUFFER IN KOTLIN
+// - - - Main Thread
+void* cpuRun(void *p)
+{
     cpuInit();
-
     ctx.running = true;
     ctx.paused = false;
     ctx.ticks = 0;
@@ -46,10 +43,33 @@ int emuRunning(u8* rom, u64 romSize) {
 
         if (!cpuTick()) {
             printf("CPU Stopped\n");
-            return -3;
+            return 0;
         }
-
         ctx.ticks++;
+    }
+    return 0;
+}
+
+int emuRunning(u8* rom, u64 romSize) {
+    if (!cartridgeLoad(rom, romSize)) {
+        printf("Failed to load ROM file at EMU RUNNING");
+        return -2;
+    }
+
+    FORGE_LOG_DEBUG("Cart loaded...");
+    // NOTE: NEED TO IMPLEMENT LOGIC FOR BUFFER IN KOTLIN
+    ui_init();
+    pthread_t t1;
+    if(pthread_create(&t1, NULL, cpuRun, NULL))
+    {
+        FORGE_LOG_ERROR("THREAD CREATION FAILED FOR CPU");
+        exit(-1);
+    }
+
+    while(!ctx.die)
+    {
+        usleep(1000);
+        uiHandleEvents();
     }
 
     return 0;
