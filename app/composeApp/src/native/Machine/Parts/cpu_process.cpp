@@ -136,14 +136,6 @@ static void DI_PROCESS(CPUContext* ctx)
     ctx->instructionMasterEnabled = false;
 }
 
-// - - - CPU gives XOR instruction
-static void XOR_PROCESS(CPUContext* ctx)
-{
-    ctx->registerFile.accumulator ^= ctx->readData & 0xFF;
-    cpuSetFlag(ctx, ctx->registerFile.accumulator == 0,0,0,0);
-}
-
-
 // - - -  CPU gives STATIC LOAD
 static void LDH_PROCESS(CPUContext* ctx)
 {
@@ -218,6 +210,31 @@ static void RETI_PROCESS(CPUContext* ctx)
     RET_PROCESS(ctx);
 }
 
+// - - - BINARY INSTRUCTIONS
+
+static void AND_PROCESS(CPUContext* ctx)
+{
+    ctx->registerFile.accumulator &= ctx->readData;
+    cpuSetFlag(ctx, ctx->registerFile.accumulator == 0 , 0, 1,0);
+}
+
+static void XOR_PROCESS(CPUContext* ctx)
+{
+    ctx->registerFile.accumulator ^= ctx->readData & 0xFF;
+    cpuSetFlag(ctx, ctx->registerFile.accumulator== 0, 0, 0, 0);
+}
+
+static void OR_PROCESS(CPUContext* ctx)
+{
+    ctx->registerFile.accumulator |= ctx->readData & 0xFF;
+    cpuSetFlag(ctx, ctx->registerFile.accumulator== 0, 0, 0, 0);
+}
+
+static void CP_PROCESS(CPUContext* ctx)
+{
+    int n = (int)ctx->registerFile.accumulator - (int)ctx->readData;
+    cpuSetFlag(ctx, n==0, 1, ((int)ctx->registerFile.accumulator & 0x0F) - ((int)ctx->readData) < 0, n<0);
+}
 
 // - - - ARITHEMATIC INSTRUCTIONS
 
