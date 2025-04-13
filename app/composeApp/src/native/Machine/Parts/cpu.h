@@ -175,6 +175,8 @@ INSTRUCTION_PROCESS instructionGetProcessor(InstructionType type);
 
 u16 cpuReadRegister(RegisterType register_);
 void cpuSetRegister(RegisterType, u16 val);
+u8 cpuReadRegister8(RegisterType registerType_);
+void cpuSetRegister8(RegisterType registerType_, u8 val);
 
 u8 cpuGetIeRegister();
 void cpuSetIeRegister(u8 n);

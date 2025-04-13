@@ -1,4 +1,7 @@
 #include "cpu.h"
+#include "../../ForgeLib/include/logger.h"
+#include "bus.h"
+
 extern CPUContext cpuCTX;
 
 u16 reverse(u16 n) {
@@ -54,6 +57,47 @@ void cpuSetRegister(RegisterType rt, u16 val) {
     }
 }
 
+u8 cpuReadRegister8(RegisterType rt)
+{
+    switch(rt)
+    {
+        case REG_A : return cpuCTX.registerFile.accumulator;
+        case REG_F : return cpuCTX.registerFile.flags;
+        case REG_B : return cpuCTX.registerFile.b;
+        case REG_C : return cpuCTX.registerFile.c;
+        case REG_D : return cpuCTX.registerFile.d;
+        case REG_E : return cpuCTX.registerFile.e;
+        case REG_H : return cpuCTX.registerFile.h;
+        case REG_L : return cpuCTX.registerFile.l;
+        case REG_HL:
+        {
+            return busRead(cpuReadRegister(REG_HL));
+        }
+        default:
+            FORGE_LOG_ERROR("INVALID OPERATION FOR CPU READ REGISTER 8 BIT");
+    }
+}
+
+void cpuSetRegister8(RegisterType rt, u8 val)
+{
+    switch(rt)
+    {
+        case REG_A : cpuCTX.registerFile.accumulator = val & 0xFF; break;
+        case REG_F : cpuCTX.registerFile.flags = val & 0xFF; break;
+        case REG_B : cpuCTX.registerFile.b = val & 0xFF; break;
+        case REG_C : cpuCTX.registerFile.c = val & 0xFF; break;
+        case REG_D : cpuCTX.registerFile.d = val & 0xFF; break;
+        case REG_E : cpuCTX.registerFile.e = val & 0xFF; break;
+        case REG_H : cpuCTX.registerFile.h= val & 0xFF; break;
+        case REG_L : cpuCTX.registerFile.l= val & 0xFF; break;
+        case REG_HL:
+        {
+            busWrite(cpuReadRegister(REG_HL), val);
+        }
+        default:
+            FORGE_LOG_ERROR("INVALID OPERATION FOR CPU WRITE REGISTER 8 BIT");
+    }
+}
 FORGE_API RegisterFile *cpuGetRegister()
 {
     return &cpuCTX.registerFile;

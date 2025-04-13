@@ -55,6 +55,28 @@ static void cpuSetFlag(CPUContext *ctx, char z, char n, char h, char c)
     }
 
 }
+
+RegisterType rt_lookup[] =
+        {
+            REG_B,
+            REG_C,
+            REG_D,
+            REG_E,
+            REG_H,
+            REG_L,
+            REG_HL,
+            REG_A
+        };
+
+RegisterType DECODE_REG(u8 reg)
+{
+        if(reg > 0B111)
+        {
+            return REG_NONE;
+        }
+        return rt_lookup[reg];
+}
+
 // - - - CPU gives a null process
 static void NONE_PROCESS(CPUContext* ctx)
 {
@@ -150,7 +172,7 @@ static void LDH_PROCESS(CPUContext* ctx)
     emuCycles(1);
 }
 
-
+// - - -  STACK PUSH operation
 static void PUSH_PROCESS(CPUContext* ctx)
 {
     u16 hi = (cpuReadRegister(ctx->currInstruction->reg1) >> 8) & 0xFF;
@@ -165,7 +187,7 @@ static void PUSH_PROCESS(CPUContext* ctx)
 }
 
 
-
+// - - - STACK POP operation
 static void POP_PROCESS(CPUContext* ctx)
 {
     u16 lo = stackPop();
@@ -236,6 +258,115 @@ static void CP_PROCESS(CPUContext* ctx)
     cpuSetFlag(ctx, n==0, 1, ((int)ctx->registerFile.accumulator & 0x0F) - ((int)ctx->readData) < 0, n<0);
 }
 
+static void CB_PROCESS(CPUContext* ctx)
+{
+    u8 op = ctx->readData;
+    RegisterType reg = DECODE_REG(op & 0xB111);
+    u8 bit = (op >> 3) & 0xB111;
+    u8 bitOp = (op >> 6) & 0xB11;
+    u8 regVal = cpuReadRegister8(reg);
+    emuCycles(1);
+
+    if(reg == REG_HL) emuCycles(2);
+    switch (bitOp) {
+        case 1:
+            cpuSetFlag(ctx, !(regVal & (1<<bit)), 0, 1, -1);
+            return;
+        case 2:
+            regVal &= ~(1 << bit);
+            cpuSetRegister8(reg, regVal);
+            return;
+        case 3:
+            regVal |= (1<<bit);
+            cpuSetRegister8(reg, regVal);
+            return;
+    }
+    bool flagC = CPU_FLAG_C;
+
+    switch(bit)
+    {
+        case 0: {
+            // - - - RLC
+            bool setC = false;
+            u8 result = (regVal << 1) & 0xFF;
+            if ((regVal & (1 << 7)) != 0) {
+                result |= 1;
+                setC = true;
+            }
+
+            cpuSetRegister8(reg, result);
+            cpuSetFlag(ctx, result == 0, false, false, setC);
+        }return;
+
+        case  1:
+        {
+            // - - - RRC
+            u8 old = regVal;
+            regVal >>= 1;
+            regVal |= (old << 7);
+            cpuSetRegister8(reg, regVal);
+            cpuSetFlag(ctx, !regVal, false, false, old &1);
+        } return;
+
+        case 2:
+        {
+            // - - - RL
+            u8 old = regVal;
+            regVal <<= 1;
+            regVal |= flagC;
+
+            cpuSetRegister8(reg, regVal);
+            cpuSetFlag(ctx, !regVal, false, false, !!(old&0x80));
+        } return;
+
+        case 3:
+        {
+            // - - - RR
+            u8 old = regVal;
+            regVal >>=1;
+            regVal |= (flagC << 7);
+            cpuSetRegister8(reg, regVal);
+            cpuSetFlag(ctx, !regVal, false, false, old&1);
+        } return;
+
+        case 4:
+        {
+            // - - - SLA
+            u8 old = regVal;
+            regVal <<=1;
+            cpuSetRegister8(reg, regVal);
+            cpuSetFlag(ctx, !regVal, false, false, !!(old & 0x80));
+        } return;
+
+        case 5:
+        {
+            // - - - SRA
+            u8 u = (int8_t) regVal >> 1;
+            cpuSetRegister8(reg, u);
+            cpuSetFlag(ctx, !u, 0,0,regVal & 1);
+        } return;
+
+        case 6:
+        {
+            // - - - SWAP
+            regVal = ((regVal & 0xF0) >> 4) | ((regVal & 0xF) << 4);
+            cpuSetRegister8(reg, regVal);
+            cpuSetFlag(ctx, regVal == 0, false, false, false);
+        }return ;
+
+        case 7:
+        {
+            // - - - SRL
+            u8 u =regVal >> 1;
+            cpuSetRegister8(reg, u);
+            cpuSetFlag(ctx, !u, 0, 0, regVal & 1);
+        } return;
+    }
+
+    FORGE_LOG_ERROR("ERROR: INVALID CB: %02X", op);
+    exit(-1);
+}
+
 // - - - ARITHEMATIC INSTRUCTIONS
 
 static void SUB_PROCESS(CPUContext* ctx)
@@ -267,7 +398,7 @@ static void ADC_PROCESS(CPUContext* ctx)
     u16 a = ctx->registerFile.accumulator;
     u16 c = CPU_FLAG_C;
 
-    ctx->registerFile.accumulator = (a+u+c) && 0xFF;
+    ctx->registerFile.accumulator = (a+u+c) & 0xFF;
 
     cpuSetFlag(ctx, ctx->registerFile.accumulator == 0, 0, (a&0xF) + (u&0xF) + c > 0xF, a+ u + c > 0xFF);
 }
@@ -371,6 +502,10 @@ static INSTRUCTION_PROCESS process[] =
                [INSTRUCTION_ADC]   = ADC_PROCESS,
                [INSTRUCTION_SUB]   = SUB_PROCESS,
                [INSTRUCTION_SBC]   = SBC_PROCESS,
+               [INSTRUCTION_AND]   = AND_PROCESS,
+               [INSTRUCTION_OR]    = OR_PROCESS,
+               [INSTRUCTION_CP]    = CP_PROCESS,
+               [INSTRUCTION_CB]    = CB_PROCESS,
                [INSTRUCTION_RETI]  = RETI_PROCESS,
                [INSTRUCTION_XOR]   = XOR_PROCESS,
 
