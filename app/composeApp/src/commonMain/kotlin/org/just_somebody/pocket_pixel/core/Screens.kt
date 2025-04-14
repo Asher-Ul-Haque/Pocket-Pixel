@@ -24,4 +24,10 @@ sealed interface Screens
 
   @Serializable
   data object DownloadsPage  : Screens
+
+  @Serializable
+  data object CartridgePage  : Screens
+
+  @Serializable
+  data object EmulatorPage   : Screens
 }

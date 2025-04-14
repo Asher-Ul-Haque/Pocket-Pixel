@@ -15,18 +15,22 @@ enum class ScreensToInt(val SCREEN : Int)
   Explore   (1),
   Favorites (2),
   Me        (3),
-  Downloads (4)
+  Downloads (4),
+  Cartridge (5),
+  Emulator  (6)
 }
 
 fun intToScreen(INT : Int) : ScreensToInt
 {
-  when (INT % 5)
+  when (INT % 7)
   {
     0 -> return ScreensToInt.Search;
     1 -> return ScreensToInt.Explore;
     2 -> return ScreensToInt.Favorites;
     3 -> return ScreensToInt.Me;
     4 -> return ScreensToInt.Downloads
+    5 -> return ScreensToInt.Cartridge
+    6 -> return ScreensToInt.Emulator
   }
-  return ScreensToInt.Explore;
+  return ScreensToInt.Search;
 }

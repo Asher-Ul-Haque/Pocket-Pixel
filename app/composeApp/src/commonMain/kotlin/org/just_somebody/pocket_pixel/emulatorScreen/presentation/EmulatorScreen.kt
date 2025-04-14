@@ -1,4 +1,4 @@
-package org.just_somebody.pocket_pixel
+package org.just_somebody.pocket_pixel.emulatorScreen.presentation
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
@@ -18,10 +18,13 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
+import org.just_somebody.pocket_pixel.core.onError
+import org.just_somebody.pocket_pixel.core.onSuccess
 import org.just_somebody.pocket_pixel.core.theme.GameBoyColors
 import org.just_somebody.pocket_pixel.core.theme.PokeFontFamily
+import org.just_somebody.pocket_pixel.depInj.getGame
+import org.just_somebody.pocket_pixel.depInj.getNetworkCalls
 import org.just_somebody.pocket_pixel.emulatorScreen.domain.GameBoy
-import org.just_somebody.pocket_pixel.emulatorScreen.presentation.EmulatorViewModel
 
 @Composable
 fun EmulatorScreen(
@@ -29,13 +32,15 @@ fun EmulatorScreen(
     VIEW_MODEL  : EmulatorViewModel = EmulatorViewModel()
 )
 {
-    val gameBoy     =   VIEW_MODEL.state.gameBoy
+    val gameBoy     = VIEW_MODEL.state.gameBoy
     var frame       by remember { mutableStateOf(renderFrame(gameBoy.getFrameBuffer())) }
 
     LaunchedEffect(Unit)
     {
-        gameBoy.startEmulator()
-        gameBoy.loadROM(byteArrayOf())
+        gameBoy.resetEmulator()
+        getNetworkCalls().getGameROM(getGame())
+            .onError    { gameBoy.loadROM(byteArrayOf()) }
+            .onSuccess  { rom -> gameBoy.loadROM(rom)  }
         while (true)
         {
             gameBoy.stepFrame()

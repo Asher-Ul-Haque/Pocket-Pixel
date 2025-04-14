@@ -12,15 +12,16 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import org.just_somebody.pocket_pixel.EmulatorScreen
+import org.just_somebody.pocket_pixel.emulatorScreen.presentation.EmulatorScreen
 import org.just_somebody.pocket_pixel.browseScreen.data.ScreensToInt
 import org.just_somebody.pocket_pixel.browseScreen.data.intToScreen
+import org.just_somebody.pocket_pixel.cartridgeScreen.presentation.CartridgeUI
 import org.just_somebody.pocket_pixel.core.Screens
 import org.just_somebody.pocket_pixel.core.isLandscape
 import org.just_somebody.pocket_pixel.core.theme.GameBoyColors
 import org.just_somebody.pocket_pixel.depInj.getMenuItems
-import org.just_somebody.pocket_pixel.depInj.getNavController
-import org.just_somebody.pocket_pixel.splashScreen.presentation.SplashScreen
+import org.just_somebody.pocket_pixel.favoritesScreen.presentation.FavoritesScreen
+import org.just_somebody.pocket_pixel.searchScreen.presentation.SearchScreen
 
 
 fun navigate(SCREEN : ScreensToInt, NAV_CONTROLLER : NavController)
@@ -32,6 +33,8 @@ fun navigate(SCREEN : ScreensToInt, NAV_CONTROLLER : NavController)
     ScreensToInt.Favorites  -> NAV_CONTROLLER.navigate(Screens.FavoritesPage);
     ScreensToInt.Me         -> NAV_CONTROLLER.navigate(Screens.MePage);
     ScreensToInt.Downloads  -> NAV_CONTROLLER.navigate(Screens.DownloadsPage);
+    ScreensToInt.Cartridge  -> NAV_CONTROLLER.navigate(Screens.CartridgePage)
+    ScreensToInt.Emulator   -> NAV_CONTROLLER.navigate(Screens.EmulatorPage)
   }
 }
 
@@ -81,14 +84,20 @@ fun MainScreen(MODIFIER  : Modifier = Modifier)
         {
           NavHost(
             navController     = navController,
-            startDestination  = Screens.FavoritesPage
+            startDestination  = Screens.SearchPage
           )
           {
             composable<Screens.MePage>            {         temp();         }
-            composable<Screens.ExplorePage>       {     EmulatorScreen()    }
-            composable<Screens.FavoritesPage>     {         temp();         }
-            composable<Screens.SearchPage>        {         temp();         }
+            composable<Screens.ExplorePage>       {         temp();         }
             composable<Screens.DownloadsPage>     {         temp();         }
+            composable<Screens.EmulatorPage>      {     EmulatorScreen();   }
+            composable<Screens.FavoritesPage>
+            { FavoritesScreen(GO_TO_GAME = { navController.navigate(Screens.CartridgePage) }); }
+            composable<Screens.SearchPage>
+            { SearchScreen(GO_TO_GAME = { navController.navigate(Screens.CartridgePage) }); }
+            composable<Screens.CartridgePage>
+            { CartridgeUI(START_GAME = { navController.navigate(Screens.EmulatorPage) }) }
+
           }
         }
       }

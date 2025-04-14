@@ -9,7 +9,11 @@ import kotlinx.coroutines.launch
 import org.just_somebody.pocket_pixel.core.Gamer
 import org.just_somebody.pocket_pixel.core.onError
 import org.just_somebody.pocket_pixel.core.onSuccess
-import org.just_somebody.pocket_pixel.depInj.getSplashNetworkCalls
+import org.just_somebody.pocket_pixel.depInj.getGamer
+import org.just_somebody.pocket_pixel.depInj.getNetworkCalls
+import org.just_somebody.pocket_pixel.depInj.setGamer
+import org.just_somebody.pocket_pixel.depInj.setGamerPass
+import org.just_somebody.pocket_pixel.depInj.setGamerTag
 import org.just_somebody.pocket_pixel.splashScreen.domain.getGamerSessionStorage
 
 class SplashViewModel : ViewModel()
@@ -22,20 +26,11 @@ class SplashViewModel : ViewModel()
     println("doing action : $ACTION");
     when (ACTION)
     {
-      is SplashActions.ChangeName ->
-        state = state.copy(gamer = Gamer(ACTION.NAME, state.gamer.password));
-
-      is SplashActions.ChangePass ->
-        state = state.copy(gamer = Gamer(state.gamer.name, ACTION.PASS));
-
-      SplashActions.Login         ->
-        login()
-
-      SplashActions.Register      ->
-        register()
-
-      SplashActions.AutoLogin     ->
-        autoLogin()
+      is SplashActions.ChangeName -> setGamerTag(ACTION.NAME)
+      is SplashActions.ChangePass -> setGamerPass(ACTION.PASS)
+      SplashActions.Login         -> login()
+      SplashActions.Register      -> register()
+      SplashActions.AutoLogin     -> autoLogin()
     }
   }
 
@@ -43,10 +38,9 @@ class SplashViewModel : ViewModel()
   {
     viewModelScope.launch ()
     {
-      state = state.copy(
-        isLoggedIn  = false,
-        gamer       = getGamerSessionStorage().getGamer() ?: state.gamer);
-      println(state.gamer)
+      state = state.copy(isLoggedIn  = false);
+      setGamer(getGamerSessionStorage().getGamer() ?: getGamer());
+      println(getGamer())
       login()
       state = state.copy(isLoginError = false)
     }
@@ -57,10 +51,10 @@ class SplashViewModel : ViewModel()
     viewModelScope.launch ()
     {
       state       = state.copy(isLoggingIn = true);
-      val result  = getSplashNetworkCalls().loginGamer(state.gamer)
+      val result  = getNetworkCalls().loginGamer(getGamer())
       result.onSuccess ()
         {
-          getGamerSessionStorage().saveGamer(state.gamer)
+          getGamerSessionStorage().saveGamer(getGamer())
           println("Wow, we did it");
           state = state.copy(
             isLoggedIn    = true,
@@ -85,10 +79,10 @@ class SplashViewModel : ViewModel()
     viewModelScope.launch ()
     {
       state       = state.copy(isLoggingIn = true);
-      val result  = getSplashNetworkCalls().registerGamer(state.gamer)
+      val result  = getNetworkCalls().registerGamer(getGamer())
       result.onSuccess ()
       {
-        getGamerSessionStorage().saveGamer(state.gamer)
+        getGamerSessionStorage().saveGamer(getGamer())
         println("Wow, we did it");
         state = state.copy(
           isLoggedIn    = true,

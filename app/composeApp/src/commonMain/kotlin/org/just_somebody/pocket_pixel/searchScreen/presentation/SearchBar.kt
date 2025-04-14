@@ -1,20 +1,13 @@
 package org.just_somebody.pocket_pixel.searchScreen.presentation
 
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.LocalTextSelectionColors
 import androidx.compose.foundation.text.selection.TextSelectionColors
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -23,15 +16,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
-import org.jetbrains.compose.resources.stringResource
 import org.just_somebody.pocket_pixel.core.theme.GameBoyColors
 import org.just_somebody.pocket_pixel.core.theme.PokeFontFamily
 import pocketpixel.composeapp.generated.resources.Res
@@ -41,9 +32,12 @@ import pocketpixel.composeapp.generated.resources.searchIcon
 fun SearchBar(
   SEARCH_QUERY            : String,
   ON_SEARCH_QUERY_CHANGE  : (String) -> Unit,
+  ON_SEARCH_TRIGGER       : () -> Unit,
   MODIFIER                : Modifier = Modifier
 )
 {
+  val keyboardController = LocalSoftwareKeyboardController.current
+
   CompositionLocalProvider(
     LocalTextSelectionColors provides TextSelectionColors(
       handleColor     = GameBoyColors.LightGreen,
@@ -60,15 +54,31 @@ fun SearchBar(
         unfocusedBorderColor  = GameBoyColors.Green,
         cursorColor           = GameBoyColors.DarkGreen,
       ),
+      keyboardOptions = KeyboardOptions(
+        imeAction     = ImeAction.Search,
+        keyboardType  = KeyboardType.Text
+      ),
+      keyboardActions = KeyboardActions(
+        onSearch =
+          {
+            ON_SEARCH_TRIGGER()
+            keyboardController?.hide()
+          }
+      ),
       placeholder     =
       {
         Text(
           text        = "Search...",
           color       = GameBoyColors.MediumGreen,
-          fontSize    = 36.sp,
+          fontSize    = 24.sp,
           fontFamily  = PokeFontFamily(),
         )
       },
+      textStyle       = TextStyle(
+        color       = GameBoyColors.DarkGreen,
+        fontSize    = 24.sp,
+        fontFamily  = PokeFontFamily()
+      ),
       leadingIcon     =
       {
         Icon(

@@ -6,7 +6,7 @@ static u64 frameCount = 0;
 #define FRAME_WIDTH 160
 
 
-void stopEmulator() { TODO }
+void stopEmulator() {  }
 
 void getFrame(u8* BUFFER)
 {

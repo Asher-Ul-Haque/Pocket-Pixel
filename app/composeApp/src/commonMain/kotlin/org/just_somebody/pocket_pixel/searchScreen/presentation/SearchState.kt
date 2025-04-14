@@ -4,6 +4,49 @@ import org.just_somebody.pocket_pixel.core.Game
 
 data class SearchState(
   val errorMessage  : String?     = null,
-  val searchQuery   : String      = "Pokemon Red",
-  val searchResults : List<Game>  = emptyList()
+  val searchQuery   : String      = "",
+  val searchResults : List<Game>  = listOf(
+    Game(
+      releaseYear = 1985,
+      title = "The Legend of Zelda",
+      publisher = "Capcom",
+      description = "Wake up at the beach, beware the racoon",
+      imageUrl = "https://upload.wikimedia.org/wikipedia/en/c/c1/Link%27s_Awakening.png"
+    ),
+    Game(
+      releaseYear = 1985,
+      title = "Pokemon Red",
+      publisher = "Nintendo",
+      description = "Gotta catch em all",
+      imageUrl = "https://upload.wikimedia.org/wikipedia/en/c/c1/Link%27s_Awakening.png"
+    ),
+    Game(
+      releaseYear = 1985,
+      title = "Mario",
+      publisher = "Nintendo",
+      description = "Tadam tum tadum tum",
+      imageUrl = "https://upload.wikimedia.org/wikipedia/en/c/c1/Link%27s_Awakening.png"
+    ),
+    Game(
+      releaseYear = 1985,
+      title = "Contra",
+      publisher = "Nintendo",
+      description = "Gotta catch em all",
+      imageUrl = "https://upload.wikimedia.org/wikipedia/en/c/c1/Link%27s_Awakening.png"
+    ),
+    Game(
+      releaseYear = 1985,
+      title = "Kirby",
+      publisher = "Nintendo",
+      description = "Tadam tum tadum tum",
+      imageUrl = "https://upload.wikimedia.org/wikipedia/en/c/c1/Link%27s_Awakening.png"
+    ),
+    Game(
+      releaseYear = 1985,
+      title = "DMG-Acid",
+      publisher = "Nintendo",
+      description = "Gotta catch em all",
+      imageUrl = "https://upload.wikimedia.org/wikipedia/en/c/c1/Link%27s_Awakening.png"
+    )
+  )
 )

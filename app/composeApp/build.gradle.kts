@@ -69,7 +69,8 @@ kotlin {
             implementation(libs.androidx.lifecycle.runtime.compose)
             implementation(libs.jetbrains.compose.navigation)
             implementation(libs.bundles.ktor)
-
+            implementation(libs.coil.compose.v310)
+            implementation(libs.coil.network.okhttp)
         }
         wasmJsMain.dependencies {
             implementation(libs.ktor.client.js)
