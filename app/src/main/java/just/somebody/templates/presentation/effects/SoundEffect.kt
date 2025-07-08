@@ -11,7 +11,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow
 
 enum class SoundEffect
-{ Click }
+{
+  Click,
+  Splash
+}
 
 object SoundController
 {
@@ -33,7 +36,8 @@ object SoundController
       .setAudioAttributes(audioAttributes)
       .build()
 
-    soundMap[SoundEffect.Click] = soundPool.load(App.appModule.context, R.raw.click, 1);
+    soundMap[SoundEffect.Click]  = soundPool.load(App.appModule.context, R.raw.click, 1);
+    soundMap[SoundEffect.Splash] = soundPool.load(App.appModule.context, R.raw.splash, 1);
   }
 
   suspend fun playSound(EFFECT : SoundEffect)

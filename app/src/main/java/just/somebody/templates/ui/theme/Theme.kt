@@ -2,6 +2,7 @@ package just.somebody.pocketpixel.ui.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -10,19 +11,34 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import just.somebody.templates.ui.theme.ExampleTypography
-import just.somebody.templates.ui.theme.MonoChrome
+import just.somebody.templates.ui.theme.PokeTypography
+import just.somebody.templates.ui.theme.GameBoyColors
 
-private val DarkColorScheme = darkColorScheme(
-  primary   = MonoChrome.Blue90,
-  secondary = MonoChrome.Blue50,
-  tertiary  = MonoChrome.Blue10
+
+val GameBoyLightColorScheme: ColorScheme = lightColorScheme(
+  primary        = GameBoyColors.MediumGreen,
+  onPrimary      = GameBoyColors.LightGreen,
+  secondary      = GameBoyColors.Green,
+  onSecondary    = GameBoyColors.DarkGreen,
+  background     = GameBoyColors.LightGreen,
+  onBackground   = GameBoyColors.DarkGreen,
+  surface        = GameBoyColors.Green,
+  onSurface      = GameBoyColors.DarkGreen,
+  error          = GameBoyColors.Error,
+  onError        = Color.White
 )
 
-private val LightColorScheme = lightColorScheme(
-  primary   = Color.Black,
-  secondary = MonoChrome.Blue70,
-  tertiary  = MonoChrome.Blue30
+val GameBoyDarkColorScheme: ColorScheme = darkColorScheme(
+  primary        = GameBoyColors.LightGreen,
+  onPrimary      = GameBoyColors.DarkGreen,
+  secondary      = GameBoyColors.Green,
+  onSecondary    = GameBoyColors.DarkGreen,
+  background     = GameBoyColors.DarkGreen,
+  onBackground   = GameBoyColors.LightGreen,
+  surface        = GameBoyColors.MediumGreen,
+  onSurface      = GameBoyColors.LightGreen,
+  error          = GameBoyColors.Error,
+  onError        = Color.White
 )
 
 
@@ -42,13 +58,13 @@ fun TemplateTheme(
       if (darkTheme)  dynamicDarkColorScheme(context)
       else            dynamicLightColorScheme(context)
     }
-    darkTheme -> DarkColorScheme
-    else      -> LightColorScheme
+    darkTheme -> GameBoyDarkColorScheme
+    else      -> GameBoyLightColorScheme
   }
 
   MaterialTheme(
     colorScheme = colorScheme,
-    typography  = ExampleTypography,
+    typography  = PokeTypography,
     content     = content
   )
 }

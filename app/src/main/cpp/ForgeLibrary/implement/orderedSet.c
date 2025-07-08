@@ -278,12 +278,12 @@ void createOrderedSet(OrderedSet* SET, u64 KEY_SIZE, memoryCompare* COMPARE, mem
   if (COMPARE == NULL)
   {
     FORGE_LOG_WARNING("[ORDERED SET] : No memory comparison function passed. Will use 'memcmp' from stdlib");
-    SET->compare = memcmp;
+    SET->compare = (i32 (*)(const void *, const void *, unsigned long)) memcmp;
   }
   if (MALLOC == NULL)
   {
     FORGE_LOG_WARNING("[ORDERED SET] : No memory allocation function passed. Will use 'malloc' from stdlib");
-    SET->allocator = malloc;
+    SET->allocator = (void *(*)(unsigned long)) malloc;
   }
   if (FREE == NULL)
   {

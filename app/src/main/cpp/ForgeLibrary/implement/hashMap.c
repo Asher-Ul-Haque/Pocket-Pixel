@@ -37,7 +37,7 @@ bool createHashMap(HashMap* MAP, unsigned long long SIZE, hashFunction* HASH_FUN
   if (MALLOC == NULL)
   {
     FORGE_LOG_WARNING("NULL passed as memory allocator, going with malloc from stdlib");
-    MAP->allocator      = malloc;
+    MAP->allocator      = (void *(*)(unsigned long)) malloc;
   }
   if (FREE == NULL)
   {
@@ -47,7 +47,7 @@ bool createHashMap(HashMap* MAP, unsigned long long SIZE, hashFunction* HASH_FUN
   if (MEMCMP == NULL)
   {
     FORGE_LOG_WARNING("NULL passed as memory compare, going with memcmp from stdlib");
-    MAP->compare        = memcmp;
+    MAP->compare        = (int (*)(const void *, const void *, unsigned long)) memcmp;
   }
   
   MAP->elements         = MAP->allocator(sizeof(MapEntry*) * MAP->size);

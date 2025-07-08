@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.dataStoreFile
+import androidx.lifecycle.viewmodel.compose.viewModel
 import just.somebody.templates.appModule.nativeBridge.NativeBridge
 import just.somebody.templates.appModule.network.NetworkService
 import just.somebody.templates.appModule.storage.DefaultExternalStorageManager
@@ -23,6 +24,8 @@ import just.somebody.templates.domain.Repository
 import just.somebody.templates.presentation.screens.DefaultNavigator
 import just.somebody.templates.presentation.screens.Destination
 import just.somebody.templates.presentation.screens.Navigator
+import just.somebody.templates.presentation.viewModels.BrowseViewModel
+import just.somebody.templates.presentation.viewModels.viewModelFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -50,7 +53,7 @@ class AppModule(private val APP_CONTEXT : Context) : AppModuleInterface
   override val context                : Context                 by lazy { APP_CONTEXT }
   override val api                    : Api                     by lazy { ApiImpl(); }
   override val repo                   : Repository              by lazy { RepositoryImpl(this.api);}
-  override val navigator              : Navigator               by lazy { DefaultNavigator(startDestination = Destination.ScreenA) }
+  override val navigator              : Navigator               by lazy { DefaultNavigator(startDestination = Destination.Home) }
   override val hardwareManager        : HardwareManager         by lazy { DefaultHardwareManager(APP_CONTEXT) }
   override val permissionManager      : PermissionManager       by lazy { DefaultPermissionManager() }
   override val dataStoreManager       : DataStoreManager        by lazy { DataStoreManager(appSettingsDataStore) }

@@ -6,20 +6,20 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import just.somebody.templates.R
 
-val ExampleFontFamily : FontFamily =
+val PokeFontFamily : FontFamily =
   FontFamily(
-    Font(R.font.times, weight = FontWeight.Light),
-    Font(R.font.times, weight = FontWeight.Normal),
-    Font(R.font.times, weight = FontWeight.Medium),
-    Font(R.font.times, weight = FontWeight.SemiBold),
-    Font(R.font.times, weight = FontWeight.Bold),
-    Font(R.font.times, weight = FontWeight.ExtraBold)
+    Font(R.font.pokemon_fire_red, weight = FontWeight.Light),
+    Font(R.font.pokemon_fire_red, weight = FontWeight.Normal),
+    Font(R.font.pokemon_fire_red, weight = FontWeight.Medium),
+    Font(R.font.pokemon_fire_red, weight = FontWeight.SemiBold),
+    Font(R.font.pokemon_fire_red, weight = FontWeight.Bold),
+    Font(R.font.pokemon_fire_red, weight = FontWeight.ExtraBold)
   )
 
-val ExampleTypography : Typography =
+val PokeTypography : Typography =
   Typography().run ()
   {
-    val fontFamily = ExampleFontFamily
+    val fontFamily = PokeFontFamily
     copy(
       displayLarge      = displayLarge.copy  (fontFamily = fontFamily),
       displayMedium     = displayMedium.copy (fontFamily = fontFamily),

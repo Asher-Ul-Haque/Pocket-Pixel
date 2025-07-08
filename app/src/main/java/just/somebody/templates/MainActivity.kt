@@ -1,9 +1,11 @@
 package just.somebody.templates
 
+import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.os.Bundle
 import android.view.View
 import android.view.animation.OvershootInterpolator
+import android.window.SplashScreen
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -32,8 +34,11 @@ import just.somebody.templates.presentation.effects.ObserveAsEvents
 import just.somebody.templates.presentation.screens.Destination
 import just.somebody.templates.presentation.effects.SnackbarController
 import just.somebody.templates.presentation.effects.SoundController
+import just.somebody.templates.presentation.effects.SoundEffect
+import just.somebody.templates.presentation.screens.BrowseScreen
 import just.somebody.templates.presentation.screens.NavigationAction
 import just.somebody.templates.presentation.screens.ScreenA
+import just.somebody.templates.presentation.viewModels.BrowseViewModel
 import just.somebody.templates.presentation.viewModels.ScreenAViewModel
 import just.somebody.templates.presentation.viewModels.SplashViewModel
 import just.somebody.templates.presentation.viewModels.viewModelFactory
@@ -47,37 +52,43 @@ class MainActivity : ComponentActivity()
 
     val splashViewModel by viewModels<SplashViewModel>()
 
-    installSplashScreen().apply ()
-    {
-      setKeepOnScreenCondition   { !splashViewModel.isReady.value }
-      setOnExitAnimationListener ()
-      { splash ->
-        val zoomX = ObjectAnimator.ofFloat(
-          splash.iconView,
-          View.SCALE_X,
-          1.0f,
-          0.0f
-        )
-        zoomX.interpolator  = OvershootInterpolator()
-        zoomX.duration      = 500L
-        zoomX.doOnEnd { splash.remove() }
+    installSplashScreen().apply {
+      setKeepOnScreenCondition { !splashViewModel.isReady.value }
 
-        val zoomY = ObjectAnimator.ofFloat(
-          splash.iconView,
-          View.SCALE_Y,
-          1.0f,
-          0.0f
-        )
-        zoomY.interpolator  = OvershootInterpolator()
-        zoomY.duration      = 500L
-        zoomY.doOnEnd { splash.remove() }
+      setOnExitAnimationListener { splash ->
+        // Play custom sound effect (if needed)
+        SoundController.play(SoundEffect.Splash)
 
-        zoomX.start()
-        zoomY.start()
+        val iconView = splash.iconView
+
+        // Scale X animation
+        val scaleX = ObjectAnimator.ofFloat(iconView, View.SCALE_X, 1.0f, 0.4f).apply {
+          duration = 500L
+        }
+
+        // Scale Y animation
+        val scaleY = ObjectAnimator.ofFloat(iconView, View.SCALE_Y, 1.0f, 0.4f).apply {
+          duration = 500L
+        }
+
+        // Optional fade out
+        val fade = ObjectAnimator.ofFloat(iconView, View.ALPHA, 1f, 0f).apply {
+          duration = 500L
+        }
+
+        // Run animations together
+        AnimatorSet().apply {
+          playTogether(scaleX, scaleY, fade)
+          interpolator = OvershootInterpolator()
+          doOnEnd {
+            splash.remove() // Only remove once all animations finish
+          }
+          start()
+        }
       }
     }
 
-    enableEdgeToEdge()
+
     setContent ()
     {
       TemplateTheme()
@@ -101,7 +112,6 @@ class MainActivity : ComponentActivity()
           }
         }
 
-        val soundEffectState  = remember { SnackbarHostState() }
         val soundScope        = rememberCoroutineScope()
         ObserveAsEvents(FLOW = SoundController.effects)
         { event ->
@@ -112,81 +122,10 @@ class MainActivity : ComponentActivity()
           }
         }
 
-        Scaffold(
-          modifier      = Modifier.fillMaxSize(),
-          snackbarHost  = { SnackbarHost(snackbarHostState) }
-        )
-        { innerPadding ->
-          val navController = rememberNavController()
-          val navigator     = App.appModule.navigator
-          ObserveAsEvents(navigator.navigationAction)
-          { action ->
-            when(action)
-            {
-              is NavigationAction.Navigate          ->
-                navController.navigate(action.DESTINATION)  {action.OPTIONS(this) }
-              is NavigationAction.PopBackStack      ->
-                {
-                  if (action.DESTINATION != null) navController.popBackStack(action.DESTINATION, action.INCLUSIVE)
-                  else                            navController.popBackStack()
-                }
-              is NavigationAction.ClearBackStack    ->
-                {
-                  navController.navigate(action.DESTINATION)
-                  {
-                    popUpTo(0) { inclusive = true}
-                    launchSingleTop = true
-                  }
-                }
-              is NavigationAction.NavigateSingleTop ->
-                {
-                  navController.navigate(action.DESTINATION) { launchSingleTop = true }
-                }
-              is NavigationAction.PopUpTo           ->
-                {
-                  navController.navigate(action.DESTINATION)
-                  {
-                    popUpTo(action.DESTINATION) { inclusive = action.INCLUSIVE}
-                    launchSingleTop = true
-                  }
-                }
-              is NavigationAction.Replace           ->
-              {
-                navController.popBackStack()
-                navController.navigate(action.DESTINATION)
-              }
-              NavigationAction.NavigateBack         -> navController.navigateUp()
-            }
-          }
-
-          NavHost(
-            navController     = navController,
-            startDestination  = navigator.startDestination,
-            modifier          = Modifier.padding(innerPadding)
-          )
-          {
-            composable<Destination.ScreenA>
-            {
-              ScreenA(
-                VIEW_MODEL = viewModel<ScreenAViewModel>(factory = viewModelFactory()
-                  { ScreenAViewModel(App.appModule.navigator) }),
-              )
-            }
-            composable<Destination.ScreenB>
-            {
-              Box(
-                modifier         = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-              )
-              { Text("Screen B") }
-            }
-            composable<Destination.ArgScreen>
-            {
-              val args = it.toRoute<Destination.ArgScreen>()
-              Text("ID: ${args.ID}")
-            }
-          }
-        }
+        BrowseScreen(
+          SNACK      = snackbarHostState,
+          VIEW_MODEL = viewModel<BrowseViewModel>(factory = viewModelFactory { BrowseViewModel() }),
+          MODIFIFER  = Modifier.fillMaxSize())
       }
     }
   }

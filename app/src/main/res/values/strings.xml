@@ -1,3 +1,7 @@
 <resources>
-    <string name="app_name">Template</string>
+    <string name = "app_name">  Pixel Pocket </string>
+    <string name = "HOME">      Home         </string>
+    <string name = "FAV">       Favorites    </string>
+    <string name = "SEARCH">    Search       </string>
+    <string name = "SERVER">    Server       </string>
 </resources>

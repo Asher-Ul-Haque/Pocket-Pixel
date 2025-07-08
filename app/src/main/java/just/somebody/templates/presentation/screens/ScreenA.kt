@@ -182,9 +182,9 @@ fun ScreenA(
       val notification = NotificationCompat.Builder(App.appModule.context, "channel_ID")
         .setContentText("This is some content text")
         .setContentTitle("Hello WOrld!")
-        .setSmallIcon(R.drawable.logo)
+        .setSmallIcon(R.drawable.gameboy)
         .build()
-      notificationManager.notify(1, notification)
+      // notificationManager.notify(1, notification)
     })
     { Text("Show notification") }
 

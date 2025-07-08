@@ -8,8 +8,6 @@ fun <VM : ViewModel> viewModelFactory(INIT : () -> VM) : ViewModelProvider.Facto
   return object : ViewModelProvider.Factory
   {
     override fun <T : ViewModel> create(modelClass: Class<T>) : T
-    {
-      return INIT() as T
-    }
+    { return INIT() as T }
   }
 }
