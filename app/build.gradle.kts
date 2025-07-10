@@ -2,6 +2,7 @@ plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.android)
   alias(libs.plugins.kotlin.compose)
+  id("com.google.devtools.ksp") // Apply KSP plugin
   kotlin("plugin.serialization") version "2.2.0"
 }
 
@@ -69,11 +70,14 @@ dependencies {
   implementation(libs.androidx.documentfile)
   implementation(libs.androidx.room.runtime)
   implementation(libs.androidx.sqlite.bundled)
+  implementation(libs.coil.compose)
   implementation(libs.ktor.client.core)
   implementation(libs.ktor.client.cio)
   implementation(libs.ktor.client.logging)
   implementation(libs.ktor.client.content.negotiation)
   implementation(libs.ktor.serialization.kotlinx.json)
+  implementation(libs.androidx.room.runtime)
+  ksp(libs.androidx.room.compiler)
   testImplementation(libs.junit)
   androidTestImplementation(libs.androidx.junit)
   androidTestImplementation(libs.androidx.espresso.core)

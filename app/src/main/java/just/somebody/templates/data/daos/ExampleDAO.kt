@@ -1,11 +1,11 @@
-package just.somebody.templates.appModule.storage.database.daos
+package just.somebody.templates.data.daos
 
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
-import just.somebody.templates.appModule.storage.database.entities.ExampleEntity
+import just.somebody.templates.data.entities.ExampleEntity
 
 @Dao
 interface ExampleDAO

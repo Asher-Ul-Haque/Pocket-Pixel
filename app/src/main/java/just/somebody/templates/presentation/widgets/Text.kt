@@ -5,6 +5,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import just.somebody.templates.ui.theme.GameBoyColors
@@ -15,13 +16,17 @@ fun CustomText(
   TEXT      : String,
   MODIFIER  : Modifier = Modifier,
   COLOR     : Color    = GameBoyColors.LightGreen,
-  FONT_SIZE : Int      = 32)
+  FONT_SIZE : Int      = 32,
+  MAX_LINES : Int      = 100)
 {
   Text(
-    modifier   = MODIFIER.padding(16.dp),
+    modifier   = if (MODIFIER == Modifier) MODIFIER.padding(16.dp)
+                 else                      MODIFIER,
     text       = TEXT,
     color      = COLOR,
     fontSize   = FONT_SIZE.sp,
     fontFamily = PokeFontFamily,
+    overflow   = TextOverflow.Ellipsis,
+    maxLines   = MAX_LINES
   )
 }

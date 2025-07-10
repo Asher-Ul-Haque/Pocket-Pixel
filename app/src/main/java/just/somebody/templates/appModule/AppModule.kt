@@ -5,7 +5,6 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.dataStoreFile
-import androidx.lifecycle.viewmodel.compose.viewModel
 import just.somebody.templates.appModule.nativeBridge.NativeBridge
 import just.somebody.templates.appModule.network.NetworkService
 import just.somebody.templates.appModule.storage.DefaultExternalStorageManager
@@ -16,16 +15,14 @@ import just.somebody.templates.appModule.storage.DefaultInternalStorageManager
 import just.somebody.templates.appModule.storage.ExternalStorageManager
 import just.somebody.templates.appModule.storage.InternalStorageManager
 import just.somebody.templates.appModule.storage.database.DatabaseFactory
-import just.somebody.templates.appModule.storage.database.ExampleDatabase
+import just.somebody.templates.appModule.storage.database.PixelPocketDB
 import just.somebody.templates.data.Api
 import just.somebody.templates.data.ApiImpl
-import just.somebody.templates.data.RepositoryImpl
-import just.somebody.templates.domain.Repository
+import just.somebody.templates.domain.repositories.DefaultGameRepository
+import just.somebody.templates.domain.repositories.GameRepository
 import just.somebody.templates.presentation.screens.DefaultNavigator
 import just.somebody.templates.presentation.screens.Destination
 import just.somebody.templates.presentation.screens.Navigator
-import just.somebody.templates.presentation.viewModels.BrowseViewModel
-import just.somebody.templates.presentation.viewModels.viewModelFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -35,7 +32,7 @@ import kotlinx.coroutines.SupervisorJob
 interface AppModuleInterface
 {
   val api                    : Api
-  val repo                   : Repository
+  val repo                   : GameRepository
   val navigator              : Navigator
   val permissionManager      : PermissionManager
   val hardwareManager        : HardwareManager
@@ -43,7 +40,7 @@ interface AppModuleInterface
   val internalStorageManager : InternalStorageManager
   val externalStorageManager : ExternalStorageManager
   val context                : Context
-  val database               : ExampleDatabase
+  val database               : PixelPocketDB
   val networkService         : NetworkService
   val nativeBridge           : NativeBridge
 }
@@ -52,7 +49,7 @@ class AppModule(private val APP_CONTEXT : Context) : AppModuleInterface
 {
   override val context                : Context                 by lazy { APP_CONTEXT }
   override val api                    : Api                     by lazy { ApiImpl(); }
-  override val repo                   : Repository              by lazy { RepositoryImpl(this.api);}
+  override val repo                   : GameRepository          by lazy { DefaultGameRepository(database.gameDAO());}
   override val navigator              : Navigator               by lazy { DefaultNavigator(startDestination = Destination.Home) }
   override val hardwareManager        : HardwareManager         by lazy { DefaultHardwareManager(APP_CONTEXT) }
   override val permissionManager      : PermissionManager       by lazy { DefaultPermissionManager() }
@@ -60,7 +57,7 @@ class AppModule(private val APP_CONTEXT : Context) : AppModuleInterface
   override val internalStorageManager : InternalStorageManager  by lazy { DefaultInternalStorageManager(APP_CONTEXT) }
   override val externalStorageManager : ExternalStorageManager  by lazy { DefaultExternalStorageManager(APP_CONTEXT, dataStoreManager) }
   override val networkService         : NetworkService          by lazy { NetworkService() }
-  override val database               : ExampleDatabase         by lazy { DatabaseFactory(APP_CONTEXT).create().build() }
+  override val database               : PixelPocketDB           by lazy { DatabaseFactory(APP_CONTEXT).create().build() }
   override val nativeBridge           : NativeBridge            by lazy { NativeBridge() }
 
   private val appSettingsDataStore : DataStore<AppSettings> by lazy ()

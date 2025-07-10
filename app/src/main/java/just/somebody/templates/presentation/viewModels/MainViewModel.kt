@@ -4,14 +4,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import just.somebody.templates.appModule.storage.dataStore.AppSettings
 import just.somebody.templates.appModule.storage.dataStore.DataStoreManager
-import just.somebody.templates.domain.Repository
+import just.somebody.templates.domain.repositories.GameRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class MainViewModel(
-  private val REPO             : Repository,
+  private val REPO             : GameRepository,
   private val SETTINGS_MANAGER : DataStoreManager
 ) : ViewModel()
 {
@@ -21,10 +21,6 @@ class MainViewModel(
     AppSettings()
   )
 
-  fun doSomething()
-  {
-    viewModelScope.launch { REPO.doSomething() }
-  }
 
   fun updateSomething(SOMETHING : Int)
   {
@@ -34,6 +30,4 @@ class MainViewModel(
       SETTINGS_MANAGER.updateSettings(current.copy(something = SOMETHING))
     }
   }
-
-
 }

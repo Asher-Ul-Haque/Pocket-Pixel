@@ -115,7 +115,9 @@ private fun NavList(
           Icon(
             painter             = painterResource(icon),
             contentDescription  = item.title,
-            tint                = GameBoyColors.DarkGreen,
+            tint                =
+              if (isSelected) GameBoyColors.LightGreen
+              else            GameBoyColors.DarkGreen,
             modifier            = Modifier.size(24.dp)
           )
           if (item.badgeCount != null)

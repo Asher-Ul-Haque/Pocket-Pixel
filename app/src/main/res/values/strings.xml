@@ -1,7 +1,35 @@
 <resources>
-    <string name = "app_name">  Pixel Pocket </string>
-    <string name = "HOME">      Home         </string>
-    <string name = "FAV">       Favorites    </string>
-    <string name = "SEARCH">    Search       </string>
-    <string name = "SERVER">    Server       </string>
+    <string name = "app_name">     Pixel Pocket                </string>
+    <string name = "HOME">         Home                        </string>
+    <string name = "FAV">          Favorites                   </string>
+    <string name = "SEARCH">       Search                      </string>
+    <string name = "SERVER">       Server                      </string>
+    <string name = "HOW_TO">       How do I use Pixel Pocket   </string>
+    <string name = "NOT_WORKING">  Why is your app not working </string>
+    <string name = "LEGAL">        Is this app legal           </string>
+    <string name = "USAGE">
+      Copy all your .gb ROM files into a directory on your device and select it.
+      This gives pixel pocket access to all files in this directory.
+      After the scan is complete, you should see your games
+    </string>
+    <string name = "TROUBLESHOOT">
+      If your games are compressed, try unzipping them.
+      Go to settings and try rescanning your directory.
+      Else report problem on github issues.
+      Also post a fix please.
+    </string>
+    <string name = "PIRACY">
+      Emulation of game boy is totally legal. What is not legal is piracy of ROMs.
+      Thus, you the user, have to acquire ROMs yourself and the server has been
+      shutdown. I love piracy but Nintendo does not.
+      As for adds and privacy. There will never be adds on this app and you can check
+      the source code for yourself here:
+    </string>
+    <string name = "GITHUB"> Github link </string>
+    <string name = "SELECT"> Select ROMs directory </string>
+    <string name = "SCAN">
+      Pixel Pocket needs to scan a directory containing Game Boy ROMs.
+      This might take a few seconds.
+    </string>
+    <string name = "DIRECTORY"> Select Directory </string>
 </resources>

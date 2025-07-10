@@ -1,16 +1,25 @@
 package just.somebody.templates.presentation.screens
 
-import androidx.compose.foundation.layout.Box
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -18,9 +27,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -29,6 +40,7 @@ import just.somebody.templates.App
 import just.somebody.templates.R
 import just.somebody.templates.presentation.effects.ObserveAsEvents
 import just.somebody.templates.presentation.viewModels.BrowseViewModel
+import just.somebody.templates.presentation.viewModels.GamesViewModel
 import just.somebody.templates.presentation.viewModels.ScreenAViewModel
 import just.somebody.templates.presentation.viewModels.viewModelFactory
 import just.somebody.templates.presentation.widgets.CustomText
@@ -43,32 +55,39 @@ fun BrowseScreen(
   MODIFIFER  : Modifier = Modifier
 )
 {
-  val selectedIndex by VIEW_MODEL.selectedIndex.collectAsState()
+  val state by VIEW_MODEL.browseState.collectAsState()
+  val commonViewModel = viewModel<GamesViewModel>(factory = viewModelFactory()
+  { GamesViewModel(App.appModule.repo) })
+
   Scaffold (
     topBar    =
     {
       TopAppBar(
         title          =
-        { CustomText(TEXT = stringResource(R.string.app_name) ) },
+        { CustomText(TEXT = stringResource(VIEW_MODEL.getDestinationTitle()) ) },
         actions        =
         {
-          IconButton(onClick = { TODO("Make the icon") })
+          IconButton(onClick = { VIEW_MODEL.toggleSeeInfo() })
           {
             Icon(
               painter            = painterResource(R.drawable.github),
-              contentDescription = "Check information"
+              contentDescription = "Check information",
+              tint                = GameBoyColors.DarkGreen,
+              modifier            = Modifier.size(24.dp)
             )
           }
 
           IconButton(onClick = { VIEW_MODEL.goToSettings() })
           {
             Icon(
-              painter            = painterResource(R.drawable.github),
-              contentDescription = "Change Settings"
+              painter            = painterResource(R.drawable.settings),
+              contentDescription = "Change Settings",
+              tint                = GameBoyColors.DarkGreen,
+              modifier            = Modifier.size(24.dp)
             )
           }
         },
-        colors         = TopAppBarDefaults.topAppBarColors(containerColor = GameBoyColors.DarkGreen)
+        colors         = TopAppBarDefaults.topAppBarColors(containerColor = GameBoyColors.MediumGreen)
       )
     },
 
@@ -78,7 +97,7 @@ fun BrowseScreen(
         MODIFIER       = Modifier
           .padding(bottom = 4.dp)
           .fillMaxWidth(),
-        SELECTED_INDEX = selectedIndex,
+        SELECTED_INDEX = state.selectedIndex,
         ON_NAVIGATE    = { VIEW_MODEL.onNavigate(it)
         }
       )
@@ -127,6 +146,7 @@ fun BrowseScreen(
       }
     }
 
+
     NavHost(
       navController    = navController,
       startDestination = navigator.startDestination,
@@ -135,14 +155,80 @@ fun BrowseScreen(
     {
       composable<Destination.Home>
       {
-        ScreenA(
-          VIEW_MODEL = viewModel<ScreenAViewModel>(factory = viewModelFactory()
-          { ScreenAViewModel(App.appModule.navigator) }),
+        HomeScreen(
+          VIEW_MODEL = commonViewModel,
+          MODIFIFER  = Modifier.fillMaxSize()
         )
       }
-      composable<Destination.Favorites> { TODO("Make favorites screen") }
-      composable<Destination.Search>    { TODO("Make search screen") }
+      composable<Destination.Favorites>
+      {
+        FavoriteScreen(
+          VIEW_MODEL = commonViewModel,
+          MODIFIFER  = Modifier.fillMaxSize()
+        )
+      }
+      composable<Destination.Search>
+      {
+        SearchScreen(
+          VIEW_MODEL = commonViewModel,
+          MODIFIFER  = Modifier.fillMaxSize()
+        )
+      }
+      composable<Destination.Settings>  { TODO("Make settings screen") }
       composable<Destination.Server>    { TODO("Make server screen") }
+    }
+
+    if (state.showInfoDialog)
+    {
+      BasicAlertDialog(
+        onDismissRequest = { VIEW_MODEL.toggleSeeInfo() },
+        modifier         = Modifier.background(GameBoyColors.MediumGreen),
+        content          =
+        {
+          Column (
+            verticalArrangement = Arrangement.SpaceEvenly,
+            horizontalAlignment = Alignment.CenterHorizontally
+          )
+          {
+            CustomText(
+              TEXT      = stringResource(R.string.HOW_TO),
+              FONT_SIZE = 24,
+              COLOR     = GameBoyColors.Green)
+            CustomText(
+              TEXT      = stringResource(R.string.USAGE),
+              FONT_SIZE = 16,
+              COLOR     = GameBoyColors.LightGreen)
+
+            CustomText(
+              TEXT      = stringResource(R.string.NOT_WORKING),
+              FONT_SIZE = 24,
+              COLOR     = GameBoyColors.Green)
+            CustomText(
+              TEXT      = stringResource(R.string.TROUBLESHOOT),
+              FONT_SIZE = 16,
+              COLOR     = GameBoyColors.LightGreen)
+
+            CustomText(
+              TEXT      = stringResource(R.string.LEGAL),
+              FONT_SIZE = 24,
+              COLOR     = GameBoyColors.Green)
+            CustomText(
+              TEXT      = stringResource(R.string.PIRACY),
+              FONT_SIZE = 16,
+              COLOR     = GameBoyColors.LightGreen)
+
+            CustomText(
+              TEXT     = stringResource(R.string.GITHUB),
+              MODIFIER = Modifier.clickable ()
+                {
+                  val githubUrl = "https://github.com/Asher-Ul-Haque/Pocket-Pixel"
+                  val intent    = Intent(Intent.ACTION_VIEW, Uri.parse(githubUrl)).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+                  App.appModule.context.startActivity(intent)
+                },
+              COLOR   = Color.Blue
+            )
+          }
+        })
     }
   }
 }

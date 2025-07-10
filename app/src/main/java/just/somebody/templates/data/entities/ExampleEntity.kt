@@ -1,4 +1,4 @@
-package just.somebody.templates.appModule.storage.database.entities
+package just.somebody.templates.data.entities
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
