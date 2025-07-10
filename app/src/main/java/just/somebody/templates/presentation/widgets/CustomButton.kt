@@ -27,8 +27,9 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun CustomButton(
-  ON_CLICK : () -> Unit = {},
-  MODIFIER : Modifier   = Modifier,
+  ON_CLICK : () -> Unit             = {},
+  MODIFIER : Modifier               = Modifier,
+  COLOR    : Color                  = GameBoyColors.MediumGreen,
   CONTENT  : @Composable () -> Unit = {},
 )
 {
@@ -43,7 +44,7 @@ fun CustomButton(
         spotColor    = Color.Black
       )
       .padding(8.dp)
-      .background(GameBoyColors.MediumGreen)
+      .background(COLOR)
       .border(4.dp, GameBoyColors.Green, RectangleShape)
       .clickable(
         onClick =

@@ -71,4 +71,9 @@ interface GameDao
            CASE WHEN lastPlayed IS NULL THEN 1 ELSE 0 END,
            lastPlayed DESC""")
   fun searchGames(QUERY : String): Flow<List<GameEntity>>
+
+
+  // - - - Drop all - - -
+  @Query("DELETE FROM games")
+  suspend fun deleteEverything()
 }

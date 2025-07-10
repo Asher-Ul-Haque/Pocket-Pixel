@@ -1,6 +1,7 @@
-package just.somebody.templates.presentation.screens
+package just.somebody.templates.appModule.navigation
 
 import androidx.navigation.NavOptionsBuilder
+import just.somebody.templates.presentation.screens.Destination
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -36,7 +37,7 @@ class DefaultNavigator(override val startDestination: Destination) : Navigator
     _navigationActions.send(
       NavigationAction.Navigate(
         DESTINATION = DESTINATION,
-        OPTIONS     = OPTIONS
+        OPTIONS = OPTIONS
       )
     )
   }

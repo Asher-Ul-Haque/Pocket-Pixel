@@ -27,7 +27,7 @@ class MainViewModel(
     viewModelScope.launch ()
     {
       val current = appSettings.value
-      SETTINGS_MANAGER.updateSettings(current.copy(something = SOMETHING))
+      //SETTINGS_MANAGER.updateSettings(current.copy(something = SOMETHING))
     }
   }
 }

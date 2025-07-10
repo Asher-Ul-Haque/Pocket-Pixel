@@ -6,12 +6,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -19,10 +17,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -31,17 +29,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import just.somebody.templates.App
 import just.somebody.templates.R
+import just.somebody.templates.appModule.navigation.NavigationAction
 import just.somebody.templates.presentation.effects.ObserveAsEvents
 import just.somebody.templates.presentation.viewModels.BrowseViewModel
 import just.somebody.templates.presentation.viewModels.GamesViewModel
-import just.somebody.templates.presentation.viewModels.ScreenAViewModel
+import just.somebody.templates.presentation.viewModels.SettingsViewModel
 import just.somebody.templates.presentation.viewModels.viewModelFactory
 import just.somebody.templates.presentation.widgets.CustomText
 import just.somebody.templates.presentation.widgets.NavBar
@@ -56,51 +55,68 @@ fun BrowseScreen(
 )
 {
   val state by VIEW_MODEL.browseState.collectAsState()
-  val commonViewModel = viewModel<GamesViewModel>(factory = viewModelFactory()
-  { GamesViewModel(App.appModule.repo) })
+  val commonViewModel =
+    viewModel<GamesViewModel>(factory = viewModelFactory()
+    { GamesViewModel(App.appModule.repo) })
+  val settingsViewModel =
+    viewModel<SettingsViewModel>(
+      factory = viewModelFactory()
+        {
+          SettingsViewModel(
+          REPO            = App.appModule.repo,
+          STORAGE_MANAGER = App.appModule.externalStorageManager,
+          DATASTORE       = App.appModule.dataStoreManager)
+        }
+    )
 
   Scaffold (
     topBar    =
     {
-      TopAppBar(
-        title          =
-        { CustomText(TEXT = stringResource(VIEW_MODEL.getDestinationTitle()) ) },
-        actions        =
-        {
-          IconButton(onClick = { VIEW_MODEL.toggleSeeInfo() })
+      if (state.showTopBar)
+      {
+        TopAppBar(
+          title          =
+          { CustomText(TEXT = stringResource(VIEW_MODEL.getDestinationTitle()) ) },
+          actions        =
           {
-            Icon(
-              painter            = painterResource(R.drawable.github),
-              contentDescription = "Check information",
-              tint                = GameBoyColors.DarkGreen,
-              modifier            = Modifier.size(24.dp)
-            )
-          }
+            IconButton(onClick = { VIEW_MODEL.toggleSeeInfo() })
+            {
+              Icon(
+                painter            = painterResource(R.drawable.github),
+                contentDescription = "Check information",
+                tint                = GameBoyColors.DarkGreen,
+                modifier            = Modifier.size(24.dp)
+              )
+            }
 
-          IconButton(onClick = { VIEW_MODEL.goToSettings() })
-          {
-            Icon(
-              painter            = painterResource(R.drawable.settings),
-              contentDescription = "Change Settings",
-              tint                = GameBoyColors.DarkGreen,
-              modifier            = Modifier.size(24.dp)
-            )
-          }
-        },
-        colors         = TopAppBarDefaults.topAppBarColors(containerColor = GameBoyColors.MediumGreen)
-      )
+            IconButton(onClick = { VIEW_MODEL.goToSettings() })
+            {
+              Icon(
+                painter            = painterResource(R.drawable.settings),
+                contentDescription = "Change Settings",
+                tint                = GameBoyColors.DarkGreen,
+                modifier            = Modifier.size(24.dp)
+              )
+            }
+          },
+          colors         = TopAppBarDefaults.topAppBarColors(containerColor = GameBoyColors.MediumGreen)
+        )
+      }
     },
 
     bottomBar =
     {
-      NavBar(
-        MODIFIER       = Modifier
-          .padding(bottom = 4.dp)
-          .fillMaxWidth(),
-        SELECTED_INDEX = state.selectedIndex,
-        ON_NAVIGATE    = { VIEW_MODEL.onNavigate(it)
-        }
-      )
+      if (state.showBottomBar)
+      {
+        NavBar(
+          MODIFIER       = Modifier
+            .padding(bottom = 4.dp)
+            .fillMaxWidth(),
+          SELECTED_INDEX = state.selectedIndex,
+          ON_NAVIGATE    = { VIEW_MODEL.onNavigate(it)
+          }
+        )
+      }
     },
 
     modifier  = MODIFIFER,
@@ -108,8 +124,9 @@ fun BrowseScreen(
     snackbarHost = { SnackbarHost(hostState = SNACK) }
   )
   { innerPadding ->
-    val navController = rememberNavController()
-    val navigator     = App.appModule.navigator
+    val navController       = rememberNavController()
+    val navigator           = App.appModule.navigator
+
     ObserveAsEvents(navigator.navigationAction)
     { action ->
       when(action)
@@ -155,6 +172,7 @@ fun BrowseScreen(
     {
       composable<Destination.Home>
       {
+        LaunchedEffect(Unit) { VIEW_MODEL.toggleBars(true, true) }
         HomeScreen(
           VIEW_MODEL = commonViewModel,
           MODIFIFER  = Modifier.fillMaxSize()
@@ -162,6 +180,7 @@ fun BrowseScreen(
       }
       composable<Destination.Favorites>
       {
+        LaunchedEffect(Unit) { VIEW_MODEL.toggleBars(true, true) }
         FavoriteScreen(
           VIEW_MODEL = commonViewModel,
           MODIFIFER  = Modifier.fillMaxSize()
@@ -169,13 +188,28 @@ fun BrowseScreen(
       }
       composable<Destination.Search>
       {
+        LaunchedEffect(Unit) { VIEW_MODEL.toggleBars(true, true) }
         SearchScreen(
           VIEW_MODEL = commonViewModel,
           MODIFIFER  = Modifier.fillMaxSize()
         )
       }
-      composable<Destination.Settings>  { TODO("Make settings screen") }
-      composable<Destination.Server>    { TODO("Make server screen") }
+      composable<Destination.Server>
+      {
+        LaunchedEffect(Unit) { VIEW_MODEL.toggleBars(true, true) }
+        ServerScreen(Modifier.fillMaxSize())
+      }
+      composable<Destination.Settings>
+      {
+        LaunchedEffect(Unit)
+        {
+          VIEW_MODEL.toggleBottomBar(false)
+          VIEW_MODEL.onNavigate(4)
+        }
+        SettingsScreen(
+          MODIFIFER  = Modifier.fillMaxSize(),
+          VIEW_MODEL = settingsViewModel)
+      }
     }
 
     if (state.showInfoDialog)

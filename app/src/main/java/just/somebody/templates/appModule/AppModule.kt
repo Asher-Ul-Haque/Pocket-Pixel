@@ -20,9 +20,9 @@ import just.somebody.templates.data.Api
 import just.somebody.templates.data.ApiImpl
 import just.somebody.templates.domain.repositories.DefaultGameRepository
 import just.somebody.templates.domain.repositories.GameRepository
-import just.somebody.templates.presentation.screens.DefaultNavigator
+import just.somebody.templates.appModule.navigation.DefaultNavigator
 import just.somebody.templates.presentation.screens.Destination
-import just.somebody.templates.presentation.screens.Navigator
+import just.somebody.templates.appModule.navigation.Navigator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -50,7 +50,7 @@ class AppModule(private val APP_CONTEXT : Context) : AppModuleInterface
   override val context                : Context                 by lazy { APP_CONTEXT }
   override val api                    : Api                     by lazy { ApiImpl(); }
   override val repo                   : GameRepository          by lazy { DefaultGameRepository(database.gameDAO());}
-  override val navigator              : Navigator               by lazy { DefaultNavigator(startDestination = Destination.Home) }
+  override val navigator              : Navigator by lazy { DefaultNavigator(startDestination = Destination.Home) }
   override val hardwareManager        : HardwareManager         by lazy { DefaultHardwareManager(APP_CONTEXT) }
   override val permissionManager      : PermissionManager       by lazy { DefaultPermissionManager() }
   override val dataStoreManager       : DataStoreManager        by lazy { DataStoreManager(appSettingsDataStore) }

@@ -8,7 +8,7 @@ import just.somebody.templates.presentation.effects.SnackbarAction
 import just.somebody.templates.presentation.effects.SnackbarController
 import just.somebody.templates.presentation.effects.SnackbarEvent
 import just.somebody.templates.presentation.screens.Destination
-import just.somebody.templates.presentation.screens.Navigator
+import just.somebody.templates.appModule.navigation.Navigator
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch

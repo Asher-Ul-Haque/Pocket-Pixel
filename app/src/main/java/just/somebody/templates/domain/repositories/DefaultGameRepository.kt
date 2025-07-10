@@ -96,4 +96,7 @@ class DefaultGameRepository(private val DAO : GameDao) : GameRepository
 
   override fun searchGames(QUERY : String): Flow<List<Game>> =
     DAO.searchGames(QUERY).map { it.map { it.toDomain() } }
+
+  override suspend fun factoryReset()
+  { DAO.deleteEverything() }
 }

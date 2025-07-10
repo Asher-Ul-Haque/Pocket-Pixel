@@ -1,6 +1,7 @@
-package just.somebody.templates.presentation.screens
+package just.somebody.templates.appModule.navigation
 
 import androidx.navigation.NavOptionsBuilder
+import just.somebody.templates.presentation.screens.Destination
 
 sealed interface NavigationAction
 {

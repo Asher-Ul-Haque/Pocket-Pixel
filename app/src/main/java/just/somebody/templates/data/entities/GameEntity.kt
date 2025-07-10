@@ -8,7 +8,9 @@ import androidx.room.PrimaryKey
   tableName = "games",
   indices   =
     [
-      Index("romUri"),
+      Index(
+        value  = ["romUri"],
+        unique = true),
       Index("lastPlayed"),
       Index("isFavorite")
     ]

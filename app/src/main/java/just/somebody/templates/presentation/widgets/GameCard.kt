@@ -57,13 +57,11 @@ fun GameCard(
       .joinToString("") { it.uppercaseChar().toString() }
   }
 
-  val bgColor = Color.White
-
   Card(
     shape     = RectangleShape,
     modifier  = Modifier
       .width(
-        if (BIG) 168.dp
+        if (BIG) 160.dp
         else     140.dp)
       .combinedClickable(
         onClick     = { ON_CLICK(GAME) } ,
@@ -81,7 +79,7 @@ fun GameCard(
         modifier          = Modifier
           .fillMaxWidth()
           .height(
-            if (BIG) 116.dp
+            if (BIG) 600.dp
             else     96.dp)
           .background(
             if (url.isNullOrEmpty()) GameBoyColors.LightGreen

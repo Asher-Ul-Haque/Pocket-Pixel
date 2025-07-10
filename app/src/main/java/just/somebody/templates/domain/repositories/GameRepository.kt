@@ -26,4 +26,6 @@ interface GameRepository
   suspend fun updateLastPlayed      (ID : Long, TIMESTAMP : Long)
 
   fun searchGames(QUERY : String) : Flow<List<Game>>
+
+  suspend fun factoryReset()
 }
