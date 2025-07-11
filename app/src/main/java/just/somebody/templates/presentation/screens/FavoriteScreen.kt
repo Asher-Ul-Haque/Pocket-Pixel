@@ -64,7 +64,9 @@ fun FavoriteScreen(
           TITLE         = "Favorites",
           ON_CLICK      = { game -> VIEW_MODEL.markAsPlayed(game) },
           ON_LONG_PRESS = { game -> VIEW_MODEL.selectGame(game)},
-          USE_ROW       = false
+          GET_URL       = { game -> VIEW_MODEL.getBoxArtFlow(game.title) },
+          USE_ROW       = false,
+          SHOW_TITLE    = false
         )
       }
     }

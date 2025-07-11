@@ -13,10 +13,10 @@ import kotlinx.coroutines.flow.Flow
 interface GameDao
 {
   // - - - Insert Update Delete - - -
-  @Insert(onConflict = OnConflictStrategy.REPLACE)
+  @Insert(onConflict = OnConflictStrategy.IGNORE)
   suspend fun insertGame(GAME   : GameEntity)
 
-  @Insert(onConflict = OnConflictStrategy.REPLACE)
+  @Insert(onConflict = OnConflictStrategy.IGNORE)
   suspend fun insertGames(GAMES : List<GameEntity>)
 
   @Update suspend fun updateGame(GAME : GameEntity)

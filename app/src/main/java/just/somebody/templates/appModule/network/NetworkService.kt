@@ -3,12 +3,14 @@ package just.somebody.templates.appModule.network
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.plugins.ResponseException
 import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.plugins.logging.*
 import io.ktor.client.request.*
-import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
+import just.somebody.templates.appModule.ForgeLogger
 import kotlinx.serialization.json.Json
 
 class NetworkService
@@ -17,68 +19,102 @@ class NetworkService
   {
     install(ContentNegotiation)
     {
-      json(Json {
-        ignoreUnknownKeys = true
-        isLenient         = true
-        encodeDefaults    = true
-      })
+      json(json = Json { ignoreUnknownKeys = true })
     }
-
     install(HttpTimeout)
     {
-      requestTimeoutMillis = 15_000
-      connectTimeoutMillis = 10_000
-      socketTimeoutMillis  = 15_000
+      socketTimeoutMillis = 20_000L
+      requestTimeoutMillis = 20_000L
     }
-
     install(Logging)
     {
-      logger = Logger.DEFAULT
-      level  = LogLevel.BODY
+      logger = object : Logger
+      {
+        override fun log(MESSAGE : String)
+        { ForgeLogger.info(MESSAGE ) }
+      }
+      level = LogLevel.ALL
+    }
+    defaultRequest() { contentType(ContentType.Application.Json) }
+  }
+
+  suspend inline fun <reified T> get(
+    URL     : String,
+    HEADERS : Map<String, String> = emptyMap(),
+    PARAMS  : Map<String, Any?>   = emptyMap()
+  ): NetworkResult<T>
+  {
+    return safeRequest()
+    {
+      client.get(URL)
+      {
+        HEADERS.forEach()
+        { (key, value) -> header(key, value) }
+        url ()
+        {
+          PARAMS.forEach ()
+          { (key, value) -> parameters.append(key, value?.toString() ?: "") }
+        }
+      }.body()
     }
   }
 
-  suspend inline fun <reified T> execute(REQUEST : NetworkRequest): NetworkResult<T>
+
+  suspend inline fun <reified T> post(
+    URL     : String,
+    BODY    : Any?                = null,
+    HEADERS : Map<String, String> = emptyMap()
+  ): NetworkResult<T>
+  {
+    return safeRequest ()
+    {
+      client.post(URL)
+      {
+        HEADERS.forEach { (key, value) -> header(key, value) }
+        setBody(BODY ?: "")
+      }.body()
+    }
+  }
+
+  suspend fun head(
+    URL     : String,
+    HEADERS : Map<String, String> = emptyMap()
+  ): NetworkResult<Boolean>
+  {
+    return safeRequest ()
+    {
+      val response = client.request(URL)
+      {
+        method = HttpMethod.Head
+        HEADERS.forEach { (key, value) -> header(key, value) }
+      }
+      response.status.isSuccess()
+    }
+  }
+
+
+  suspend inline fun <T> safeRequest(crossinline BLOCK : suspend () -> T): NetworkResult<T>
   {
     return try
     {
-      val response: HttpResponse = client.request()
-      {
-        url()
-        {
-          takeFrom(REQUEST.url)
-          REQUEST.queryParams.forEach { (k, v) -> parameters.append(k, v) }
-        }
-        method = when (REQUEST.method)
-        {
-          HttpMethod.GET    -> io.ktor.http.HttpMethod.Get
-          HttpMethod.POST   -> io.ktor.http.HttpMethod.Post
-          HttpMethod.PUT    -> io.ktor.http.HttpMethod.Put
-          HttpMethod.DELETE -> io.ktor.http.HttpMethod.Delete
-        }
-        REQUEST.headers.forEach { (k, v) -> headers.append(k, v) }
-        if (REQUEST.body != null && REQUEST.method != HttpMethod.GET)
-        {
-          setBody(REQUEST.body)
-          contentType(ContentType.parse(REQUEST.contentType))
-        }
-      }
-
-      val parsed: T = response.body()
-      NetworkResult.Success(parsed, response.status.value)
-
-    }
-    catch (e: Exception) { mapExceptionToError(e) }
-  }
-
-  fun mapExceptionToError(EXCEPTION : Exception) : NetworkResult.Error
-  {
-    return when (EXCEPTION)
+      val result = BLOCK()
+      NetworkResult.Success(result)
+    } catch (e: ResponseException)
     {
-      is java.net.SocketTimeoutException -> NetworkResult.Error(NetworkErrorType.Timeout,    EXCEPTION.message)
-      is java.net.UnknownHostException   -> NetworkResult.Error(NetworkErrorType.NoInternet, EXCEPTION.message)
-      is java.io.IOException             -> NetworkResult.Error(NetworkErrorType.Unexpected, EXCEPTION.message)
-      else                               -> NetworkResult.Error(NetworkErrorType.Unexpected, EXCEPTION.message)
+      val code    = e.response.status.value
+      val message = e.message ?: "Unknown error"
+
+      val type = when (code)
+      {
+        401 -> NetworkErrorType.Unauthorized
+        404 -> NetworkErrorType.NotFound
+        in 500..599 -> NetworkErrorType.ServerError
+        else -> NetworkErrorType.Unexpected
+      }
+      NetworkResult.Error(type, message, code)
     }
+    catch (e: java.net.SocketTimeoutException) { NetworkResult.Error(NetworkErrorType.Timeout, e.message) }
+    catch (e: java.net.UnknownHostException)   { NetworkResult.Error(NetworkErrorType.NoInternet, e.message) }
+    catch (e: Exception)                       { NetworkResult.Error(NetworkErrorType.Unexpected, e.message) }
   }
 }

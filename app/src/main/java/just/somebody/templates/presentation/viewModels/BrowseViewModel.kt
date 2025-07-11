@@ -15,8 +15,8 @@ data class BrowseUIState
 (
   val selectedIndex  : Int,
   val showInfoDialog : Boolean,
-  val showTopBar     : Boolean,
-  val showBottomBar  : Boolean
+  val showSettings   : Boolean,
+  val showBars       : Boolean,
 )
 
 class BrowseViewModel : ViewModel()
@@ -25,7 +25,7 @@ class BrowseViewModel : ViewModel()
     BrowseUIState(
       0,
       false,
-      true,
+      false,
       true)
   )
   public  val browseState  : StateFlow<BrowseUIState>        = _browseState
@@ -41,8 +41,8 @@ class BrowseViewModel : ViewModel()
         BrowseUIState(
         NEW_INDEX,
         _browseState.value.showInfoDialog,
-        _browseState.value.showTopBar,
-        _browseState.value.showBottomBar)
+        _browseState.value.showSettings,
+        _browseState.value.showBars)
       }
       val destination =
         when (NEW_INDEX)
@@ -57,9 +57,19 @@ class BrowseViewModel : ViewModel()
     }
   }
 
-  fun goToSettings()
+  fun goToSettings(TOGGLE : Boolean)
   {
-    viewModelScope.launch { App.appModule.navigator.navigate(Destination.Settings) }
+    viewModelScope.launch ()
+    {
+      _browseState.update()
+      {
+        BrowseUIState(
+          _browseState.value.selectedIndex,
+          _browseState.value.showInfoDialog,
+          TOGGLE,
+          _browseState.value.showBars)
+      }
+    }
   }
 
   fun toggleSeeInfo()
@@ -71,8 +81,8 @@ class BrowseViewModel : ViewModel()
         BrowseUIState(
           _browseState.value.selectedIndex,
           !_browseState.value.showInfoDialog,
-          _browseState.value.showTopBar,
-          _browseState.value.showBottomBar)
+          _browseState.value.showSettings,
+          _browseState.value.showBars)
       }
     }
   }
@@ -88,7 +98,7 @@ class BrowseViewModel : ViewModel()
     }
   }
 
-  fun toggleTopBar(TOGGLE : Boolean)
+  fun showBars(TOGGLE : Boolean)
   {
     viewModelScope.launch ()
     {
@@ -97,38 +107,8 @@ class BrowseViewModel : ViewModel()
         BrowseUIState(
           _browseState.value.selectedIndex,
           _browseState.value.showInfoDialog,
-          TOGGLE,
-          _browseState.value.showBottomBar)
-      }
-    }
-  }
-
-  fun toggleBottomBar(TOGGLE: Boolean)
-  {
-    viewModelScope.launch ()
-    {
-      _browseState.update ()
-      {
-        BrowseUIState(
-          _browseState.value.selectedIndex,
-          _browseState.value.showInfoDialog,
-          _browseState.value.showTopBar,
+          _browseState.value.showSettings,
           TOGGLE)
-      }
-    }
-  }
-
-  fun toggleBars(BOTTOM : Boolean, TOP : Boolean)
-  {
-    viewModelScope.launch ()
-    {
-      _browseState.update ()
-      {
-        BrowseUIState(
-          _browseState.value.selectedIndex,
-          _browseState.value.showInfoDialog,
-          TOP,
-          BOTTOM)
       }
     }
   }

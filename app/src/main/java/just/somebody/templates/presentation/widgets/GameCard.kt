@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,7 +23,11 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -38,16 +43,22 @@ import just.somebody.templates.domain.models.Game
 import just.somebody.templates.presentation.widgets.CustomButton
 import just.somebody.templates.presentation.widgets.CustomText
 import just.somebody.templates.ui.theme.GameBoyColors
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 
 @Composable
 fun GameCard(
   GAME          : Game,
-  IMAGE_URL     : (Game) -> String?,
+  IMAGE_URL     : (Game) -> Flow<String?>,
   ON_CLICK      : (Game) -> Unit,
   ON_LONG_PRESS : (Game) -> Unit,
   BIG           : Boolean
 )
 {
+  val SCALE =
+    if (BIG) 1f
+    else     0.8f
+
   val initials = remember(GAME.title)
   {
     GAME.title
@@ -57,83 +68,101 @@ fun GameCard(
       .joinToString("") { it.uppercaseChar().toString() }
   }
 
+  val cardWidth =
+    if (BIG)  200.dp * SCALE
+    else      140.dp * SCALE
+  val titleFont =
+    if (BIG)  24
+    else      18
+  val publisherFont =
+    if (BIG)  16
+    else      14
+
   Card(
     shape     = RectangleShape,
     modifier  = Modifier
-      .width(
-        if (BIG) 160.dp
-        else     140.dp)
+      .width(cardWidth)
       .combinedClickable(
-        onClick     = { ON_CLICK(GAME) } ,
+        onClick     = { ON_CLICK(GAME) },
         onLongClick = { ON_LONG_PRESS(GAME) }
       ),
-    elevation = CardDefaults.cardElevation(4.dp)
+    elevation = CardDefaults.cardElevation(4.dp * SCALE)
   )
   {
-    Column(modifier = Modifier
-      .fillMaxWidth()
-      .background(GameBoyColors.MediumGreen))
+    Column(
+      modifier = Modifier
+        .fillMaxWidth()
+        .background(GameBoyColors.MediumGreen)
+    )
     {
-      val url = IMAGE_URL(GAME)
+      val url by IMAGE_URL(GAME).collectAsState(initial = null)
+      var imageFail by remember { mutableStateOf(false) }
+
       Box(
         modifier          = Modifier
           .fillMaxWidth()
-          .height(
-            if (BIG) 600.dp
-            else     96.dp)
+          .aspectRatio(1f)
           .background(
-            if (url.isNullOrEmpty()) GameBoyColors.LightGreen
-            else                     Color.Transparent),
+            if (url.isNullOrEmpty() || imageFail) GameBoyColors.LightGreen
+            else Color.Transparent
+          ),
         contentAlignment = Alignment.Center
       )
       {
-        if (!url.isNullOrEmpty())
+        CustomText(
+          TEXT      = initials,
+          FONT_SIZE = (36 * SCALE).toInt(),
+          COLOR     = GameBoyColors.DarkGreen
+        )
+
+        if (!url.isNullOrEmpty() && !imageFail)
         {
           AsyncImage(
-            model              = ImageRequest.Builder(App.appModule.context)
-              .data(IMAGE_URL)
+            model               = ImageRequest.Builder(App.appModule.context)
+              .data(url)
               .crossfade(true)
               .build(),
-            contentDescription = GAME.title.trim(),
-            contentScale       = ContentScale.Crop,
-            modifier           = Modifier.fillMaxSize(),
-            error              = painterResource(R.drawable.gameboy)
+            contentDescription  = GAME.title.trim(),
+            contentScale        = ContentScale.Crop,
+            modifier            = Modifier.fillMaxSize(),
+            onError             = { imageFail = true },
+            onSuccess           = { imageFail = false }
           )
-        }
-        else
-        {
-          CustomText(
-            TEXT      = initials,
-            FONT_SIZE = 36,
-            COLOR     = GameBoyColors.DarkGreen)
         }
       }
 
-      Spacer(modifier = Modifier.height(2.dp))
+      Spacer(modifier = Modifier.height(2.dp * SCALE))
+
       CustomText(
         TEXT      = GAME.title,
-        FONT_SIZE = 24,
+        FONT_SIZE = titleFont,
         MAX_LINES = 1,
-        MODIFIER  = Modifier.padding(4.dp))
+        MODIFIER  = Modifier.padding(horizontal = 4.dp * SCALE, vertical = 0.dp)
+      )
+
       CustomText(
         TEXT      = GAME.publisher,
-        FONT_SIZE = 16,
+        FONT_SIZE = publisherFont,
         MAX_LINES = 1,
-        MODIFIER  = Modifier.padding(4.dp))
+        MODIFIER  = Modifier.padding(horizontal = 4.dp * SCALE, vertical = 2.dp * SCALE)
+      )
     }
   }
 }
 
+
+
 @Composable
 fun GameList(
   GAMES           : List<Game>,
-  MODIFIFER       : Modifier          = Modifier,
+  MODIFIFER       : Modifier                = Modifier,
   TITLE           : String,
-  ON_LONG_PRESS   : (Game) -> Unit    = {},
-  ON_CLICK        : (Game) -> Unit    = {},
-  GET_URL         : (Game) -> String? = { null },
-  USE_ROW         : Boolean           = true,
-  BIG             : Boolean           = false
+  ON_LONG_PRESS   : (Game) -> Unit          = {},
+  ON_CLICK        : (Game) -> Unit          = {},
+  GET_URL         : (Game) -> Flow<String?> = { flowOf(null) },
+  USE_ROW         : Boolean                 = true,
+  SHOW_TITLE      : Boolean                 = true,
+  BIG             : Boolean                 = false
 )
 {
   if (GAMES.isNotEmpty())
@@ -144,7 +173,7 @@ fun GameList(
         horizontalAlignment = Alignment.Start,
         modifier            = MODIFIFER)
       {
-        CustomText(TITLE)
+        if (SHOW_TITLE) CustomText(TITLE)
         LazyRow(
           horizontalArrangement = Arrangement.spacedBy(8.dp),
           contentPadding        = PaddingValues(horizontal = 16.dp)
@@ -169,7 +198,7 @@ fun GameList(
         horizontalAlignment = Alignment.Start,
         modifier            = MODIFIFER)
       {
-        CustomText(TITLE)
+        if (SHOW_TITLE) CustomText(TITLE)
         LazyVerticalGrid(
           columns               = GridCells.Fixed(2),
           verticalArrangement   = Arrangement.spacedBy(12.dp),

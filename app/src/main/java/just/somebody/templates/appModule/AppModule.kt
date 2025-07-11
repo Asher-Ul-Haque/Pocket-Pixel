@@ -2,6 +2,7 @@ package just.somebody.templates.appModule
 
 
 import android.content.Context
+import androidx.compose.runtime.mutableStateOf
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.dataStoreFile
@@ -23,6 +24,8 @@ import just.somebody.templates.domain.repositories.GameRepository
 import just.somebody.templates.appModule.navigation.DefaultNavigator
 import just.somebody.templates.presentation.screens.Destination
 import just.somebody.templates.appModule.navigation.Navigator
+import just.somebody.templates.data.BoxArtFetcher
+import just.somebody.templates.data.DefaultBoxArtFetcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -43,6 +46,8 @@ interface AppModuleInterface
   val database               : PixelPocketDB
   val networkService         : NetworkService
   val nativeBridge           : NativeBridge
+  val gameRomsKey            : String
+  val boxArtFetcher           : BoxArtFetcher
 }
 
 class AppModule(private val APP_CONTEXT : Context) : AppModuleInterface
@@ -50,7 +55,7 @@ class AppModule(private val APP_CONTEXT : Context) : AppModuleInterface
   override val context                : Context                 by lazy { APP_CONTEXT }
   override val api                    : Api                     by lazy { ApiImpl(); }
   override val repo                   : GameRepository          by lazy { DefaultGameRepository(database.gameDAO());}
-  override val navigator              : Navigator by lazy { DefaultNavigator(startDestination = Destination.Home) }
+  override val navigator              : Navigator               by lazy { DefaultNavigator(startDestination = Destination.Home) }
   override val hardwareManager        : HardwareManager         by lazy { DefaultHardwareManager(APP_CONTEXT) }
   override val permissionManager      : PermissionManager       by lazy { DefaultPermissionManager() }
   override val dataStoreManager       : DataStoreManager        by lazy { DataStoreManager(appSettingsDataStore) }
@@ -59,12 +64,15 @@ class AppModule(private val APP_CONTEXT : Context) : AppModuleInterface
   override val networkService         : NetworkService          by lazy { NetworkService() }
   override val database               : PixelPocketDB           by lazy { DatabaseFactory(APP_CONTEXT).create().build() }
   override val nativeBridge           : NativeBridge            by lazy { NativeBridge() }
+  override val gameRomsKey            : String                  by lazy { "GAME_BOY_ROMS" }
+  override val boxArtFetcher          : BoxArtFetcher           by lazy { DefaultBoxArtFetcher(internalStorageManager, networkService) }
 
   private val appSettingsDataStore : DataStore<AppSettings> by lazy ()
   {
     DataStoreFactory.create(
       serializer = AppSettingsSerializer,
       scope      = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    ) { APP_CONTEXT.dataStoreFile("app-settings.json") }
+    )
+    { APP_CONTEXT.dataStoreFile("app-settings.json") }
   }
 }

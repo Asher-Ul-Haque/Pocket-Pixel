@@ -93,21 +93,24 @@ fun HomeScreen(
           GAMES         = favoriteGames.value,
           TITLE         = "Favorites",
           ON_CLICK      = { game -> VIEW_MODEL.markAsPlayed(game) },
-          ON_LONG_PRESS = { game -> VIEW_MODEL.selectGame(game)}
+          ON_LONG_PRESS = { game -> VIEW_MODEL.selectGame(game)},
+          GET_URL       = { game -> VIEW_MODEL.getBoxArtFlow(game.title) }
         )
 
         GameList(
           GAMES         = recentGames.value,
           TITLE         = "Recently played",
           ON_CLICK      = { game -> VIEW_MODEL.markAsPlayed(game) },
-          ON_LONG_PRESS = { game -> VIEW_MODEL.selectGame(game) }
+          ON_LONG_PRESS = { game -> VIEW_MODEL.selectGame(game) },
+          GET_URL       = { game -> VIEW_MODEL.getBoxArtFlow(game.title) }
         )
 
         GameList(
           GAMES         = newGames.value,
           TITLE         = "Discover New",
           ON_CLICK      = { game -> VIEW_MODEL.markAsPlayed(game) },
-          ON_LONG_PRESS = { game -> VIEW_MODEL.selectGame(game) }
+          ON_LONG_PRESS = { game -> VIEW_MODEL.selectGame(game) },
+          GET_URL       = { game -> VIEW_MODEL.getBoxArtFlow(game.title) }
         )
       }
     }

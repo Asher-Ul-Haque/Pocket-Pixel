@@ -33,7 +33,6 @@ class SettingsViewModel(
   {
     viewModelScope.launch ()
     {
-      REPO.factoryReset()
       val key = "GAME_BOY_ROMS"
       if (STORAGE_MANAGER.getDirectory(key) == null) return@launch
       val repo = App.appModule.repo
@@ -47,6 +46,7 @@ class SettingsViewModel(
     {
       DATASTORE.updateSettings(AppSettings())
       REPO.factoryReset()
+      App.appModule.boxArtFetcher.deleteCache()
     }
   }
 }

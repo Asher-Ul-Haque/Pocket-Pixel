@@ -72,7 +72,7 @@ fun BrowseScreen(
   Scaffold (
     topBar    =
     {
-      if (state.showTopBar)
+      if (state.showBars)
       {
         TopAppBar(
           title          =
@@ -89,7 +89,7 @@ fun BrowseScreen(
               )
             }
 
-            IconButton(onClick = { VIEW_MODEL.goToSettings() })
+            IconButton(onClick = { VIEW_MODEL.goToSettings(true) })
             {
               Icon(
                 painter            = painterResource(R.drawable.settings),
@@ -106,7 +106,7 @@ fun BrowseScreen(
 
     bottomBar =
     {
-      if (state.showBottomBar)
+      if (state.showBars)
       {
         NavBar(
           MODIFIER       = Modifier
@@ -172,7 +172,7 @@ fun BrowseScreen(
     {
       composable<Destination.Home>
       {
-        LaunchedEffect(Unit) { VIEW_MODEL.toggleBars(true, true) }
+        LaunchedEffect(Unit) { VIEW_MODEL.showBars(true) }
         HomeScreen(
           VIEW_MODEL = commonViewModel,
           MODIFIFER  = Modifier.fillMaxSize()
@@ -180,7 +180,7 @@ fun BrowseScreen(
       }
       composable<Destination.Favorites>
       {
-        LaunchedEffect(Unit) { VIEW_MODEL.toggleBars(true, true) }
+        LaunchedEffect(Unit) { VIEW_MODEL.showBars(true) }
         FavoriteScreen(
           VIEW_MODEL = commonViewModel,
           MODIFIFER  = Modifier.fillMaxSize()
@@ -188,7 +188,7 @@ fun BrowseScreen(
       }
       composable<Destination.Search>
       {
-        LaunchedEffect(Unit) { VIEW_MODEL.toggleBars(true, true) }
+        LaunchedEffect(Unit) { VIEW_MODEL.showBars(true) }
         SearchScreen(
           VIEW_MODEL = commonViewModel,
           MODIFIFER  = Modifier.fillMaxSize()
@@ -196,19 +196,8 @@ fun BrowseScreen(
       }
       composable<Destination.Server>
       {
-        LaunchedEffect(Unit) { VIEW_MODEL.toggleBars(true, true) }
+        LaunchedEffect(Unit) { VIEW_MODEL.showBars(true) }
         ServerScreen(Modifier.fillMaxSize())
-      }
-      composable<Destination.Settings>
-      {
-        LaunchedEffect(Unit)
-        {
-          VIEW_MODEL.toggleBottomBar(false)
-          VIEW_MODEL.onNavigate(4)
-        }
-        SettingsScreen(
-          MODIFIFER  = Modifier.fillMaxSize(),
-          VIEW_MODEL = settingsViewModel)
       }
     }
 
@@ -263,6 +252,14 @@ fun BrowseScreen(
             )
           }
         })
+    }
+
+    if (state.showSettings)
+    {
+      SettingsScreen(
+        VIEW_MODEL = settingsViewModel,
+        ON_DISMISS = { VIEW_MODEL.goToSettings(false) }
+      )
     }
   }
 }
