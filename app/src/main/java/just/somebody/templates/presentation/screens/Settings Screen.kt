@@ -56,15 +56,7 @@ fun SettingsScreen(
           .fillMaxWidth()
       )
       {
-        Column ()
-        {
-          CustomText(
-            TEXT     = "Change ROM directory",
-            MODIFIER = Modifier
-              .padding(0.dp)
-              .fillMaxWidth(),
-            )
-        }
+        CustomText("Change ROM directory")
       }
 
       CustomButton(

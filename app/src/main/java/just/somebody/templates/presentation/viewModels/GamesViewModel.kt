@@ -8,6 +8,7 @@ import io.ktor.client.request.request
 import io.ktor.http.isSuccess
 import just.somebody.templates.App
 import just.somebody.templates.appModule.ForgeLogger
+import just.somebody.templates.appModule.NetworkStatus
 import just.somebody.templates.appModule.network.NetworkResult
 import just.somebody.templates.domain.models.Game
 import just.somebody.templates.domain.repositories.GameRepository
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
@@ -105,21 +107,49 @@ class GamesViewModel(private val REPO : GameRepository) : ViewModel()
   private val boxArtFetcher = App.appModule.boxArtFetcher
 
   private val _boxArtMap = MutableStateFlow<Map<String, String?>>(emptyMap())
-  val boxArtMap: StateFlow<Map<String, String?>> = _boxArtMap
+  public  val boxArtMap : StateFlow<Map<String, String?>> = _boxArtMap
 
-  fun getBoxArtFlow(title: String): Flow<String?> {
-    // start fetching if not already triggered
-    if (!_boxArtMap.value.containsKey(title)) {
-      viewModelScope.launch {
-        boxArtFetcher
-          .fetchBoxArt(title)
-          .collect { url ->
-            _boxArtMap.update { old ->
-              old + (title to url)
-            }
-          }
-      }
-    }
+  fun getBoxArtFlow(title: String): Flow<String?>
+  {
+    if (!_boxArtMap.value.containsKey(title)) fetchBoxArt(title)
     return boxArtMap.map { it[title] }
+  }
+
+  init {
+    observeInternetConnectivity()
+  }
+
+  private fun observeInternetConnectivity() {
+    viewModelScope.launch {
+      App.appModule.hardwareManager.isConnectedToInternet
+        .distinctUntilChanged()
+        .collect { status ->
+          if (status is NetworkStatus.Available) {
+            retryMissingBoxArts()
+          }
+        }
+    }
+  }
+
+  private fun retryMissingBoxArts() {
+    val missingGames = _boxArtMap.value
+      .filter { (_, url) -> url == null }
+      .keys
+
+    for (title in missingGames) { fetchBoxArt(title) }
+  }
+
+  private fun fetchBoxArt(title : String)
+  {
+    viewModelScope.launch ()
+    {
+      boxArtFetcher
+        .fetchBoxArt(title)
+        .collect ()
+        { url ->
+          _boxArtMap.update()
+          { old -> old + (title to url) }
+        }
+    }
   }
 }

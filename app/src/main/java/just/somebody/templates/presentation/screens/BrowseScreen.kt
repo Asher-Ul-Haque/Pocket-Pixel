@@ -57,7 +57,8 @@ fun BrowseScreen(
   val state by VIEW_MODEL.browseState.collectAsState()
   val commonViewModel =
     viewModel<GamesViewModel>(factory = viewModelFactory()
-    { GamesViewModel(App.appModule.repo) })
+    { GamesViewModel(App.appModule.repo)
+    })
   val settingsViewModel =
     viewModel<SettingsViewModel>(
       factory = viewModelFactory()
