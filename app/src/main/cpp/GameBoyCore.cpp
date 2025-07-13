@@ -45,3 +45,6 @@ void setButton(u8 BUTTON, bool PRESSED)
 {
   FORGE_LOG_INFO("Received Button %d", BUTTON)
 }
+
+void cycles(u32 CPU_CYCLES)
+{ }

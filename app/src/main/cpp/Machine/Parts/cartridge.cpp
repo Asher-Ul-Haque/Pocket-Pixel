@@ -127,7 +127,7 @@ const char* getCartType()
   else                                  return "UNKNOWN";
 }
 
-bool loadCartridge(u8* CARTRIDGE, u64 SIZE)
+bool cartridgeLoad(u8* CARTRIDGE, u64 SIZE)
 {
   FORGE_LOG_DEBUG("Trying to load a Cartridge of size : %d", SIZE);
   FORGE_ASSERT_MESSAGE(CARTRIDGE != NULL, "Cannot load a NULL CARTRIDGE");
@@ -140,7 +140,7 @@ bool loadCartridge(u8* CARTRIDGE, u64 SIZE)
   // - - - skip the 256 byttes of nindendo logo and look at metadata
 
   FORGE_LOG_INFO("Cartridge Loaded:\n");
-  FORGE_LOG_DEBUG("Ttile       : %s\n",         cartCTX.metadata->title);
+  FORGE_LOG_DEBUG("Title       : %s\n",         cartCTX.metadata->title);
   FORGE_LOG_DEBUG("Type        : %2.2X\n",      cartCTX.metadata->type, getCartType());
   FORGE_LOG_DEBUG("ROM Size    : %d KB\n",      32 * (1 << cartCTX.metadata->romSize));
   FORGE_LOG_DEBUG("RAM Size    : %d KB\n",      32 * (1 << cartCTX.metadata->ramSize));
@@ -157,3 +157,9 @@ bool loadCartridge(u8* CARTRIDGE, u64 SIZE)
 
   return checkSumPassed;
 }
+
+u8 cartridgeRead(u16 ADDRESS)
+{ return cartCTX.romData[ADDRESS]; }
+
+void cartridgeWrite(u16 ADDRESS, u8 VALUE)
+{ TODO_COMMENT("For now we have implemented ROM Only") }

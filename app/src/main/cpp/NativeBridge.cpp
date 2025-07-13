@@ -50,7 +50,7 @@ Java_just_somebody_templates_domain_GameBoy_nativeLoadROM(
 {
   FORGE_LOG_DEBUG("Attempting to read the rom");
   jbyte* buffer = JVM->GetByteArrayElements(ROM, nullptr);
-  loadCartridge(reinterpret_cast<uint8_t *>(buffer), SIZE);
+  cartridgeLoad(reinterpret_cast<uint8_t *>(buffer), SIZE);
   JVM->ReleaseByteArrayElements(ROM, buffer, JNI_ABORT);
   FORGE_LOG_DEBUG("Successfully read the rom");
 }
