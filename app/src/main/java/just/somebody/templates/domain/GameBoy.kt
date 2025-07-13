@@ -35,7 +35,7 @@ class GameBoy
   fun loadROM(ROM : ByteArray)
   {
     romData = ROM;
-    nativeLoadROM(romData);
+    nativeLoadROM(romData, romData.size);
   }
 
   fun startEmulator  ()                  { nativeStartEmulator(); }
@@ -100,7 +100,7 @@ class GameBoy
   private external fun nativeStepFrame      ()
   private external fun nativeGetFrameBuffer (FRAME_BUFFER : ByteArray)
   private external fun nativeGetAudioBuffer (AUDIO_BUFFER : ByteArray)
-  private external fun nativeLoadROM        (ROM : ByteArray)
+  private external fun nativeLoadROM        (ROM : ByteArray, SIZE : Int)
   private external fun nativeSetButtonState (BUTTON : Int, PRESSED : Boolean)
   private external fun nativeStartEmulator  ();
   private external fun nativeStopEmulator   ();

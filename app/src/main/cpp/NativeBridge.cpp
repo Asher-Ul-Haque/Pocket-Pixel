@@ -2,6 +2,9 @@
 #include "defines.h"
 #include "ForgeLibrary/include/asserts.h"
 #include "GameBoyCore.h"
+#include "Machine/Parts/cpu.h"
+#include "Machine/Parts/cartridge.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -10,12 +13,14 @@ JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeStepFrame(
   JNIEnv* JVM,
   jobject THIS)
-{}
+{
+  cpuTick();
+}
 
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeGetFrameBuffer(
-  JNIEnv* JVM,
-  jobject THIS,
+  JNIEnv*    JVM,
+  jobject    THIS,
   jbyteArray FRAME_BUFFER)
 {
   jbyte* buffer = JVM->GetByteArrayElements(FRAME_BUFFER, nullptr);
@@ -26,52 +31,49 @@ Java_just_somebody_templates_domain_GameBoy_nativeGetFrameBuffer(
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeGetAudioBuffer
 (
-  JNIEnv* JVM,
-  jobject THIS,
+  JNIEnv*    JVM,
+  jobject    THIS,
   jbyteArray AUDIO_BUFFER)
 {
-  // TODO: implement nativeGetAudioBuffer()
+  jbyte* buffer = JVM->GetByteArrayElements(AUDIO_BUFFER, nullptr);
+  getAudio(reinterpret_cast<uint8_t *>(buffer));
+  JVM->ReleaseByteArrayElements(AUDIO_BUFFER, buffer, 0);
 }
+
 
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeLoadROM(
-  JNIEnv* ENV,
-  jobject THIS,
-  jbyteArray ROM)
+  JNIEnv*    JVM,
+  jobject    THIS,
+  jbyteArray ROM,
+  jint SIZE)
 {
-  // TODO: implement nativeLoadROM()
+  FORGE_LOG_DEBUG("Attempting to read the rom");
+  jbyte* buffer = JVM->GetByteArrayElements(ROM, nullptr);
+  loadCartridge(reinterpret_cast<uint8_t *>(buffer), SIZE);
+  JVM->ReleaseByteArrayElements(ROM, buffer, JNI_ABORT);
+  FORGE_LOG_DEBUG("Successfully read the rom");
 }
 
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeSetButtonState(
-  JNIEnv* ENV,
-  jobject THIS,
-  jint BUTTON,
+  JNIEnv*  ENV,
+  jobject  THIS,
+  jint     BUTTON,
   jboolean PRESSED)
-{
-  // TODO: implement nativeSetButtonState()
-}
+{ setButton(BUTTON, PRESSED); }
 
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeStartEmulator(
   JNIEnv* ENV,
   jobject THIS)
-{
-  startEmulator();
-}
+{ cpuInit(); }
 
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeStopEmulator(
   JNIEnv* ENV,
   jobject THIS)
-{
-  stopEmulator();
-}
-
-JNIEXPORT void JNICALL
-Java_just_somebody_templates_domain_GameBoy_nativeStartCPU(JNIEnv *env, jobject thiz) {
-  // TODO: implement nativeStartCPU()
-}
+{ stopEmulator(); }
 
 #ifdef __cplusplus
 }

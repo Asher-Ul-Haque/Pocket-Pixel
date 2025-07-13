@@ -7,10 +7,10 @@ static u64 frameCount = 0;
 
 
 void stopEmulator()
-{FORGE_LOG_INFO("Emulator Stopped");}
+{ FORGE_LOG_INFO("Emulator Stopped");}
 
 void startEmulator()
-{FORGE_LOG_INFO("Emulator Start");}
+{ FORGE_LOG_INFO("Emulator Start");}
 
 void getFrame(u8* BUFFER)
 {
