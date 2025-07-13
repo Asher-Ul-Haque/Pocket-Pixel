@@ -40,7 +40,9 @@ fun SettingsScreen(
     { SnackbarController.sendEvent(SnackbarEvent(message = "No directory picked")) }
   }
 
-  ModalBottomSheet(onDismissRequest = ON_DISMISS)
+  ModalBottomSheet(
+    onDismissRequest = ON_DISMISS,
+    containerColor = GameBoyColors.DarkGreen)
   {
     Column(
       modifier            = Modifier.padding(16.dp),

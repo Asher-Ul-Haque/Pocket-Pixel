@@ -34,6 +34,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
 import just.somebody.templates.App
 import just.somebody.templates.R
 import just.somebody.templates.appModule.navigation.NavigationAction
@@ -199,6 +200,14 @@ fun BrowseScreen(
       {
         LaunchedEffect(Unit) { VIEW_MODEL.showBars(true) }
         ServerScreen(Modifier.fillMaxSize())
+      }
+      composable<Destination.Emulator>
+      {
+        LaunchedEffect(Unit) { VIEW_MODEL.showBars(false) }
+        val args = it.toRoute<Destination.Emulator>()
+        EmulatorScreen(
+          MODIFIER = Modifier.fillMaxSize(),
+          URI      = args.URI)
       }
     }
 

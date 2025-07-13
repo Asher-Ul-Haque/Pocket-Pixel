@@ -118,7 +118,7 @@ fun HomeScreen(
     selectedGame.value?.let ()
     { game ->
       GameActionBottomSheet(
-        GAME        = game,
+        GAME         = game,
         ON_DISMISS   = { VIEW_MODEL.selectGame(null)},
         ON_PLAY      =
           {

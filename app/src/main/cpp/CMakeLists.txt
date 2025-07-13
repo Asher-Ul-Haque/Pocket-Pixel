@@ -6,6 +6,8 @@ project("native-lib")
 file(GLOB_RECURSE PROJECT_SOURCES
         "${CMAKE_SOURCE_DIR}/*.c"
         "${CMAKE_SOURCE_DIR}/*.cpp"
+        "${CMAKE_SOURCE_DIR}/GameBoyCore.cpp"
+        "${CMAKE_SOURCE_DIR}/NativeBridge.cpp"
 )
 
 # Default Android build

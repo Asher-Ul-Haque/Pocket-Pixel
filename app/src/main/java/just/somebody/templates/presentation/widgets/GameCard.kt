@@ -31,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -232,7 +233,9 @@ fun GameActionBottomSheet(
   ON_FAVORITE : () -> Unit,
 )
 {
-  ModalBottomSheet(onDismissRequest = ON_DISMISS)
+  ModalBottomSheet(
+    onDismissRequest = ON_DISMISS,
+    containerColor   = GameBoyColors.DarkGreen)
   {
     Column(
       modifier            = Modifier.padding(16.dp),

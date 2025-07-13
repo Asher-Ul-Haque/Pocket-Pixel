@@ -12,6 +12,7 @@ import just.somebody.templates.appModule.NetworkStatus
 import just.somebody.templates.appModule.network.NetworkResult
 import just.somebody.templates.domain.models.Game
 import just.somebody.templates.domain.repositories.GameRepository
+import just.somebody.templates.presentation.screens.Destination
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -84,7 +85,11 @@ class GamesViewModel(private val REPO : GameRepository) : ViewModel()
 
   fun markAsPlayed(GAME : Game)
   {
-    viewModelScope.launch { REPO.updateLastPlayed(GAME.id, System.currentTimeMillis()) }
+    viewModelScope.launch ()
+    {
+      REPO.updateLastPlayed(GAME.id, System.currentTimeMillis())
+      App.appModule.navigator.navigate(Destination.Emulator(GAME.romUri))
+    }
   }
 
   fun detectAndInsertRoms()
@@ -106,8 +111,8 @@ class GamesViewModel(private val REPO : GameRepository) : ViewModel()
 
   private val boxArtFetcher = App.appModule.boxArtFetcher
 
-  private val _boxArtMap = MutableStateFlow<Map<String, String?>>(emptyMap())
-  public  val boxArtMap : StateFlow<Map<String, String?>> = _boxArtMap
+  private val _boxArtMap : MutableStateFlow<Map<String, String?>> = MutableStateFlow<Map<String, String?>>(emptyMap())
+  public  val boxArtMap  : StateFlow<Map<String, String?>>        = _boxArtMap
 
   fun getBoxArtFlow(title: String): Flow<String?>
   {
@@ -115,23 +120,23 @@ class GamesViewModel(private val REPO : GameRepository) : ViewModel()
     return boxArtMap.map { it[title] }
   }
 
-  init {
-    observeInternetConnectivity()
-  }
+  init { observeInternetConnectivity() }
 
-  private fun observeInternetConnectivity() {
-    viewModelScope.launch {
+  private fun observeInternetConnectivity()
+  {
+    viewModelScope.launch ()
+    {
       App.appModule.hardwareManager.isConnectedToInternet
         .distinctUntilChanged()
-        .collect { status ->
-          if (status is NetworkStatus.Available) {
-            retryMissingBoxArts()
-          }
+        .collect ()
+        { status ->
+          if (status is NetworkStatus.Available) retryMissingBoxArts()
         }
     }
   }
 
-  private fun retryMissingBoxArts() {
+  private fun retryMissingBoxArts()
+  {
     val missingGames = _boxArtMap.value
       .filter { (_, url) -> url == null }
       .keys

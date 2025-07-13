@@ -2,11 +2,9 @@ package just.somebody.templates.appModule
 
 
 import android.content.Context
-import androidx.compose.runtime.mutableStateOf
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.dataStoreFile
-import just.somebody.templates.appModule.nativeBridge.NativeBridge
 import just.somebody.templates.appModule.network.NetworkService
 import just.somebody.templates.appModule.storage.DefaultExternalStorageManager
 import just.somebody.templates.appModule.storage.dataStore.AppSettings
@@ -26,6 +24,7 @@ import just.somebody.templates.presentation.screens.Destination
 import just.somebody.templates.appModule.navigation.Navigator
 import just.somebody.templates.data.BoxArtFetcher
 import just.somebody.templates.data.DefaultBoxArtFetcher
+import just.somebody.templates.domain.GameBoy
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -45,9 +44,9 @@ interface AppModuleInterface
   val context                : Context
   val database               : PixelPocketDB
   val networkService         : NetworkService
-  val nativeBridge           : NativeBridge
   val gameRomsKey            : String
-  val boxArtFetcher           : BoxArtFetcher
+  val boxArtFetcher          : BoxArtFetcher
+  val gameBoy                : GameBoy
 }
 
 class AppModule(private val APP_CONTEXT : Context) : AppModuleInterface
@@ -63,9 +62,10 @@ class AppModule(private val APP_CONTEXT : Context) : AppModuleInterface
   override val externalStorageManager : ExternalStorageManager  by lazy { DefaultExternalStorageManager(APP_CONTEXT, dataStoreManager) }
   override val networkService         : NetworkService          by lazy { NetworkService() }
   override val database               : PixelPocketDB           by lazy { DatabaseFactory(APP_CONTEXT).create().build() }
-  override val nativeBridge           : NativeBridge            by lazy { NativeBridge() }
   override val gameRomsKey            : String                  by lazy { "GAME_BOY_ROMS" }
   override val boxArtFetcher          : BoxArtFetcher           by lazy { DefaultBoxArtFetcher(internalStorageManager, networkService) }
+  override val gameBoy                : GameBoy                 by lazy { GameBoy() }
+
 
   private val appSettingsDataStore : DataStore<AppSettings> by lazy ()
   {
