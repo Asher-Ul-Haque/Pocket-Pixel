@@ -9,8 +9,12 @@ static u64 frameCount = 0;
 void stopEmulator()
 {FORGE_LOG_INFO("Emulator Stopped");}
 
+void startEmulator()
+{FORGE_LOG_INFO("Emulator Start");}
+
 void getFrame(u8* BUFFER)
 {
+  FORGE_LOG_INFO("Framecount %d", frameCount);
   frameCount++;
   u64 width  = 160;
   u64 height = 144;

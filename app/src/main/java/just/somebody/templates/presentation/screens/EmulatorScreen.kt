@@ -1,6 +1,8 @@
 package just.somebody.templates.presentation.screens
 
 import android.graphics.Bitmap
+import android.net.Uri
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -12,49 +14,41 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import just.somebody.templates.App
 import just.somebody.templates.domain.models.Game
+import just.somebody.templates.presentation.effects.SnackbarController
+import just.somebody.templates.presentation.effects.SnackbarEvent
+import just.somebody.templates.presentation.viewModels.EmulatorViewModel
 import just.somebody.templates.presentation.widgets.GameBoyControls
 import just.somebody.templates.ui.theme.GameBoyColors
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 
 @Composable
 fun EmulatorScreen(
-  MODIFIER : Modifier = Modifier,
-  URI      : String)
+  MODIFIER   : Modifier = Modifier,
+  VIEW_MODEL : EmulatorViewModel,
+  URI        : String)
 {
-  val gameBoy = App.appModule.gameBoy
-  var bitmap by remember { mutableStateOf<Bitmap?>(null) }
 
-  LaunchedEffect(Unit)
-  {
-    gameBoy.resetEmulator()
-    gameBoy.loadROM(URI)
-    gameBoy.startEmulator()
+  val bitmap by VIEW_MODEL.frameFlow.collectAsState()
 
-    while (true)
-    {
-      val frameStart = System.currentTimeMillis()
-      bitmap         = gameBoy.getFrameBuffer()
-      gameBoy.stepFrame()
 
-      val target     = 16L // 60 GPS -> 16ms per frame
-      val elapsed    = System.currentTimeMillis() - frameStart
-      val sleepTime  = target - elapsed
-
-      if (sleepTime > 0) delay(sleepTime)
-    }
-  }
+  LaunchedEffect(URI) { VIEW_MODEL.runEmulator(URI) }
 
   Column (
     modifier            = MODIFIER
@@ -64,6 +58,7 @@ fun EmulatorScreen(
     horizontalAlignment = Alignment.CenterHorizontally
   )
   {
+
     Box(
       modifier = Modifier
         .border(width = 8.dp, color = Color.Black)
@@ -81,6 +76,6 @@ fun EmulatorScreen(
         )
       }
     }
-    GameBoyControls(gameBoy)
+    GameBoyControls(App.appModule.gameBoy)
   }
 }
