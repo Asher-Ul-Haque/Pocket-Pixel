@@ -1,12 +1,13 @@
 #include "../include/bus.h"
 #include "../include/cpu.h"
+#include "../include/stack.h"
 #include "../../../GameBoyCore.h"
 
 
 // - - - Helpers - - -
 
 
-void cpuSetFlags(CPUContext* CTX, char Z, char N, char H, char C)
+void cpuSetFlags(CPUContext* CTX, i8 Z, i8 N, i8 H, i8 C)
 {
   if (Z != -1)
   {
@@ -47,7 +48,7 @@ static void procLoad(CPUContext* CTX)
       cycles(1);
       busWrite16(CTX->memDest, CTX->readData);
     }
-    else       busWrite(CTX->memDest, CTX->readData);
+    else busWrite(CTX->memDest, CTX->readData);
 
     return;
   }
@@ -77,6 +78,33 @@ static void procLoadHalf(CPUContext* CTX)
   cycles(1);
 }
 
+// - - - pop 
+static void procPop(CPUContext* CTX)
+{
+  u16 lo = stackPop();
+  cycles(1);
+  u16 hi = stackPop();
+  cycles(1);
+
+  u16 n = (hi << 8) | lo;
+  cpuSetRegister(CTX->currentInst->reg1, n);
+  if (CTX->currentInst->reg1 == REG_AF) cpuSetRegister(CTX->currentInst->reg1, n & 0xFFF0);
+}
+
+// - - - push 
+static void procPush(CPUContext* CTX)
+{
+  u16 hi = (cpuReadRegister(CTX->currentInst->reg1) >> 8) & 0xFF;
+  cycles(1);
+  stackPush(hi);
+
+  u16 lo = (cpuReadRegister(CTX->currentInst->reg2) & 0xFF);
+  cycles(1);
+  stackPush(lo);
+
+  cycles(1);
+}
+
 // - - - XOR, XOR accumulator with whatever is read 
 static void procXOR(CPUContext* CTX)
 { 
@@ -89,8 +117,9 @@ static void procDI(CPUContext* CTX)
 { CTX->interruptMasterEnabled = false; }
 
 
-// - - - jump insturction
-static void procJump(CPUContext* CTX)
+// - - - JUMP Insutructions - - -
+
+static bool checkCondition(CPUContext* CTX)
 {
   bool checkCondition = true;
 
@@ -99,20 +128,76 @@ static void procJump(CPUContext* CTX)
 
   switch (CTX->currentInst->cond) 
   {
-    case CONDITIONS_NONE : { checkCondition = true; break; }
-    case CONDITIONS_C    : { checkCondition = c;    break; }
-    case CONDITIONS_NC   : { checkCondition = !c;   break; }
-    case CONDITIONS_Z    : { checkCondition = z;    break; }
-    case CONDITIONS_NZ   : { checkCondition = !z;   break; }
+    case CHECK_NONE     : { checkCondition = true; break; }
+    case CHECK_CARRY    : { checkCondition = c;    break; }
+    case CHECK_NO_CARRY : { checkCondition = !c;   break; }
+    case CHECK_ZERO     : { checkCondition = z;    break; }
+    case CHECK_NOT_ZERO : { checkCondition = !z;   break; }
   }
 
-  if (checkCondition)
+  return checkCondition;
+}
+
+// - - - goto
+static void gotoAddr(CPUContext* CTX, u16 ADDR, bool PUSH)
+{
+  if (checkCondition(CTX))
   {
-    CTX->registerFile.programCounter = CTX->readData;
+    if (PUSH) 
+    {
+      cycles(2);
+      stackPush16(CTX->registerFile.programCounter);
+    }
+    CTX->registerFile.programCounter = ADDR;
     cycles(1);
   }
 }
 
+// - - - jump insturction
+static void procJump(CPUContext* CTX)
+{ gotoAddr(CTX, CTX->readData, false); }
+
+// - - - function call 
+static void procCall(CPUContext* CTX)
+{ gotoAddr(CTX, CTX->readData, true); }
+
+// - - - function call with arguments 
+static void procRST(CPUContext* CTX)
+{ gotoAddr(CTX, CTX->currentInst->param, true); }
+
+// - - - jump relative 
+static void procJumpRelative(CPUContext* CTX)
+{
+  i8  rel  = (i8)(CTX->readData & 0xFF);
+  u16 addr = CTX->registerFile.programCounter + rel;
+  gotoAddr(CTX, addr, false);
+}
+
+// - - - return 
+static void procRet(CPUContext* CTX)
+{
+  if (CTX->currentInst->cond != CHECK_NONE) cycles(1);
+
+  if (checkCondition(CTX))
+  {
+    u16 lo = stackPop();
+    cycles(1);
+
+    u16 hi = stackPop();
+    cycles(1);
+
+    u16 n = (hi << 8) | lo;
+    CTX->registerFile.programCounter = n;
+    cycles(1);
+  }
+}
+
+// - - - return from interrupt
+static void procReturnInterrupt(CPUContext* CTX)
+{
+  CTX->interruptMasterEnabled = true;
+  procRet(CTX);
+}
 
 // - - - API to get processors - - -
 static Processor processors[] = 
@@ -123,7 +208,14 @@ static Processor processors[] =
     [INSTRUCTION_JUMP] = procJump,
     [INSTRUCTION_DI]   = procDI,
     [INSTRUCTION_XOR]  = procXOR,
-    [INSTRUCTION_LDH]  = procLoadHalf
+    [INSTRUCTION_LDH]  = procLoadHalf,
+    [INSTRUCTION_POP]  = procPop,
+    [INSTRUCTION_PUSH] = procPush,
+    [INSTRUCTION_JR]   = procJumpRelative,
+    [INSTRUCTION_CALL] = procCall,
+    [INSTRUCTION_RET]  = procRet,
+    [INSTRUCTION_RETI] = procReturnInterrupt,
+    [INSTRUCTION_RST]  = procRST
   };
 
 Processor getInstrProcessor(InstructionType TYPE)

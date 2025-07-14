@@ -118,11 +118,11 @@ typedef enum
 
 typedef enum 
 {
-  CONDITIONS_NONE,
-  CONDITIONS_NZ,
-  CONDITIONS_Z,
-  CONDITIONS_NC,
-  CONDITIONS_C
+  CHECK_NONE,
+  CHECK_NOT_ZERO,
+  CHECK_ZERO,
+  CHECK_NO_CARRY,
+  CHECK_CARRY
 } ConditionType;
 
 typedef struct
@@ -158,6 +158,8 @@ FORGE_API u16  cpuReadRegister(RegisterType TYPE);
 FORGE_API void cpuSetRegister(RegisterType TYPE, u16 VAL);
 FORGE_API void cpuSetInterrupt(u8 INTERRUPT);
 FORGE_API u8   cpuGetInterrupt();
+
+FORGE_API RegisterFile* cpuGetRegisters();
 
 typedef void (*Processor)(CPUContext*);
 Processor getInstrProcessor(InstructionType TYPE);
