@@ -141,12 +141,7 @@ fun GameCard(
         MODIFIER  = Modifier.padding(horizontal = 4.dp * SCALE, vertical = 0.dp)
       )
 
-      CustomText(
-        TEXT      = GAME.publisher,
-        FONT_SIZE = publisherFont,
-        MAX_LINES = 1,
-        MODIFIER  = Modifier.padding(horizontal = 4.dp * SCALE, vertical = 2.dp * SCALE)
-      )
+      Spacer(modifier = Modifier.height(2.dp * SCALE))
     }
   }
 }

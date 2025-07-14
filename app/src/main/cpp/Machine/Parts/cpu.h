@@ -16,8 +16,8 @@ typedef struct
   u8 e;
   u8 h;
   u8 l;
-  u8 stackPointer;
-  u8 programCounter;
+  u16 stackPointer;
+  u16 programCounter;
 } RegisterFile;
 
 typedef enum 
@@ -144,6 +144,8 @@ typedef struct
   bool            destIsMemory;
   bool            halted;
   bool            steppingMode;
+  bool            interruptMasterEnabled;
+  Instruction*    currentInst;
 } CPUContext;
 
 
@@ -152,6 +154,10 @@ typedef struct
 FORGE_API void cpuInit();
 FORGE_API void cpuTick();
 FORGE_API u16  cpuReadRegister(RegisterType TYPE);
+
+typedef void (*Processor)(CPUContext*);
+Processor getInstrProcessor(InstructionType TYPE);
+
 
 #ifdef __cplusplus
 }

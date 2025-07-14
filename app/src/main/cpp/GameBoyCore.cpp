@@ -1,6 +1,7 @@
 #include "GameBoyCore.h"
 #include "ForgeLibrary/include/asserts.h"
 #include "ForgeLibrary/include/logger.h"
+#include "Machine/Parts/cpu.h"
 
 static u64 frameCount = 0;
 #define FRAME_WIDTH 160
@@ -10,11 +11,13 @@ void stopEmulator()
 { FORGE_LOG_INFO("Emulator Stopped");}
 
 void startEmulator()
-{ FORGE_LOG_INFO("Emulator Start");}
+{
+  FORGE_LOG_INFO("Emulator Start");
+  cpuInit();
+}
 
 void getFrame(u8* BUFFER)
 {
-  FORGE_LOG_INFO("Framecount %d", frameCount);
   frameCount++;
   u64 width  = 160;
   u64 height = 144;

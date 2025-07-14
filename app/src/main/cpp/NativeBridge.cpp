@@ -67,7 +67,7 @@ JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeStartEmulator(
   JNIEnv* ENV,
   jobject THIS)
-{ cpuInit(); }
+{ startEmulator(); }
 
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeStopEmulator(
