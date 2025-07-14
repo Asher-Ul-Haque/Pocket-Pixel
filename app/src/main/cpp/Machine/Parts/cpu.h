@@ -154,6 +154,7 @@ typedef struct
 FORGE_API void cpuInit();
 FORGE_API void cpuTick();
 FORGE_API u16  cpuReadRegister(RegisterType TYPE);
+FORGE_API void cpuSetRegister(RegisterType TYPE, u16 VAL);
 
 typedef void (*Processor)(CPUContext*);
 Processor getInstrProcessor(InstructionType TYPE);

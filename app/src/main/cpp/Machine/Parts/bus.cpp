@@ -35,9 +35,24 @@ MEMORY MAP OF THE GAME BOY
 u8 busRead(u16 ADDRESS)
 {
   if (ADDRESS < 0x8000) return cartridgeRead(ADDRESS);
-  TODO_COMMENT("We are doing only ROM reading for now");
+  //TODO_COMMENT("We are doing only ROM reading for now");
   return 0;
 }
 
 void busWrite(u16 ADDRESS, u8 VALUE)
-{ TODO_COMMENT("We are doing only ROM reading for now"); }
+{
+  //TODO_COMMENT("We are doing only ROM reading for now");
+}
+
+u16 busRead16(u16 ADDRESS)
+{
+  u16 lo = busRead(ADDRESS);
+  u16 hi = busRead(ADDRESS + 1);
+  return lo | (hi << 8);
+}
+
+void busWrite16(u16 ADDRESS, u16 VALUE)
+{
+  busWrite(ADDRESS + 1, (VALUE >> 8) & 0xFF);
+  busWrite(ADDRESS, VALUE & 0xFF);
+}

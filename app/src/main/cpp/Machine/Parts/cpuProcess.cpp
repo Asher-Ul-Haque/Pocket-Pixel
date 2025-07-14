@@ -1,3 +1,4 @@
+#include "bus.h"
 #include "cpu.h"
 #include "../../GameBoyCore.h"
 #include "../../ForgeLibrary/include/asserts.h"
@@ -38,7 +39,35 @@ static void procNone(CPUContext* CTX) {}
 
 // - - - Load instruction 
 static void procLoad(CPUContext* CTX)
-{ TODO }
+{
+  if (CTX->destIsMemory)
+  {
+    // - - - Check if 16 bit register 
+    if (CTX->currentInst->reg2 >= RegisterType::REG_AF)
+    {
+      cycles(1);
+      busWrite16(CTX->memDest, CTX->readData);
+    }
+    else       busWrite(CTX->memDest, CTX->readData);
+
+    return;
+  }
+
+  if (CTX->currentInst->mode == ADDRESS_MODE_HL_SPR)
+  {
+    u8 halfCarryFlag = (cpuReadRegister(CTX->currentInst->reg2) & 0xF) + 
+      (CTX->readData & 0xF) >= 0x10;
+    u8 carryFlag     = (cpuReadRegister(CTX->currentInst->reg2) & 0xFF) + 
+      (CTX->readData & 0xFF) >= 0x100;
+
+    cpuSetFlags(CTX, 0, 0, halfCarryFlag, carryFlag);
+    cpuSetRegister(CTX->currentInst->reg1, cpuReadRegister(CTX->currentInst->reg2) + (i8)(CTX->readData));
+
+    return;
+  }
+
+  cpuSetRegister(CTX->currentInst->reg1, CTX->readData);
+}
 
 
 // - - - XOR, XOR accumulator with whatever is read 
