@@ -1,7 +1,6 @@
-#include "bus.h"
-#include "cpu.h"
-#include "../../GameBoyCore.h"
-#include "../../ForgeLibrary/include/asserts.h"
+#include "../include/bus.h"
+#include "../include/cpu.h"
+#include "../../../GameBoyCore.h"
 
 
 // - - - Helpers - - -
@@ -69,6 +68,14 @@ static void procLoad(CPUContext* CTX)
   cpuSetRegister(CTX->currentInst->reg1, CTX->readData);
 }
 
+// - - - Load Half 
+static void procLoadHalf(CPUContext* CTX)
+{
+  if (CTX->currentInst->reg1 == REG_A)  cpuSetRegister(REG_A, busRead(0xFF00 | CTX->readData)); 
+  else                                  busWrite(0xFF00 | CTX->readData, CTX->registerFile.accumulator);
+
+  cycles(1);
+}
 
 // - - - XOR, XOR accumulator with whatever is read 
 static void procXOR(CPUContext* CTX)
@@ -116,6 +123,7 @@ static Processor processors[] =
     [INSTRUCTION_JUMP] = procJump,
     [INSTRUCTION_DI]   = procDI,
     [INSTRUCTION_XOR]  = procXOR,
+    [INSTRUCTION_LDH]  = procLoadHalf
   };
 
 Processor getInstrProcessor(InstructionType TYPE)

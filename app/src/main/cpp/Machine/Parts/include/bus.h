@@ -1,6 +1,6 @@
 #pragma once
-#include "../../defines.h"
-#include "../../ForgeLibrary/include/logger.h"
+#include "../../../defines.h"
+#include "../../../ForgeLibrary/include/logger.h"
 
 #ifdef __cplusplus
 extern "C" {

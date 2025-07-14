@@ -2,8 +2,8 @@
 #include "defines.h"
 #include "ForgeLibrary/include/asserts.h"
 #include "GameBoyCore.h"
-#include "Machine/Parts/cpu.h"
-#include "Machine/Parts/cartridge.h"
+#include "Machine/Parts/include/cpu.h"
+#include "Machine/Parts/include/cartridge.h"
 
 #ifdef __cplusplus
 extern "C" {

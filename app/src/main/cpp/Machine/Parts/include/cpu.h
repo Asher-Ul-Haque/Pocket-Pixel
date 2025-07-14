@@ -1,5 +1,5 @@
 #pragma once
-#include "../../defines.h"
+#include "../../../defines.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -145,6 +145,7 @@ typedef struct
   bool            halted;
   bool            steppingMode;
   bool            interruptMasterEnabled;
+  u8              interrupt;
   Instruction*    currentInst;
 } CPUContext;
 
@@ -155,6 +156,8 @@ FORGE_API void cpuInit();
 FORGE_API void cpuTick();
 FORGE_API u16  cpuReadRegister(RegisterType TYPE);
 FORGE_API void cpuSetRegister(RegisterType TYPE, u16 VAL);
+FORGE_API void cpuSetInterrupt(u8 INTERRUPT);
+FORGE_API u8   cpuGetInterrupt();
 
 typedef void (*Processor)(CPUContext*);
 Processor getInstrProcessor(InstructionType TYPE);

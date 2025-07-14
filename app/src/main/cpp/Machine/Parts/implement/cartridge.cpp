@@ -1,5 +1,5 @@
-#include "cartridge.h"
-#include "../../ForgeLibrary/include/asserts.h"
+#include "../include/cartridge.h"
+#include "../../../ForgeLibrary/include/asserts.h"
 
 typedef struct 
 {
@@ -162,4 +162,7 @@ u8 cartridgeRead(u16 ADDRESS)
 { return cartCTX.romData[ADDRESS]; }
 
 void cartridgeWrite(u16 ADDRESS, u8 VALUE)
-{ TODO_COMMENT("For now we have implemented ROM Only") }
+{
+  FORGE_LOG_WARNING("Cartridge Write at %08X. Remember to implement", ADDRESS);
+//    TODO_COMMENT("For now we have implemented ROM Only") 
+}

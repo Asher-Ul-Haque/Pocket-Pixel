@@ -1,4 +1,4 @@
-#include "ppu.h"
+#include "../include/ppu.h"
 
 void ppuInit()
 { FORGE_LOG_TRACE("PPU init"); }

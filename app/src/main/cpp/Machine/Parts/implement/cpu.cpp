@@ -1,8 +1,8 @@
-#include "cpu.h"
-#include "bus.h"
-#include "../../GameBoyCore.h"
-#include "../../ForgeLibrary/include/asserts.h"
-#include "../../ForgeLibrary/include/logger.h"
+#include "../include/cpu.h"
+#include "../include/bus.h"
+#include "../../../GameBoyCore.h"
+#include "../../../ForgeLibrary/include/asserts.h"
+#include "../../../ForgeLibrary/include/logger.h"
 
 static CPUContext   cpuCTX  = {0};
 static int emuCycles = 0;
@@ -129,10 +129,12 @@ static Instruction instructions[POSSIBLE_INSTRUCTION_COUNT] =
     [0xC3] = {INSTRUCTION_JUMP,       ADDRESS_MODE_D16},
 
     // - - - 0xEX
+    [0xE0] = {INSTRUCTION_LDH,        ADDRESS_MODE_A8_R,  REG_NONE, REG_A},
     [0xE2] = {INSTRUCTION_LOAD,       ADDRESS_MODE_MR_R,  REG_C,    REG_A},
     [0xEA] = {INSTRUCTION_LOAD,       ADDRESS_MODE_A16_R, REG_NONE, REG_A},
 
     // - - - 0xFX
+    [0xF0] = {INSTRUCTION_LDH,        ADDRESS_MODE_R_A8,  REG_A},
     [0xF2] = {INSTRUCTION_LOAD,       ADDRESS_MODE_R_MR,  REG_A,    REG_C},
     [0xF3] = {INSTRUCTION_DI},
     [0xFA] = {INSTRUCTION_LOAD,       ADDRESS_MODE_R_A16, REG_A},
@@ -407,13 +409,17 @@ FORGE_API void cpuTick()
 
     // - - - execute the instruction
     FORGE_LOG_INFO(
-        "0x%04X : \t\t0x%02X : %-10s \t\t(A=0x%02X, B=0x%02X, C=0x%02X)",
-        cpuCTX.registerFile.programCounter - 1,
-        cpuCTX.currentOpcode,
-        getInstrName(cpuCTX.currentInst->type),
-        cpuCTX.registerFile.accumulator,
-        cpuCTX.registerFile.b,
-        cpuCTX.registerFile.c
+      "0x%04X : \t\t0x%02X : %-10s \t\t(A : 0x%02X \t BC : 0x%02X%02X \t DE : 0x%02X%02X \t HL : 0x%02X%02X)",
+      cpuCTX.registerFile.programCounter - 1,
+      cpuCTX.currentOpcode,
+      getInstrName(cpuCTX.currentInst->type),
+      cpuCTX.registerFile.accumulator,
+      cpuCTX.registerFile.b,
+      cpuCTX.registerFile.c,
+      cpuCTX.registerFile.d,
+      cpuCTX.registerFile.e,
+      cpuCTX.registerFile.h,
+      cpuCTX.registerFile.l
     );
 
     Processor proc = getInstrProcessor(cpuCTX.currentInst->type);
@@ -474,3 +480,9 @@ void cpuSetRegister(RegisterType TYPE, u16 VAL)
     default : return;
   }
 }
+
+u8 cpuGetInterrupt()
+{ return cpuCTX.interrupt; }
+
+void cpuSetRegister(u8 INTERRPUT)
+{ cpuCTX.interrupt = INTERRPUT; }

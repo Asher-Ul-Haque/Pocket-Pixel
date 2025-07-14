@@ -1,4 +1,4 @@
-#include "spu.h"
+#include "../include/spu.h"
 
 void spuInit()
 { FORGE_LOG_TRACE("SPU init"); }

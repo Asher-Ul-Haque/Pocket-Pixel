@@ -1,7 +1,7 @@
 #include "GameBoyCore.h"
 #include "ForgeLibrary/include/asserts.h"
 #include "ForgeLibrary/include/logger.h"
-#include "Machine/Parts/cpu.h"
+#include "Machine/Parts/include/cpu.h"
 
 static u64 frameCount = 0;
 #define FRAME_WIDTH 160
