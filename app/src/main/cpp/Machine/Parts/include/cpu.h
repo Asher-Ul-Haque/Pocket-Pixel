@@ -23,10 +23,14 @@ typedef struct
 typedef enum 
 {
   REG_NONE,
-  REG_A, REG_F,
-  REG_B, REG_C,
-  REG_D, REG_E,
-  REG_H, REG_L,
+  REG_A, 
+  REG_F,
+  REG_B, 
+  REG_C,
+  REG_D, 
+  REG_E,
+  REG_H, 
+  REG_L,
   REG_AF,
   REG_BC,
   REG_DE,
@@ -156,6 +160,8 @@ FORGE_API void cpuInit();
 FORGE_API void cpuTick();
 FORGE_API u16  cpuReadRegister(RegisterType TYPE);
 FORGE_API void cpuSetRegister(RegisterType TYPE, u16 VAL);
+FORGE_API u8   cpuReadRegister8(RegisterType TYPE);
+FORGE_API void cpuSetRegister8(RegisterType TYPE, u8 VAL);
 FORGE_API void cpuSetInterrupt(u8 INTERRUPT);
 FORGE_API u8   cpuGetInterrupt();
 

@@ -73,9 +73,9 @@ void busWrite(u16 ADDRESS, u8 VALUE)
   // - - - reserved unusable 
   if (ADDRESS < 0xFF00)  TODO_COMMENT("Writing Unusable Reserved");
   // - - - IO registers 
-  if (ADDRESS < 0xFF80)  TODO_COMMENT("Writing I/O registers");
+  if (ADDRESS < 0xFF80)  //TODO_COMMENT("Writing I/O registers");
   // - - - last byte : interrupt 
-  if (ADDRESS == 0xFFFF) TODO_COMMENT("Writing the master interrupt");
+  if (ADDRESS == 0xFFFF) //TODO_COMMENT("Writing the master interrupt");
 
   hramWrite(ADDRESS, VALUE);
 }

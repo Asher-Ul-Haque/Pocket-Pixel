@@ -149,7 +149,6 @@ static Instruction instructions[POSSIBLE_INSTR_COUNT] =
     [0x7D] = {INSTR_LOAD,   ADDR_MODE_R_R,   REG_A,    REG_L},
     [0x7E] = {INSTR_LOAD,   ADDR_MODE_R_MR,  REG_A,    REG_HL},
     [0x7F] = {INSTR_LOAD,   ADDR_MODE_R_R,   REG_A,    REG_A},
-    [0xAF] = {INSTR_XOR,    ADDR_MODE_R,     REG_A},
 
     // - - - 0x8X 
     [0x80] = {INSTR_ADD,    ADDR_MODE_R_R,   REG_A,    REG_B},
@@ -187,6 +186,42 @@ static Instruction instructions[POSSIBLE_INSTR_COUNT] =
     [0x9E] = {INSTR_SBC,    ADDR_MODE_R_MR,  REG_A,    REG_HL},
     [0x9F] = {INSTR_SBC,    ADDR_MODE_R_R,   REG_A,    REG_A},
 
+    // - - - 0xAX 
+    [0xA0] = {INSTR_AND,    ADDR_MODE_R_R,   REG_A,    REG_B},
+    [0xA1] = {INSTR_AND,    ADDR_MODE_R_R,   REG_A,    REG_C},
+    [0xA2] = {INSTR_AND,    ADDR_MODE_R_R,   REG_A,    REG_D},
+    [0xA3] = {INSTR_AND,    ADDR_MODE_R_R,   REG_A,    REG_E},
+    [0xA4] = {INSTR_AND,    ADDR_MODE_R_R,   REG_A,    REG_H},
+    [0xA5] = {INSTR_AND,    ADDR_MODE_R_R,   REG_A,    REG_L},
+    [0xA6] = {INSTR_AND,    ADDR_MODE_R_MR,  REG_A,    REG_HL},
+    [0xA7] = {INSTR_AND,    ADDR_MODE_R_R,   REG_A,    REG_A},
+    [0xA8] = {INSTR_XOR,    ADDR_MODE_R_R,   REG_A,    REG_B},
+    [0xA9] = {INSTR_XOR,    ADDR_MODE_R_R,   REG_A,    REG_C},
+    [0xAA] = {INSTR_XOR,    ADDR_MODE_R_R,   REG_A,    REG_D},
+    [0xAB] = {INSTR_XOR,    ADDR_MODE_R_R,   REG_A,    REG_E},
+    [0xAC] = {INSTR_XOR,    ADDR_MODE_R_R,   REG_A,    REG_H},
+    [0xAD] = {INSTR_XOR,    ADDR_MODE_R_R,   REG_A,    REG_L},
+    [0xAE] = {INSTR_XOR,    ADDR_MODE_R_MR,  REG_A,    REG_HL},
+    [0xAF] = {INSTR_XOR,    ADDR_MODE_R_R,   REG_A,    REG_A},
+
+    // - - - 0xBX
+    [0xB0] = {INSTR_OR,     ADDR_MODE_R_R,   REG_A,    REG_B},
+    [0xB1] = {INSTR_OR,     ADDR_MODE_R_R,   REG_A,    REG_C},
+    [0xB2] = {INSTR_OR,     ADDR_MODE_R_R,   REG_A,    REG_D},
+    [0xB3] = {INSTR_OR,     ADDR_MODE_R_R,   REG_A,    REG_E},
+    [0xB4] = {INSTR_OR,     ADDR_MODE_R_R,   REG_A,    REG_H},
+    [0xB5] = {INSTR_OR,     ADDR_MODE_R_R,   REG_A,    REG_L},
+    [0xB6] = {INSTR_OR,     ADDR_MODE_R_MR,  REG_A,    REG_HL},
+    [0xB7] = {INSTR_OR,     ADDR_MODE_R_R,   REG_A,    REG_A},
+    [0xB8] = {INSTR_CP,     ADDR_MODE_R_R,   REG_A,    REG_B},
+    [0xB9] = {INSTR_CP,     ADDR_MODE_R_R,   REG_A,    REG_C},
+    [0xBA] = {INSTR_CP,     ADDR_MODE_R_R,   REG_A,    REG_D},
+    [0xBB] = {INSTR_CP,     ADDR_MODE_R_R,   REG_A,    REG_E},
+    [0xBC] = {INSTR_CP,     ADDR_MODE_R_R,   REG_A,    REG_H},
+    [0xBD] = {INSTR_CP,     ADDR_MODE_R_R,   REG_A,    REG_L},
+    [0xBE] = {INSTR_CP,     ADDR_MODE_R_MR,  REG_A,    REG_HL},
+    [0xBF] = {INSTR_CP,     ADDR_MODE_R_R,   REG_A,    REG_A},
+
     // - - - 0xCX
     [0xC0] = {INSTR_RET,    ADDR_MODE_IMP,   REG_NONE, REG_NONE, CHECK_NOT_ZERO},
     [0xC1] = {INSTR_POP,    ADDR_MODE_R,     REG_BC},
@@ -199,6 +234,7 @@ static Instruction instructions[POSSIBLE_INSTR_COUNT] =
     [0xC8] = {INSTR_RET,    ADDR_MODE_IMP,   REG_NONE, REG_NONE, CHECK_ZERO},
     [0xC9] = {INSTR_RET},
     [0xCA] = {INSTR_JUMP,   ADDR_MODE_D16,   REG_NONE, REG_NONE, CHECK_ZERO},
+    [0xCB] = {INSTR_CB,     ADDR_MODE_D8},
     [0xCE] = {INSTR_ADC,    ADDR_MODE_R_D8,  REG_A},
     [0xCC] = {INSTR_CALL,   ADDR_MODE_D16,   REG_NONE, REG_NONE, CHECK_ZERO},
     [0xCD] = {INSTR_CALL,   ADDR_MODE_D16},
@@ -222,10 +258,12 @@ static Instruction instructions[POSSIBLE_INSTR_COUNT] =
     [0xE1] = {INSTR_POP,    ADDR_MODE_R,     REG_HL},
     [0xE2] = {INSTR_LOAD,   ADDR_MODE_MR_R,  REG_C,    REG_A},
     [0xE5] = {INSTR_PUSH,   ADDR_MODE_R,     REG_HL},
+    [0xE6] = {INSTR_AND,    ADDR_MODE_D8},
     [0xE7] = {INSTR_RST,    ADDR_MODE_IMP,   REG_NONE, REG_NONE, CHECK_NONE,     0x20},
     [0xE8] = {INSTR_ADD,    ADDR_MODE_R_D8,  REG_SP},
     [0xE9] = {INSTR_JUMP,   ADDR_MODE_MR,    REG_HL},
     [0xEA] = {INSTR_LOAD,   ADDR_MODE_A16_R, REG_NONE, REG_A},
+    [0xEE] = {INSTR_XOR,    ADDR_MODE_D8},
     [0xEF] = {INSTR_RST,    ADDR_MODE_IMP,   REG_NONE, REG_NONE, CHECK_NONE,     0x28},
 
     // - - - 0xFX
@@ -234,8 +272,10 @@ static Instruction instructions[POSSIBLE_INSTR_COUNT] =
     [0xF2] = {INSTR_LOAD,   ADDR_MODE_R_MR,  REG_A,    REG_C},
     [0xF3] = {INSTR_DI},
     [0xF5] = {INSTR_PUSH,   ADDR_MODE_R,     REG_AF},
+    [0xF6] = {INSTR_OR,     ADDR_MODE_D8},
     [0xF7] = {INSTR_RST,    ADDR_MODE_IMP,   REG_NONE, REG_NONE, CHECK_NONE,     0x30},
     [0xFA] = {INSTR_LOAD,   ADDR_MODE_R_A16, REG_A},
+    [0xFE] = {INSTR_CP,     ADDR_MODE_D8},
     [0xFF] = {INSTR_RST,    ADDR_MODE_IMP,   REG_NONE, REG_NONE, CHECK_NONE,     0x38},
   };
 
@@ -313,9 +353,10 @@ FORGE_API void cpuTick()
 
     // - - - Fetch instruction
     cpuCTX.currentOpcode     = busRead(cpuCTX.registerFile.programCounter++);
+    cpuCTX.currentInst       = &instructions[cpuCTX.currentOpcode];
+    cycles(1);
     cpuCTX.memDest           = 0;
     cpuCTX.destIsMemory      = false;
-    cpuCTX.currentInst       = &instructions[cpuCTX.currentOpcode];
 
     if (cpuCTX.currentInst->type == INSTR_NONE)
     {
@@ -333,6 +374,12 @@ FORGE_API void cpuTick()
       case ADDR_MODE_R     : 
         {
           cpuCTX.readData = cpuReadRegister(cpuCTX.currentInst->reg1);
+          break;
+        }
+
+      case ADDR_MODE_R_R    :
+        {
+          cpuCTX.readData = cpuReadRegister(cpuCTX.currentInst->reg2);
           break;
         }
 
@@ -503,13 +550,17 @@ FORGE_API void cpuTick()
           break;
         }
 
-      default : TODO_COMMENT("For now only one addressing mode : Implied")
+      default :
+      {
+        FORGE_LOG_INFO("Failed to address : %d", cpuCTX.currentInst->mode);
+        TODO_COMMENT("For now only one addressing mode : Implied")
+      }
     }
 
     // - - - execute the instruction
     FORGE_LOG_INFO(
-      "0x%04X : \t\t0x%02X : %-10s \t\t(A : 0x%02X \t BC : 0x%02X%02X \t DE : 0x%02X%02X \t HL : 0x%02X%02X, \t\t FLAGS-  : %c%c%c%c)",
-      cpuCTX.registerFile.programCounter - 1,
+      "0x%04X: \t\t0x%02X : %-10s \t\t(A : 0x%02X \t BC : 0x%02X%02X \t DE : 0x%02X%02X \t HL : 0x%02X%02X, \t FLAGS : %c%c%c%c)",
+      oldPC,
       cpuCTX.currentOpcode,
       getInstrName(cpuCTX.currentInst->type),
       cpuCTX.registerFile.accumulator,
@@ -556,6 +607,48 @@ u16 cpuReadRegister(RegisterType TYPE)
     case REG_SP : return cpuCTX.registerFile.stackPointer;
 
     default : return 0;
+  }
+}
+
+u8 cpuReadRegister8(RegisterType TYPE)
+{
+  switch (TYPE)
+  {
+    case REG_A  : return cpuCTX.registerFile.accumulator;
+    case REG_F  : return cpuCTX.registerFile.flags;
+    case REG_B  : return cpuCTX.registerFile.b;
+    case REG_C  : return cpuCTX.registerFile.c;
+    case REG_D  : return cpuCTX.registerFile.d;
+    case REG_E  : return cpuCTX.registerFile.e;
+    case REG_H  : return cpuCTX.registerFile.h;
+    case REG_L  : return cpuCTX.registerFile.l;
+    case REG_HL : return busRead(cpuReadRegister(REG_HL)); 
+    default :
+      {
+        FORGE_LOG_ERROR("Invalid 8 bit Register : %d\n", TYPE);
+        return 0;
+      }
+  }
+}
+
+void cpuSetRegister8(RegisterType TYPE, u8 VAL)
+{
+  switch (TYPE)
+  {
+    case REG_A  : cpuCTX.registerFile.accumulator = VAL & 0xFF; break;
+    case REG_F  : cpuCTX.registerFile.flags       = VAL & 0xFF; break;
+    case REG_B  : cpuCTX.registerFile.b           = VAL & 0xFF; break;
+    case REG_C  : cpuCTX.registerFile.c           = VAL & 0xFF; break;
+    case REG_D  : cpuCTX.registerFile.d           = VAL & 0xFF; break;
+    case REG_E  : cpuCTX.registerFile.e           = VAL & 0xFF; break;
+    case REG_H  : cpuCTX.registerFile.h           = VAL & 0xFF; break;
+    case REG_L  : cpuCTX.registerFile.l           = VAL & 0xFF; break;
+    case REG_HL : busWrite(cpuReadRegister(REG_HL), VAL);       break;
+    default : 
+      {
+        FORGE_LOG_ERROR("Invalid 8 bit register : %d\n", TYPE);
+        return;
+      }
   }
 }
 

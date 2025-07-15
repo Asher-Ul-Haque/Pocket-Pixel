@@ -69,11 +69,162 @@ static void gotoAddr(CPUContext* CTX, u16 ADDR, bool PUSH)
 static bool is16bit(RegisterType TYPE)
 { return TYPE >= REG_AF; }
 
+RegisterType lookup[] =
+  {
+    REG_B,
+    REG_C,
+    REG_D,
+    REG_E,
+    REG_H,
+    REG_L,
+    REG_HL,
+    REG_A
+  };
+
+RegisterType decodeReg(u8 REG)
+{
+  if (REG > 0b111)   return REG_NONE;
+  return lookup[REG];
+}
+
 
 // - - - Instruction Processors - - - 
 
 // - - - None : Means not implemented yet
 static void procNone(CPUContext* CTX) {}
+
+// - - - CB
+static void procCB(CPUContext* CTX)
+{
+  u8           op     = CTX->readData;
+  RegisterType reg    = decodeReg(op & 0b111);
+  u8           bit    = (op >> 3) & 0b111;
+  u8           bitOP  = (op >> 6 ) & 0b11;
+  u8           regVal = cpuReadRegister8(reg);
+
+  cycles(1);
+  if (reg == REG_HL) cycles(2);
+
+  switch (bitOP)
+  {
+    // - - - BIT
+    case 1 :
+      cpuSetFlags(CTX, !(regVal & (1 << bit)),  0, 1, -1);
+      return;
+
+    // - - - RST 
+    case 2 : 
+      regVal &= ~(1 << bit);
+      cpuSetRegister8(reg, regVal);
+      return;
+
+    // - - - SET 
+    case 3 :
+      regVal |= (1 << bit);
+      cpuSetRegister8(reg, regVal);
+      return;
+  }
+
+  bool cFlag = CTX->registerFile.flags & (1 << 4);
+
+  switch (bit)
+  {
+    // - - - Rorate left to the carry flag
+    case 0 :
+      {
+        bool setC = false;
+        u8 result = (regVal << 1) & 0xFF;
+
+        if ((regVal & (1 << 7)) != 0)
+        {
+          result |= 1;
+          setC = true;
+        }
+
+        cpuSetRegister8(reg, result);
+        cpuSetFlags(CTX, result == 0, 0, 0, setC);
+
+        return;
+      }
+
+    // - - - Rotate Right to the carry flag 
+    case 1 :
+      {
+        u8 old = regVal;
+        regVal >>= 1;
+        regVal |= (old << 7);
+
+        cpuSetRegister8(reg, regVal);
+        cpuSetFlags(CTX, !regVal, 0, 0, old & 1);
+      }
+
+    // - - - Rotate Left;
+    case 2 : 
+      {
+        u8 old    = regVal;
+        regVal  <<= 1;
+        regVal   |=  cFlag;
+
+        cpuSetRegister8(reg, regVal);
+        cpuSetFlags(CTX, !regVal, 0, 0, !!(old & 0x80));
+        return;
+      }
+
+    // - - - Rotate Right
+    case 3 :
+      {
+        u8 old   = regVal;
+        regVal >>= 1;
+        regVal  |= (cFlag << 7); 
+
+        cpuSetRegister8(reg, regVal);
+        cpuSetFlags(CTX, !regVal, 0, 0, old & 1);
+        return;
+      }
+
+    // - - - Shifht left Arithmentci
+    case 4 :
+      {
+        u8 old   = regVal;
+        regVal <<= 1;
+
+        cpuSetRegister8(reg, regVal);
+        cpuSetFlags(CTX, !regVal, 0, 0, !!(old & 0x80));
+        return;
+      }
+
+    // - - - Shight Right Arithmetic  
+    case 5 :
+      {
+        u8 u = (i8)regVal >> 1;
+
+        cpuSetRegister8(reg, u);
+        cpuSetFlags(CTX, !u, 0, 0, regVal & 1);
+        return;
+      }
+
+    // - - - SWAP
+    case 6 :
+      {
+        regVal = ((regVal & 0xF0) >> 4) | ((regVal & 0xF) << 4);
+
+        cpuSetRegister8(reg, regVal);
+        cpuSetFlags(CTX, regVal == 0, 0, 0, 0);
+        return;
+      }
+
+    // - - - Shift Right Loical
+    case 7 :
+      {
+        u8 u = regVal >> 1;
+        
+        cpuSetRegister8(reg, u);
+        cpuSetFlags(CTX, !u, 0, 0, regVal & 1);
+        return;
+      }
+  }
+  FORGE_LOG_ERROR("INVALID CB : %02X", op);
+}
 
 // - - - Load instruction 
 static void procLoad(CPUContext* CTX)
@@ -147,7 +298,34 @@ static void procPush(CPUContext* CTX)
 static void procXOR(CPUContext* CTX)
 { 
   CTX->registerFile.accumulator ^= CTX->readData & 0xFF;
-  cpuSetFlags(CTX, CTX->registerFile.accumulator, 0, 0, 0);
+  cpuSetFlags(CTX, CTX->registerFile.accumulator == 0, 0, 0, 0);
+}
+
+// - - - AND, AND accumulator with whatever is read 
+static void procAND(CPUContext* CTX)
+{ 
+  CTX->registerFile.accumulator &= CTX->readData;
+  cpuSetFlags(CTX, CTX->registerFile.accumulator == 0, 0, 1, 0);
+}
+
+// - - - OR, OR accumulator with whatever is read 
+static void procOR(CPUContext* CTX)
+{ 
+  CTX->registerFile.accumulator |= CTX->readData & 0xFF;
+  cpuSetFlags(CTX, CTX->registerFile.accumulator == 0, 0, 0, 0);
+}
+
+// - - - CP, CP accumulator with whatever is read 
+static void procCP(CPUContext* CTX)
+{
+  int n = (int) CTX->registerFile.accumulator - (int)CTX->readData;
+  CTX->registerFile.accumulator ^= CTX->readData & 0xFF;
+  cpuSetFlags(
+    CTX, 
+    n == 0, 
+    1, 
+    ((int)CTX->registerFile.accumulator & 0x0F) - ((int)CTX->readData & 0x0F) < 0, 
+    n < 0);
 }
 
 // - - - disable interruprts
@@ -349,6 +527,10 @@ static Processor processors[] =
     [INSTR_ADD]  = procAdd,
     [INSTR_SUB]  = procSub,
     [INSTR_SBC]  = procSBC,
+    [INSTR_AND]  = procAND,
+    [INSTR_OR]   = procOR,
+    [INSTR_CP]   = procCP,
+    [INSTR_CB]   = procCB,
   };
 
 Processor getInstrProcessor(InstructionType TYPE)
