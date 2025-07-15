@@ -31,6 +31,44 @@ void cpuSetFlags(CPUContext* CTX, i8 Z, i8 N, i8 H, i8 C)
   }
 }
 
+// - - - check whether to jump or not
+static bool checkCondition(CPUContext* CTX)
+{
+  bool checkCondition = true;
+
+  bool z =  ((CTX->registerFile.flags >> 7) & 1);
+  bool c =  ((CTX->registerFile.flags >> 4) & 1);
+
+  switch (CTX->currentInst->cond) 
+  {
+    case CHECK_NONE     : { checkCondition = true; break; }
+    case CHECK_CARRY    : { checkCondition = c;    break; }
+    case CHECK_NO_CARRY : { checkCondition = !c;   break; }
+    case CHECK_ZERO     : { checkCondition = z;    break; }
+    case CHECK_NOT_ZERO : { checkCondition = !z;   break; }
+  }
+
+  return checkCondition;
+}
+
+// - - - goto
+static void gotoAddr(CPUContext* CTX, u16 ADDR, bool PUSH)
+{
+  if (checkCondition(CTX))
+  {
+    if (PUSH) 
+    {
+      cycles(2);
+      stackPush16(CTX->registerFile.programCounter);
+    }
+    CTX->registerFile.programCounter = ADDR;
+    cycles(1);
+  }
+}
+
+static bool is16bit(RegisterType TYPE)
+{ return TYPE >= REG_AF; }
+
 
 // - - - Instruction Processors - - - 
 
@@ -43,7 +81,7 @@ static void procLoad(CPUContext* CTX)
   if (CTX->destIsMemory)
   {
     // - - - Check if 16 bit register 
-    if (CTX->currentInst->reg2 >= RegisterType::REG_AF)
+    if (is16bit(CTX->currentInst->reg2))
     {
       cycles(1);
       busWrite16(CTX->memDest, CTX->readData);
@@ -53,7 +91,7 @@ static void procLoad(CPUContext* CTX)
     return;
   }
 
-  if (CTX->currentInst->mode == ADDRESS_MODE_HL_SPR)
+  if (CTX->currentInst->mode == ADDR_MODE_HL_SPR)
   {
     u8 halfCarryFlag = (cpuReadRegister(CTX->currentInst->reg2) & 0xF) + 
       (CTX->readData & 0xF) >= 0x10;
@@ -119,39 +157,6 @@ static void procDI(CPUContext* CTX)
 
 // - - - JUMP Insutructions - - -
 
-static bool checkCondition(CPUContext* CTX)
-{
-  bool checkCondition = true;
-
-  bool z =  ((CTX->registerFile.flags >> 7) & 1);
-  bool c =  ((CTX->registerFile.flags >> 4) & 1);
-
-  switch (CTX->currentInst->cond) 
-  {
-    case CHECK_NONE     : { checkCondition = true; break; }
-    case CHECK_CARRY    : { checkCondition = c;    break; }
-    case CHECK_NO_CARRY : { checkCondition = !c;   break; }
-    case CHECK_ZERO     : { checkCondition = z;    break; }
-    case CHECK_NOT_ZERO : { checkCondition = !z;   break; }
-  }
-
-  return checkCondition;
-}
-
-// - - - goto
-static void gotoAddr(CPUContext* CTX, u16 ADDR, bool PUSH)
-{
-  if (checkCondition(CTX))
-  {
-    if (PUSH) 
-    {
-      cycles(2);
-      stackPush16(CTX->registerFile.programCounter);
-    }
-    CTX->registerFile.programCounter = ADDR;
-    cycles(1);
-  }
-}
 
 // - - - jump insturction
 static void procJump(CPUContext* CTX)
@@ -199,23 +204,151 @@ static void procReturnInterrupt(CPUContext* CTX)
   procRet(CTX);
 }
 
+// - - - increment 
+static void procIncrement(CPUContext* CTX)
+{
+  u16 val = cpuReadRegister(CTX->currentInst->reg1) + 1;
+
+  if (is16bit(CTX->currentInst->reg1)) cycles(1);
+
+  if (CTX->currentInst->reg1 == REG_HL && CTX->currentInst->mode == ADDR_MODE_MR)
+  {
+    val =  busRead(cpuReadRegister(REG_HL)) + 1;
+    val &= 0xFF;
+    busWrite(cpuReadRegister(REG_HL), val);
+  }
+  else 
+  {
+    cpuSetRegister(CTX->currentInst->reg1, val);
+    val = cpuReadRegister(CTX->currentInst->reg1);
+  }
+
+  if ((CTX->currentOpcode & 0x03) == 0x03) return;
+
+  cpuSetFlags(CTX, (val == 0), 0, (val & 0x0F) == 0, -1);
+}
+
+// - - - decrement 
+static void procDecrement(CPUContext* CTX)
+{
+  u16 val = cpuReadRegister(CTX->currentInst->reg1) - 1;
+
+  if (is16bit(CTX->currentInst->reg1)) cycles(1);
+
+  if (CTX->currentInst->reg1 == REG_HL && CTX->currentInst->mode == ADDR_MODE_MR)
+  {
+    val =  busRead(cpuReadRegister(REG_HL)) - 1;
+    busWrite(cpuReadRegister(REG_HL), val);
+  }
+  else 
+  {
+    cpuSetRegister(CTX->currentInst->reg1, val);
+    val = cpuReadRegister(CTX->currentInst->reg1);
+  }
+
+  if ((CTX->currentOpcode & 0x0B) == 0x0B) return;
+
+  cpuSetFlags(CTX, (val == 0), 1, (val & 0x0F) == 0x0F, -1);
+}
+
+// - - - add 
+static void procAdd(CPUContext* CTX)
+{
+  u32  val   = cpuReadRegister(CTX->currentInst->reg1) + CTX->readData;
+  bool isbig = is16bit(CTX->currentInst->reg1);
+
+  if (isbig) cycles(1);
+
+  if (CTX->currentInst->reg1 == REG_SP)
+  {
+    val = cpuReadRegister(CTX->currentInst->reg1) + (i8)CTX->readData;
+  }
+
+  int z = (val & 0xFF) == 0;
+  int h = (cpuReadRegister(CTX->currentInst->reg1) & 0xF) + (CTX->readData & 0xF) >= 0x10;
+  int c = (i8)(cpuReadRegister(CTX->currentInst->reg1) & 0xFF) + (i8)(CTX->readData & 0xFF) > 0x100;
+
+  if (isbig && CTX->currentInst->reg1 != REG_SP)
+  {
+    z     = -1;
+    h     = (cpuReadRegister(CTX->currentInst->reg1) & 0xFFF) + (CTX->readData & 0xFFF) > 0x1000;
+    u32 n = ((u32)cpuReadRegister(CTX->currentInst->reg1)) + ((u32)CTX->readData);
+    c     = n >= 0x10000;
+  }
+
+  cpuSetRegister(CTX->currentInst->reg1, val & 0xFFFF);
+  cpuSetFlags(CTX, z, 0, h, c);
+}
+
+// - - - add with carry 
+static void procAddCarry(CPUContext* CTX)
+{
+  u16 u = CTX->readData;
+  u16 a = CTX->registerFile.accumulator;
+  u16 c = CTX->registerFile.flags & (1 << 4);
+
+  CTX->registerFile.accumulator = (a + u + c) & 0xFF;
+  cpuSetFlags(
+    CTX, 
+    (CTX->registerFile.accumulator == 0), 
+    0, 
+    (a & 0xF) + (u &0xF) + c > 0xF, 
+    a + u + c > 0xFF);
+}
+
+// - - - sub
+static void procSub(CPUContext* CTX)
+{
+  u16 val = cpuReadRegister(CTX->currentInst->reg1) - CTX->readData;
+  int z   = (val == 0);
+  int h   = ((int)cpuReadRegister(CTX->currentInst->reg1) & 0xF) - ((int)CTX->readData & 0xF) < 0;
+  int c   = ((int)cpuReadRegister(CTX->currentInst->reg1)) - ((int)CTX->readData) < 0;
+
+  cpuSetRegister(CTX->currentInst->reg1, val);
+  cpuSetFlags(CTX, z, 1, h, c);
+}
+
+// - - - sub with carry 
+static void procSBC(CPUContext* CTX)
+{
+  u8 cpuFlagC = CTX->registerFile.flags & (1 << 4);
+  u16 val = CTX->readData + cpuFlagC;
+
+  int z   = cpuReadRegister(CTX->currentInst->reg1) - val == 0;
+  int h   = ((int)cpuReadRegister(CTX->currentInst->reg1) & 0xF) 
+            - ((int)CTX->readData & 0xF)    
+            - ((int)cpuFlagC) < 0;
+  int c   = ((int)cpuReadRegister(CTX->currentInst->reg1)) 
+            - ((int)CTX->readData)
+            - ((int)cpuFlagC) < 0;
+
+  cpuSetRegister(CTX->currentInst->reg1, cpuReadRegister(CTX->currentInst->reg1) - val);
+  cpuSetFlags(CTX, z, 1, h, c);
+}
+
 // - - - API to get processors - - -
+
 static Processor processors[] = 
   {
-    [INSTRUCTION_NONE] = procNone,
-    [INSTRUCTION_NOP]  = procNone,
-    [INSTRUCTION_LOAD] = procLoad,
-    [INSTRUCTION_JUMP] = procJump,
-    [INSTRUCTION_DI]   = procDI,
-    [INSTRUCTION_XOR]  = procXOR,
-    [INSTRUCTION_LDH]  = procLoadHalf,
-    [INSTRUCTION_POP]  = procPop,
-    [INSTRUCTION_PUSH] = procPush,
-    [INSTRUCTION_JR]   = procJumpRelative,
-    [INSTRUCTION_CALL] = procCall,
-    [INSTRUCTION_RET]  = procRet,
-    [INSTRUCTION_RETI] = procReturnInterrupt,
-    [INSTRUCTION_RST]  = procRST
+    [INSTR_NONE] = procNone,
+    [INSTR_NOP]  = procNone,
+    [INSTR_LOAD] = procLoad,
+    [INSTR_JUMP] = procJump,
+    [INSTR_DI]   = procDI,
+    [INSTR_XOR]  = procXOR,
+    [INSTR_LDH]  = procLoadHalf,
+    [INSTR_POP]  = procPop,
+    [INSTR_PUSH] = procPush,
+    [INSTR_JR]   = procJumpRelative,
+    [INSTR_CALL] = procCall,
+    [INSTR_RET]  = procRet,
+    [INSTR_RETI] = procReturnInterrupt,
+    [INSTR_RST]  = procRST,
+    [INSTR_DEC]  = procDecrement,
+    [INSTR_INC]  = procIncrement,
+    [INSTR_ADD]  = procAdd,
+    [INSTR_SUB]  = procSub,
+    [INSTR_SBC]  = procSBC,
   };
 
 Processor getInstrProcessor(InstructionType TYPE)
