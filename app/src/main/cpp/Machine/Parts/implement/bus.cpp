@@ -61,21 +61,21 @@ void busWrite(u16 ADDRESS, u8 VALUE)
 {
   if (ADDRESS < 0x8000)  { cartridgeWrite(ADDRESS, VALUE); return; }
   // - - - Char / Map data 
-  if (ADDRESS < 0xA000)  TODO_COMMENT("Writing Char / Map data"); 
+  if (ADDRESS < 0xA000)  TODO_COMMENT("Writing Char / Map data");
   // - - - Cartridge Ram 
   if (ADDRESS < 0xC000)  { cartridgeWrite(ADDRESS, VALUE); return; }
   // - - - Working RAM (WRAM)
   if (ADDRESS < 0xE000)  { wramWrite(ADDRESS, VALUE);      return; }
   // - - - reserved echo ram
-  if (ADDRESS < 0xFE00)  TODO_COMMENT("Writing Echo ram"); 
+  if (ADDRESS < 0xFE00)  TODO_COMMENT("Writing Echo ram");
   // - - - oam 
   if (ADDRESS < 0xFEA0)  TODO_COMMENT("Writing OAM ram");
   // - - - reserved unusable 
   if (ADDRESS < 0xFF00)  TODO_COMMENT("Writing Unusable Reserved");
   // - - - IO registers 
-  if (ADDRESS < 0xFF80)  //TODO_COMMENT("Writing I/O registers");
+  if (ADDRESS < 0xFF80)  TODO_COMMENT("Writing I/O registers");
   // - - - last byte : interrupt 
-  if (ADDRESS == 0xFFFF) //TODO_COMMENT("Writing the master interrupt");
+  if (ADDRESS == 0xFFFF) TODO_COMMENT("Writing the master interrupt");
 
   hramWrite(ADDRESS, VALUE);
 }

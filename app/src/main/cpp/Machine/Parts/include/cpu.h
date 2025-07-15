@@ -152,6 +152,7 @@ typedef struct
   u8              interrupt;
   Instruction*    currentInst;
   bool            enableIME;
+  u8              interruptFlags;
 } CPUContext;
 
 

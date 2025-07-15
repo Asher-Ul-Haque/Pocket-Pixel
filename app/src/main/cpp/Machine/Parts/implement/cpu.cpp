@@ -1,5 +1,6 @@
 #include "../include/cpu.h"
 #include "../include/bus.h"
+#include "../include/interrupt.h"
 #include "../../../GameBoyCore.h"
 #include "../../../ForgeLibrary/include/asserts.h"
 #include "../../../ForgeLibrary/include/logger.h"
@@ -593,7 +594,7 @@ FORGE_API void cpuTick()
   else 
   {
     cycles(1);
-    if (cpuCTX->intFlags)    cpuCTX.halted = false; 
+    if (cpuCTX.interruptFlags)    cpuCTX.halted = false;
   }
 
   if (cpuCTX.interruptMasterEnabled)
