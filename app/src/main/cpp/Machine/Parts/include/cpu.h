@@ -151,6 +151,7 @@ typedef struct
   bool            interruptMasterEnabled;
   u8              interrupt;
   Instruction*    currentInst;
+  bool            enableIME;
 } CPUContext;
 
 

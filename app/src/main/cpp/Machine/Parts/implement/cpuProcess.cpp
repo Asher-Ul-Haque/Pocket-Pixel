@@ -2,6 +2,7 @@
 #include "../include/cpu.h"
 #include "../include/stack.h"
 #include "../../../GameBoyCore.h"
+#include <numeric>
 
 
 // - - - Helpers - - -
@@ -226,6 +227,50 @@ static void procCB(CPUContext* CTX)
   FORGE_LOG_ERROR("INVALID CB : %02X", op);
 }
 
+// - - - RLCA
+static void procRLCA(CPUContext* CTX)
+{
+  u8   u = CTX->registerFile.accumulator;
+  bool c = (u >> 7) & 1;
+  u      = (u << 1) | c;
+  CTX->registerFile.accumulator = u;
+
+  cpuSetFlags(CTX, 0, 0, 0, c);
+}
+
+// - - - RRCA
+static void procRRCA(CPUContext* CTX)
+{
+  u8 b                            = CTX->registerFile.accumulator;
+  CTX->registerFile.accumulator >>= 1;
+  CTX->registerFile.accumulator  |= (b << 7);
+
+  cpuSetFlags(CTX, 0, 0, 0, b);
+}
+
+// - - - RLA
+static void procRLA(CPUContext* CTX)
+{
+  u8 u      = CTX->registerFile.accumulator;
+  u8 cFlag  = (CTX->registerFile.accumulator & (1 << 4));
+  u8 c      = (u >> 7) & 1;
+  CTX->registerFile.accumulator = (u << 1) | cFlag;
+
+  cpuSetFlags(CTX, 0, 0, 0, c);
+}
+
+// - - - RRA
+static void procRRA(CPUContext* CTX)
+{
+  u8 carry = (CTX->registerFile.accumulator & (1 << 4));
+  u8 newC = CTX->registerFile.accumulator & 1;
+
+  CTX->registerFile.accumulator >>= 1;
+  CTX->registerFile.accumulator  |= (carry << 7);
+
+  cpuSetFlags(CTX, 0, 0, 0, newC);
+}
+
 // - - - Load instruction 
 static void procLoad(CPUContext* CTX)
 {
@@ -331,6 +376,25 @@ static void procCP(CPUContext* CTX)
 // - - - disable interruprts
 static void procDI(CPUContext* CTX)
 { CTX->interruptMasterEnabled = false; }
+
+// - - - enable interrupts 
+static void procEI(CPUContext* CTX)
+{  CTX->enableIME = true; }
+
+// - - - stop (or restart in my case)
+static void procStop(CPUContext* CTX)
+{
+  CTX->registerFile           = {0};
+  CTX->readData               = 0;
+  CTX->currentInst            = {0};
+  CTX->currentOpcode          = 0;
+  CTX->interruptMasterEnabled = false;
+  CTX->interrupt              = 0;
+  CTX->destIsMemory           = false;
+  CTX->memDest                = 0;
+  CTX->steppingMode           = false;
+  cpuInit();
+}
 
 
 // - - - JUMP Insutructions - - -
@@ -504,6 +568,55 @@ static void procSBC(CPUContext* CTX)
   cpuSetFlags(CTX, z, 1, h, c);
 }
 
+// - - - daa
+static void procDAA(CPUContext* CTX)
+{
+  u8  u     = 0;
+  i32 fc    = 0;
+  u8  cFlag = (CTX->registerFile.accumulator & (1 << 4));
+  u8  hFlag = (CTX->registerFile.accumulator & (1 << 5));
+  u8  nFlag = (CTX->registerFile.accumulator & (1 << 6));
+  u8  zFlag = (CTX->registerFile.accumulator & (1 << 7));
+
+  if (hFlag || (!nFlag && (CTX->registerFile.accumulator & 0xF) > 9))
+  {
+    u = 6;
+  }
+
+  if (cFlag || (!nFlag && CTX->registerFile.accumulator > 0x99))
+  {
+    u |= 0x60;
+    fc = 1;
+  }
+
+  CTX->registerFile.accumulator += nFlag ? -u : u;
+
+  cpuSetFlags(CTX, (CTX->registerFile.accumulator == 0), -1, 0, fc);
+}
+
+// - - - cpl 
+static void procCPL(CPUContext* CTX)
+{
+  CTX->registerFile.accumulator = ~CTX->registerFile.accumulator;
+  cpuSetFlags(CTX, -1, 1, 1, -1);
+}
+
+// - - - fcf 
+static void procSCF(CPUContext* CTX)
+{ cpuSetFlags(CTX, -1, 0, 0, 1); }
+
+// - - - ccf 
+static void procCCF(CPUContext* CTX)
+{
+  u8 cFlag = CTX->registerFile.accumulator & (1 << 4);
+  cpuSetFlags(CTX, -1, 0, 0, cFlag ^ 1); 
+}
+
+// - - - halt
+static void procHalt(CPUContext* CTX)
+{ CTX->halted = true; }
+
+
 // - - - API to get processors - - -
 
 static Processor processors[] = 
@@ -531,6 +644,17 @@ static Processor processors[] =
     [INSTR_OR]   = procOR,
     [INSTR_CP]   = procCP,
     [INSTR_CB]   = procCB,
+    [INSTR_RRCA] = procRRCA,
+    [INSTR_RLCA] = procRLCA,
+    [INSTR_RRA]  = procRRA,
+    [INSTR_RLA]  = procRLA,
+    [INSTR_STOP] = procStop,
+    [INSTR_CCF]  = procCCF,
+    [INSTR_HALT] = procHalt,
+    [INSTR_DAA]  = procDAA,
+    [INSTR_CPL]  = procCPL,
+    [INSTR_SCF]  = procSCF,
+    [INSTR_EI]   = procEI,
   };
 
 Processor getInstrProcessor(InstructionType TYPE)
