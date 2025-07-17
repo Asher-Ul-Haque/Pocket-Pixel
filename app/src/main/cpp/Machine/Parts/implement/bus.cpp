@@ -1,6 +1,7 @@
 #include "../include/bus.h"
 #include "../include/cartridge.h"
 #include "../include/ram.h"
+#include "../include/cpu.h"
 #include "../include/io.h"
 #include "../../../ForgeLibrary/include/asserts.h"
 
@@ -53,30 +54,56 @@ u8 busRead(u16 ADDRESS)
   // - - - IO registers 
   if (ADDRESS < 0xFF80)  return IOread(ADDRESS);
   // - - - last byte : interrupt 
-  if (ADDRESS == 0xFFFF) TODO_COMMENT("Reading the master interrupt");
+  if (ADDRESS == 0xFFFF) return cpuGetInterrupt();
 
   return hramRead(ADDRESS);
 }
 
 void busWrite(u16 ADDRESS, u8 VALUE)
 {
-  if (ADDRESS < 0x8000)  { cartridgeWrite(ADDRESS, VALUE); return; }
+  if (ADDRESS < 0x8000)  
+  {
+    FORGE_LOG_ERROR("Attempting to write over the ROM");
+    cartridgeWrite(ADDRESS, VALUE); 
+    return; 
+  }
   // - - - Char / Map data 
-  if (ADDRESS < 0xA000)  TODO_COMMENT("Writing Char / Map data");
+  if (ADDRESS < 0xA000)  
+  {
+    FORGE_LOG_ERROR("Attempting to write over the Char / Map data");
+    return;
+  }
+
   // - - - Cartridge Ram 
   if (ADDRESS < 0xC000)  { cartridgeWrite(ADDRESS, VALUE); return; }
   // - - - Working RAM (WRAM)
   if (ADDRESS < 0xE000)  { wramWrite(ADDRESS, VALUE);      return; }
   // - - - reserved echo ram
-  if (ADDRESS < 0xFE00)  TODO_COMMENT("Writing Echo ram");
+  if (ADDRESS < 0xFE00)  
+  {
+    FORGE_LOG_ERROR("Attempting to write over the Echo RAM");
+    return;
+  }
   // - - - oam 
-  if (ADDRESS < 0xFEA0)  TODO_COMMENT("Writing OAM ram");
+  if (ADDRESS < 0xFEA0)  
+  {
+    FORGE_LOG_ERROR("Attempting to write over the OAM");
+    return;
+  }
   // - - - reserved unusable 
-  if (ADDRESS < 0xFF00)  TODO_COMMENT("Writing Unusable Reserved");
+  if (ADDRESS < 0xFF00)  
+  {
+    FORGE_LOG_ERROR("Attempting to write over the Unusable Reserved");
+    return;
+  }
   // - - - IO registers 
-  if (ADDRESS < 0xFF80)  return IOwrite(ADDRESS, VALUE);
+  if (ADDRESS < 0xFF80)  { IOwrite(ADDRESS, VALUE); return; }
   // - - - last byte : interrupt 
-  if (ADDRESS == 0xFFFF) TODO_COMMENT("Writing the master interrupt");
+  if (ADDRESS == 0xFFFF) 
+  {
+    cpuSetInterrupt(VALUE);
+    return;
+  }
 
   hramWrite(ADDRESS, VALUE);
 }

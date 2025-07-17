@@ -8,7 +8,6 @@
 #include "../../../ForgeLibrary/include/logger.h"
 
 static CPUContext   cpuCTX    = {0};
-static int          emuCycles = 0;
 
 
 // - - - CPU - - - 
@@ -177,10 +176,10 @@ FORGE_API void cpuTick()
           u16 hi = busRead(cpuCTX.registerFile.programCounter + 1);
           cycles(1);
 
-          cpuCTX.memDest = lo | (hi << 8);
-          cpuCTX.destIsMemory = true;
+          cpuCTX.memDest                      = lo | (hi << 8);
+          cpuCTX.destIsMemory                 = true;
           cpuCTX.registerFile.programCounter += 2;
-          cpuCTX.readData = cpuReadRegister(cpuCTX.currentInst->reg2);
+          cpuCTX.readData                     = cpuReadRegister(cpuCTX.currentInst->reg2);
 
           break;
         }
@@ -376,3 +375,6 @@ void cpuSetRegister(u8 INTERRPUT)
 
 RegisterFile* cpuGetRegisters()
 { return &cpuCTX.registerFile; }
+
+void cpuSetInterrupt(u8 INTERRUPT)
+{ cpuCTX.interrupt = INTERRUPT; }

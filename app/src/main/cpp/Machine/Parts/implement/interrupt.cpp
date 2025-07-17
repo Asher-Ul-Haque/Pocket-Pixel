@@ -16,6 +16,7 @@ FORGE_INLINE bool interruptCheck(CPUContext* CTX, u16 ADDRESS, InterruptType TYP
     CTX->interruptFlags        &= ~INTRPT_VBLANK;
     CTX->halted                 = false;
     CTX->interruptMasterEnabled = false;
+
     return true;
   }
   return false;

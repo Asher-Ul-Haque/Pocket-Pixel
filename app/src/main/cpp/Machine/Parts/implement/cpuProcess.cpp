@@ -35,21 +35,19 @@ void cpuSetFlags(CPUContext* CTX, i8 Z, i8 N, i8 H, i8 C)
 // - - - check whether to jump or not
 static bool checkCondition(CPUContext* CTX)
 {
-  bool checkCondition = true;
-
-  bool z =  ((CTX->registerFile.flags >> 7) & 1);
-  bool c =  ((CTX->registerFile.flags >> 4) & 1);
+  bool z = (CTX->registerFile.flags >> 7) & 1;
+  bool c = (CTX->registerFile.flags >> 4) & 1;
 
   switch (CTX->currentInst->cond) 
   {
-    case CHECK_NONE     : { checkCondition = true; break; }
-    case CHECK_CARRY    : { checkCondition = c;    break; }
-    case CHECK_NO_CARRY : { checkCondition = !c;   break; }
-    case CHECK_ZERO     : { checkCondition = z;    break; }
-    case CHECK_NOT_ZERO : { checkCondition = !z;   break; }
+    case CHECK_NONE     : return true;
+    case CHECK_CARRY    : return c;
+    case CHECK_NO_CARRY : return !c;
+    case CHECK_ZERO     : return z;
+    case CHECK_NOT_ZERO : return !z;
   }
 
-  return checkCondition;
+  return false;
 }
 
 // - - - goto
@@ -92,7 +90,8 @@ RegisterType decodeReg(u8 REG)
 // - - - Instruction Processors - - - 
 
 // - - - None : Means not implemented yet
-static void procNone(CPUContext* CTX) {}
+static void procNone(CPUContext* CTX) 
+{  }
 
 // - - - CB
 static void procCB(CPUContext* CTX)
@@ -100,7 +99,7 @@ static void procCB(CPUContext* CTX)
   u8           op     = CTX->readData;
   RegisterType reg    = decodeReg(op & 0b111);
   u8           bit    = (op >> 3) & 0b111;
-  u8           bitOP  = (op >> 6 ) & 0b11;
+  u8           bitOP  = (op >> 6) & 0b11;
   u8           regVal = cpuReadRegister8(reg);
 
   cycles(1);
@@ -133,13 +132,13 @@ static void procCB(CPUContext* CTX)
     // - - - Rorate left to the carry flag
     case 0 :
       {
-        bool setC = false;
-        u8 result = (regVal << 1) & 0xFF;
+        bool setC   = false;
+        u8   result = (regVal << 1) & 0xFF;
 
         if ((regVal & (1 << 7)) != 0)
         {
           result |= 1;
-          setC = true;
+          setC    = true;
         }
 
         cpuSetRegister8(reg, result);
@@ -151,9 +150,9 @@ static void procCB(CPUContext* CTX)
     // - - - Rotate Right to the carry flag 
     case 1 :
       {
-        u8 old = regVal;
+        u8 old   = regVal;
         regVal >>= 1;
-        regVal |= (old << 7);
+        regVal  |= (old << 7);
 
         cpuSetRegister8(reg, regVal);
         cpuSetFlags(CTX, !regVal, 0, 0, old & 1);
@@ -241,7 +240,7 @@ static void procRLCA(CPUContext* CTX)
 // - - - RRCA
 static void procRRCA(CPUContext* CTX)
 {
-  u8 b                            = CTX->registerFile.accumulator;
+  u8 b                            = CTX->registerFile.accumulator & 1;
   CTX->registerFile.accumulator >>= 1;
   CTX->registerFile.accumulator  |= (b << 7);
 
@@ -254,8 +253,8 @@ static void procRLA(CPUContext* CTX)
   u8 u      = CTX->registerFile.accumulator;
   u8 cFlag  = (CTX->registerFile.accumulator & (1 << 4));
   u8 c      = (u >> 7) & 1;
-  CTX->registerFile.accumulator = (u << 1) | cFlag;
 
+  CTX->registerFile.accumulator = (u << 1) | cFlag;
   cpuSetFlags(CTX, 0, 0, 0, c);
 }
 
@@ -263,7 +262,7 @@ static void procRLA(CPUContext* CTX)
 static void procRRA(CPUContext* CTX)
 {
   u8 carry = (CTX->registerFile.accumulator & (1 << 4));
-  u8 newC = CTX->registerFile.accumulator & 1;
+  u8 newC  = CTX->registerFile.accumulator & 1;
 
   CTX->registerFile.accumulator >>= 1;
   CTX->registerFile.accumulator  |= (carry << 7);
@@ -284,6 +283,8 @@ static void procLoad(CPUContext* CTX)
     }
     else busWrite(CTX->memDest, CTX->readData);
 
+    cycles(1);
+
     return;
   }
 
@@ -295,7 +296,9 @@ static void procLoad(CPUContext* CTX)
       (CTX->readData & 0xFF) >= 0x100;
 
     cpuSetFlags(CTX, 0, 0, halfCarryFlag, carryFlag);
-    cpuSetRegister(CTX->currentInst->reg1, cpuReadRegister(CTX->currentInst->reg2) + (i8)(CTX->readData));
+    cpuSetRegister(
+      CTX->currentInst->reg1, 
+      cpuReadRegister(CTX->currentInst->reg2) + (i8)(CTX->readData));
 
     return;
   }
@@ -364,7 +367,6 @@ static void procOR(CPUContext* CTX)
 static void procCP(CPUContext* CTX)
 {
   int n = (int) CTX->registerFile.accumulator - (int)CTX->readData;
-  CTX->registerFile.accumulator ^= CTX->readData & 0xFF;
   cpuSetFlags(
     CTX, 
     n == 0, 
@@ -384,14 +386,14 @@ static void procEI(CPUContext* CTX)
 // - - - stop (or restart in my case)
 static void procStop(CPUContext* CTX)
 {
-  CTX->registerFile           = {0};
   CTX->readData               = 0;
-  CTX->currentInst            = {0};
   CTX->currentOpcode          = 0;
-  CTX->interruptMasterEnabled = false;
   CTX->interrupt              = 0;
-  CTX->destIsMemory           = false;
   CTX->memDest                = 0;
+  CTX->registerFile           = {0};
+  CTX->currentInst            = {0};
+  CTX->interruptMasterEnabled = false;
+  CTX->destIsMemory           = false;
   CTX->steppingMode           = false;
   cpuInit();
 }
@@ -435,6 +437,7 @@ static void procRet(CPUContext* CTX)
 
     u16 n = (hi << 8) | lo;
     CTX->registerFile.programCounter = n;
+
     cycles(1);
   }
 }
@@ -455,7 +458,7 @@ static void procIncrement(CPUContext* CTX)
 
   if (CTX->currentInst->reg1 == REG_HL && CTX->currentInst->mode == ADDR_MODE_MR)
   {
-    val =  busRead(cpuReadRegister(REG_HL)) + 1;
+    val  = busRead(cpuReadRegister(REG_HL)) + 1;
     val &= 0xFF;
     busWrite(cpuReadRegister(REG_HL), val);
   }
@@ -508,14 +511,21 @@ static void procAdd(CPUContext* CTX)
 
   int z = (val & 0xFF) == 0;
   int h = (cpuReadRegister(CTX->currentInst->reg1) & 0xF) + (CTX->readData & 0xF) >= 0x10;
-  int c = (i8)(cpuReadRegister(CTX->currentInst->reg1) & 0xFF) + (i8)(CTX->readData & 0xFF) > 0x100;
+  int c = (i8)(cpuReadRegister(CTX->currentInst->reg1) & 0xFF) + (i8)(CTX->readData & 0xFF) >= 0x100;
 
-  if (isbig && CTX->currentInst->reg1 != REG_SP)
+  if (isbig)
   {
     z     = -1;
-    h     = (cpuReadRegister(CTX->currentInst->reg1) & 0xFFF) + (CTX->readData & 0xFFF) > 0x1000;
+    h     = (cpuReadRegister(CTX->currentInst->reg1) & 0xFFF) + (CTX->readData & 0xFFF) >= 0x1000;
     u32 n = ((u32)cpuReadRegister(CTX->currentInst->reg1)) + ((u32)CTX->readData);
     c     = n >= 0x10000;
+  }
+
+  if (CTX->currentInst->reg1 == REG_SP)
+  {
+    z = 0;
+    h = (cpuReadRegister(CTX->currentInst->reg1) & 0xF) + (CTX->readData & 0xF) >= 0x10;
+    c = (int)(cpuReadRegister(CTX->currentInst->reg1) & 0xFF) + (int)(CTX->readData & 0xFF) > 0x100;
   }
 
   cpuSetRegister(CTX->currentInst->reg1, val & 0xFFFF);
@@ -553,8 +563,8 @@ static void procSub(CPUContext* CTX)
 // - - - sub with carry 
 static void procSBC(CPUContext* CTX)
 {
-  u8 cpuFlagC = CTX->registerFile.flags & (1 << 4);
-  u16 val = CTX->readData + cpuFlagC;
+  u8  cpuFlagC = CTX->registerFile.flags & (1 << 4);
+  u16 val      = CTX->readData + cpuFlagC;
 
   int z   = cpuReadRegister(CTX->currentInst->reg1) - val == 0;
   int h   = ((int)cpuReadRegister(CTX->currentInst->reg1) & 0xF) 

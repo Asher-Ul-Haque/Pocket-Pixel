@@ -70,7 +70,7 @@ static Instruction instructions[POSSIBLE_INSTR_COUNT] =
     [0x34] = {INSTR_INC,    ADDR_MODE_R,     REG_HL},
     [0x35] = {INSTR_DEC,    ADDR_MODE_R,     REG_HL},
     [0x36] = {INSTR_LOAD,   ADDR_MODE_MR_D8, REG_HL},
-    [0x38] = {INSTR_JR,     ADDR_MODE_D8,    REG_NONE, REG_NONE, CHECK_NOT_ZERO},
+    [0x38] = {INSTR_JR,     ADDR_MODE_D8,    REG_NONE, REG_NONE, CHECK_CARRY},
     [0x39] = {INSTR_ADD,    ADDR_MODE_R_R,   REG_HL,   REG_SP},
     [0x3A] = {INSTR_LOAD,   ADDR_MODE_R_HLD, REG_A,    REG_HL},
     [0x3B] = {INSTR_DEC,    ADDR_MODE_R,     REG_SP},
@@ -235,9 +235,9 @@ static Instruction instructions[POSSIBLE_INSTR_COUNT] =
     [0xC9] = {INSTR_RET},
     [0xCA] = {INSTR_JUMP,   ADDR_MODE_D16,   REG_NONE, REG_NONE, CHECK_ZERO},
     [0xCB] = {INSTR_CB,     ADDR_MODE_D8},
-    [0xCE] = {INSTR_ADC,    ADDR_MODE_R_D8,  REG_A},
     [0xCC] = {INSTR_CALL,   ADDR_MODE_D16,   REG_NONE, REG_NONE, CHECK_ZERO},
     [0xCD] = {INSTR_CALL,   ADDR_MODE_D16},
+    [0xCE] = {INSTR_ADC,    ADDR_MODE_R_D8,  REG_A},
     [0xCF] = {INSTR_RST,    ADDR_MODE_IMP,   REG_NONE, REG_NONE, CHECK_NONE,     0x08},
 
     // - - - 0xDX 
