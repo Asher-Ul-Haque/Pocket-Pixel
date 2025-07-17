@@ -1,6 +1,7 @@
 #include "../include/bus.h"
 #include "../include/cartridge.h"
 #include "../include/ram.h"
+#include "../include/io.h"
 #include "../../../ForgeLibrary/include/asserts.h"
 
 /* 
@@ -50,7 +51,7 @@ u8 busRead(u16 ADDRESS)
   // - - - reserved unusable 
   if (ADDRESS < 0xFF00)  return 0;
   // - - - IO registers 
-  if (ADDRESS < 0xFF80)  TODO_COMMENT("Reading I/O registers");
+  if (ADDRESS < 0xFF80)  return IOread(ADDRESS);
   // - - - last byte : interrupt 
   if (ADDRESS == 0xFFFF) TODO_COMMENT("Reading the master interrupt");
 
@@ -73,7 +74,7 @@ void busWrite(u16 ADDRESS, u8 VALUE)
   // - - - reserved unusable 
   if (ADDRESS < 0xFF00)  TODO_COMMENT("Writing Unusable Reserved");
   // - - - IO registers 
-  if (ADDRESS < 0xFF80)  TODO_COMMENT("Writing I/O registers");
+  if (ADDRESS < 0xFF80)  return IOwrite(ADDRESS, VALUE);
   // - - - last byte : interrupt 
   if (ADDRESS == 0xFFFF) TODO_COMMENT("Writing the master interrupt");
 
