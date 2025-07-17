@@ -18,5 +18,5 @@ void debuggerUpdate()
 
 void debuggerPrint()
 {
-  if (debugMessage[0] != 0)  FORGE_LOG_DEBUG("%s", debugMessage);
+  FORGE_LOG_DEBUG("%s", debugMessage);
 }

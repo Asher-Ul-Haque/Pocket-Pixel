@@ -2,6 +2,7 @@
 #include "ForgeLibrary/include/asserts.h"
 #include "ForgeLibrary/include/logger.h"
 #include "Machine/Parts/include/cpu.h"
+#include "Machine/Parts/include/timer.h"
 
 static u64 frameCount = 0;
 #define FRAME_WIDTH 160
@@ -13,6 +14,7 @@ void stopEmulator()
 void startEmulator()
 {
   FORGE_LOG_INFO("Emulator Start");
+  timerInit();
   cpuInit();
 }
 
@@ -49,5 +51,11 @@ void setButton(u8 BUTTON, bool PRESSED)
   FORGE_LOG_INFO("Received Button %d", BUTTON)
 }
 
-void cycles(u32 CPU_CYCLES)
-{ }
+void cycles(u32 CPU_CYCLES, CPUContext* CTX)
+{
+  for (int i = 0; i < CPU_CYCLES * 4; ++i)
+  {
+    CTX->ticks++;
+    timerTick();
+  }
+}

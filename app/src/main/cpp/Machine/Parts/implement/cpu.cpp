@@ -17,8 +17,13 @@ FORGE_API void cpuInit()
   FORGE_LOG_INFO("Started the emulator");
   cpuCTX.registerFile.programCounter = 0x100;
   cpuCTX.registerFile.accumulator    = 0x1;
+  *((i16*)&cpuCTX.registerFile.accumulator) = 0x001;
+  *((i16*)&cpuCTX.registerFile.accumulator) = 0x001;
+  *((i16*)&cpuCTX.registerFile.accumulator) = 0x001;
+  *((i16*)&cpuCTX.registerFile.accumulator) = 0x001;
 }
 
+static int ticks = 0;
 
 FORGE_API void cpuTick()
 {
@@ -232,7 +237,8 @@ FORGE_API void cpuTick()
     char instruction[1600];
     getInstrStr(cpuCTX.currentInst, cpuCTX.readData, oldPC, instruction);
     FORGE_LOG_INFO(
-      "0x%04X: \t\t0x%02X : %-12s \t\t(A : 0x%02X \t BC : 0x%02X%02X \t DE : 0x%02X%02X \t HL : 0x%02X%02X, \t FLAGS : %c%c%c%c)",
+      "0x%08X - 0x%04X: \t\t0x%02X : %-20s (A : 0x%02X \t BC : 0x%02X%02X \t DE : 0x%02X%02X \t HL : 0x%02X%02X, \t FLAGS : %c%c%c%c)",
+      ticks++,
       oldPC,
       cpuCTX.currentOpcode,
       instruction,

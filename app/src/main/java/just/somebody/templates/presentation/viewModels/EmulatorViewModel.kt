@@ -57,6 +57,7 @@ class EmulatorViewModel : ViewModel()
 
         gameBoy.stepFrame()
 
+
         val frameTime = System.nanoTime() - frameStart
         val frameTimeMillis = frameTime / 1_000_000
         val targetFrameMillis = 16L
@@ -65,6 +66,7 @@ class EmulatorViewModel : ViewModel()
         if (sleepMillis > 0) {
           delay(sleepMillis)
         }
+
       }
     }
   }
