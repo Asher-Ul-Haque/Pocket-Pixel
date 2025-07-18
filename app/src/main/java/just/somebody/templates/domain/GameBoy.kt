@@ -10,6 +10,8 @@ import just.somebody.templates.ui.theme.GameBoyColors
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import androidx.core.graphics.createBitmap
+import androidx.core.graphics.set
 
 enum class Buttons
 {
@@ -26,7 +28,7 @@ class GameBoy
 {
   // - - - memory
   private val frameBuffer = ByteArray(160 * 144 / 4)  // - - - 2 bits per pixel
-  private val bitmap      = Bitmap.createBitmap(160, 144, Bitmap.Config.ARGB_8888)
+  private val bitmap      = createBitmap(160, 144)
   private val audioBuffer = ByteArray(1024)           // - - - TODO : find out how audio on gameboy works
   private var romData     = ByteArray(1024 * 1024 * 4)    // - - - 1MB ROM size
   private val ramData     = ByteArray(1024 * 8)       // - - - 8KB RAM
@@ -66,7 +68,7 @@ class GameBoy
         val x = pixelIndex % 160
         val y = pixelIndex / 160
 
-        bitmap.setPixel(x, y, mapColorToArgb(colorIndex));
+        bitmap[x, y] = mapColorToArgb(colorIndex);
         pixelIndex++;
       }
     }

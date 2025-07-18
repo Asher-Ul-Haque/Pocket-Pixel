@@ -18,8 +18,9 @@ import kotlinx.coroutines.withContext
 
 class EmulatorViewModel : ViewModel()
 {
-  private val _frameFlow = MutableStateFlow<Bitmap?>(null)
-  val frameFlow: StateFlow<Bitmap?> = _frameFlow
+  private val _frameSignal= MutableStateFlow(0)
+  val frameSignal: StateFlow<Int> = _frameSignal
+
 
   private val gameBoy = App.appModule.gameBoy
 
@@ -47,23 +48,16 @@ class EmulatorViewModel : ViewModel()
       {
         val frameStart = System.nanoTime()
 
-        /*
-        val frameBitmap = gameBoy.getFrameBuffer().config?.let {
-          gameBoy
-            .getFrameBuffer()
-            .copy(it, true)
-        }
 
-        _frameFlow.emit(frameBitmap)
-         */
+        _frameSignal.emit(_frameSignal.value + 1)
+
 
         gameBoy.stepFrame()
 
 
-
         val frameTime = System.nanoTime() - frameStart
         val frameTimeMillis = frameTime / 1_000_000
-        val targetFrameMillis = 4L
+        val targetFrameMillis = 16L
 
         val sleepMillis = targetFrameMillis - frameTimeMillis
         if (sleepMillis > 0) {

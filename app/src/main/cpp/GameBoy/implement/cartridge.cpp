@@ -1,5 +1,5 @@
 #include "../include/cartridge.h"
-#include "../../../ForgeLibrary/include/asserts.h"
+#include "../../ForgeLibrary/include/asserts.h"
 
 typedef struct 
 {
