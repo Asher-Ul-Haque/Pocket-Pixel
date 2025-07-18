@@ -26,6 +26,6 @@ void emuCycles(i32 CPU_CYCLES)
   for (i32 i = 0; i < n; i++) 
   {
     ctx.ticks++;
-    timer_tick();
+    timerTick();
   }
 }

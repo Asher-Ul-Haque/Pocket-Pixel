@@ -20,7 +20,7 @@ void cpuInit()
   ctx.interruptFlags             = 0;
   ctx.interruptMasterEnabled     = false;
   ctx.enablingIme                = false;
-  timer_get_context()->div       = 0xABCC;
+  timerGetContext()->div       = 0xABCC;
 }
 
 static void fetchInstruction() 
@@ -38,7 +38,7 @@ static void execute()
   proc(&ctx);
 }
 
-bool cpuStep() 
+bool cpuTick()
 {
   if (!ctx.halted) 
   {
@@ -105,7 +105,7 @@ bool cpuStep()
 u8 cpuGetInterrupt() 
 { return ctx.interrupt; }
 
-void cpuSetInterruptRegister(u8 N) 
+void cpuSetInterrupt(u8 N) 
 { ctx.interrupt = N; }
 
 void cpuRequestInterrupt(InterruptType TYPE) 

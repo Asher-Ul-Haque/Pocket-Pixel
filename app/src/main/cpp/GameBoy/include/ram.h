@@ -6,11 +6,11 @@
 extern "C" {
 #endif
 
-u8 wram_read(u16 address);
-void wram_write(u16 address, u8 value);
+u8   wramRead (u16 ADDRESS);
+void wramWrite(u16 ADDRESS, u8 VALUE);
 
-u8 hram_read(u16 address);
-void hram_write(u16 address, u8 value);
+u8   hramRead (u16 ADDRESS);
+void hramWrite(u16 ADDRESS, u8 VALUE);
 
 
 #ifdef __cplusplus

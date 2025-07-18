@@ -1,21 +1,23 @@
 #include "GameBoyCore.h"
 #include "ForgeLibrary/include/asserts.h"
 #include "ForgeLibrary/include/logger.h"
-#include "Machine/Parts/include/cpu.h"
-#include "Machine/Parts/include/timer.h"
+#include "GameBoy/include/cpu.h"
+#include "GameBoy/include/timer.h"
+#include "GameBoy/include/emu.h"
 
 static u64 frameCount = 0;
 #define FRAME_WIDTH 160
 
-static GBContext CTX;
-
-
 void stopEmulator()
-{ FORGE_LOG_INFO("Emulator Stopped");}
+{ 
+  FORGE_LOG_INFO("Emulator Stopped");
+  emuGetContext()->running = false;
+}
 
 void startEmulator()
 {
   FORGE_LOG_INFO("Emulator Start");
+  emuGetContext()->running = true;
   timerInit();
   cpuInit();
 }
@@ -52,15 +54,3 @@ void setButton(u8 BUTTON, bool PRESSED)
 {
   FORGE_LOG_INFO("Received Button %d", BUTTON)
 }
-
-void cycles(u32 CPU_CYCLES)
-{
-  for (int i = 0; i < CPU_CYCLES * 4; ++i)
-  {
-    CTX.ticks++;
-    timerTick();
-  }
-}
-
-GBContext* getContext()
-{ return &CTX; }

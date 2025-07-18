@@ -1,37 +1,41 @@
-#include <ram.h>
+#include "../include/ram.h"
+#include "../../ForgeLibrary/include/asserts.h"
 
-typedef struct {
-    u8 wram[0x2000];
-    u8 hram[0x80];
-} ram_context;
+typedef struct 
+{
+  u8 wram[0x2000];
+  u8 hram[0x80];
+} RAMcontext;
 
-static ram_context ctx;
+static RAMcontext ctx;
 
-u8 wram_read(u16 address) {
-    address -= 0xC000;
+u8 wramRead(u16 ADDRESS) 
+{
+  ADDRESS -= 0xC000;
 
-    if (address >= 0x2000) {
-        printf("INVALID WRAM ADDR %08X\n", address + 0xC000);
-        exit(-1);
-    }
+  if (ADDRESS >= 0x2000) 
+  {
+    FORGE_LOG_FATAL("INVALID WRAM ADDR %08X\n", ADDRESS + 0xC000);
+    FORGE_ASSERT(false);
+  }
 
-    return ctx.wram[address];
+  return ctx.wram[ADDRESS];
 }
 
-void wram_write(u16 address, u8 value) {
-    address -= 0xC000;
-
-    ctx.wram[address] = value;
+void wramWrite(u16 ADDRESS, u8 VALUE) 
+{
+  ADDRESS           -= 0xC000;
+  ctx.wram[ADDRESS]  = VALUE;
 }
 
-u8 hram_read(u16 address) {
-    address -= 0xFF80;
-
-    return ctx.hram[address];
+u8 hramRead(u16 ADDRESS) 
+{
+  ADDRESS -= 0xFF80;
+  return ctx.hram[ADDRESS];
 }
 
-void hram_write(u16 address, u8 value) {
-    address -= 0xFF80;
-
-    ctx.hram[address] = value;
+void hramWrite(u16 ADDRESS, u8 VALUE) 
+{
+  ADDRESS           -= 0xFF80;
+  ctx.hram[ADDRESS]  = VALUE;
 }

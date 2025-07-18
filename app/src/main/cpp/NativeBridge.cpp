@@ -1,9 +1,10 @@
+#ifdef __ANDROID__
 #include <jni.h>
 #include "defines.h"
 #include "ForgeLibrary/include/asserts.h"
 #include "GameBoyCore.h"
-#include "Machine/Parts/include/cpu.h"
-#include "Machine/Parts/include/cartridge.h"
+#include "GameBoy/include/cpu.h"
+#include "GameBoy/include/cartridge.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -77,4 +78,5 @@ Java_just_somebody_templates_domain_GameBoy_nativeStopEmulator(
 
 #ifdef __cplusplus
 }
+#endif
 #endif

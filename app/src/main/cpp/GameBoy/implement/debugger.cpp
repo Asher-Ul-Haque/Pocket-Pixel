@@ -8,7 +8,7 @@ void debuggerUpdate()
 {
   if (busRead(0xFF02) == 0x81) 
   {
-    char c                      = busRead(0xFF01);
+    char c                      = (char) busRead(0xFF01);
     debugMesage[messageSize++]  = c;
     busWrite(0xFF02, 0);
   }

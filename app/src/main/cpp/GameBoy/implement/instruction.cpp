@@ -185,7 +185,6 @@ Instruction instructions[0x100] =
     [0x9E] = {IN_SBC, AM_R_MR, RT_A, RT_HL},
     [0x9F] = {IN_SBC, AM_R_R, RT_A, RT_A},
 
-
     // - - - 0xAX
     [0xA0] = {IN_AND, AM_R_R, RT_A, RT_B},
     [0xA1] = {IN_AND, AM_R_R, RT_A, RT_C},
@@ -286,7 +285,7 @@ Instruction instructions[0x100] =
 
 
 
-Instruction* getInstructionByOpcode(u8 OPCODE) 
+Instruction* instructionGetByOpcode(u8 OPCODE)
 { return &instructions[OPCODE]; }
 
 std::string instructionLookup[] = 

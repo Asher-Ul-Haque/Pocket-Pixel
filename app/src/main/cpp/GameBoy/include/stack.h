@@ -7,11 +7,13 @@
 extern "C" {
 #endif
 
-void stack_push(u8 data);
-void stack_push16(u16 data);
+// - - - 8 bit operations
+void stackPush  (u8 DATA);
+u8   stackPop   ();
 
-u8 stack_pop();
-u16 stack_pop16();
+// - - - 16 bit operations
+void stackPush16(u16 DATA);
+u16  stackPop16 ();
 
 #ifdef __cplusplus
 }

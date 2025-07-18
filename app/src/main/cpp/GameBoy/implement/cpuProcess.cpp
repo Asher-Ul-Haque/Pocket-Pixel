@@ -345,7 +345,7 @@ static void gotoAddress(CPUcontext* CTX, u16 ADDR, bool PUSH_PC)
     if (PUSH_PC) 
     {
       emuCycles(2);
-      stack_push16(CTX->regs.programCounter);
+      stackPush16(CTX->regs.programCounter);
     }
 
     CTX->regs.programCounter = ADDR;
@@ -376,9 +376,9 @@ static void proc_ret(CPUcontext* CTX)
 
   if (checkCondition(CTX)) 
   {
-    u16 lo = stack_pop();
+    u16 lo = stackPop();
     emuCycles(1);
-    u16 hi = stack_pop();
+    u16 hi = stackPop();
     emuCycles(1);
 
     u16 n = (hi << 8) | lo;
@@ -396,9 +396,9 @@ static void procRETI(CPUcontext* CTX)
 
 static void procPop(CPUcontext* CTX) 
 {
-  u16 lo = stack_pop();
+  u16 lo = stackPop();
   emuCycles(1);
-  u16 hi = stack_pop();
+  u16 hi = stackPop();
   emuCycles(1);
 
   u16 n = (hi << 8) | lo;
@@ -412,36 +412,36 @@ static void procPush(CPUcontext* CTX)
 {
   u16 hi = (cpuReadRegister(CTX->currentInstruction->reg1) >> 8) & 0xFF;
   emuCycles(1);
-  stack_push(hi);
+  stackPush(hi);
 
   u16 lo = cpuReadRegister(CTX->currentInstruction->reg1) & 0xFF;
   emuCycles(1);
-  stack_push(lo);
+  stackPush(lo);
 
   emuCycles(1);
 }
 
 static void procINC(CPUcontext* CTX) 
 {
-    u16 val = cpuReadRegister(CTX->currentInstruction->reg1) + 1;
+  u16 val = cpuReadRegister(CTX->currentInstruction->reg1) + 1;
 
-    if (is16Bit(CTX->currentInstruction->reg1)) emuCycles(1);
+  if (is16Bit(CTX->currentInstruction->reg1)) emuCycles(1);
 
-    if (CTX->currentInstruction->reg1 == RT_HL && CTX->currentInstruction->mode == AM_MR) 
-    {
-      val = busRead(cpuReadRegister(RT_HL)) + 1;
-      val &= 0xFF;
-      busWrite(cpuReadRegister(RT_HL), val);
-    } 
-    else 
-    {
-      cpuSetRegister(CTX->currentInstruction->reg1, val);
-      val = cpuReadRegister(CTX->currentInstruction->reg1);
-    }
+  if (CTX->currentInstruction->reg1 == RT_HL && CTX->currentInstruction->mode == AM_MR) 
+  {
+    val = busRead(cpuReadRegister(RT_HL)) + 1;
+    val &= 0xFF;
+    busWrite(cpuReadRegister(RT_HL), val);
+  } 
+  else 
+  {
+    cpuSetRegister(CTX->currentInstruction->reg1, val);
+    val = cpuReadRegister(CTX->currentInstruction->reg1);
+  }
 
-    if ((CTX->currentOpcode & 0x03) == 0x03) return;
+  if ((CTX->currentOpcode & 0x03) == 0x03) return;
 
-    cpuSetFlags(CTX, val == 0, 0, (val & 0x0F) == 0, -1);
+  cpuSetFlags(CTX, val == 0, 0, (val & 0x0F) == 0, -1);
 }
 
 static void procDEC(CPUcontext* CTX) 
@@ -580,5 +580,5 @@ static INSTRUCTION_PROCESSOR processors[] =
     [IN_RETI]   = procRETI
   };
 
-INSTRUCTION_PROCESSOR inst_get_processor(InstructionType TYPE) 
+INSTRUCTION_PROCESSOR InstructionGetProcessor(InstructionType TYPE) 
 { return processors[TYPE]; }

@@ -7,20 +7,21 @@
 extern "C" {
 #endif
 
-typedef struct {
-    u16 div;
-    u8 tima;
-    u8 tma;
-    u8 tac;
-} timer_context;
+typedef struct 
+{
+  u16 div;
+  u8  tima;
+  u8  tma;
+  u8  tac;
+} TimerContext;
 
-void timer_init();
-void timer_tick();
+void timerInit();
+void timerTick();
 
-void timer_write(u16 address, u8 value);
-u8 timer_read(u16 address);
+void timerWrite(u16 ADDRESS, u8 VALUE);
+u8   timerRead (u16 ADDRESS);
 
-timer_context *timer_get_context();
+TimerContext* timerGetContext();
 
 #ifdef __cplusplus
 }

@@ -138,7 +138,6 @@ bool cartridgeLoad(u8* CARTRIDGE, u64 SIZE)
   cartCTX.metadata    = (CartridgeMetadata*)(CARTRIDGE + 256);
 
   // - - - skip the 256 byttes of nindendo logo and look at metadata
-
   FORGE_LOG_INFO("Cartridge Loaded:\n");
   FORGE_LOG_DEBUG("Title       : %s\n",         cartCTX.metadata->title);
   FORGE_LOG_DEBUG("Type        : %2.2X\n",      cartCTX.metadata->type, getCartType());

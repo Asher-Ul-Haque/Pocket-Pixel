@@ -33,7 +33,7 @@ u8 busRead(u16 ADDRESS)
     FORGE_ASSERT(false);
   } 
   else if (ADDRESS < 0xC000)  return cartridgeRead(ADDRESS);
-  else if (ADDRESS < 0xE000)  return wram_read(ADDRESS);
+  else if (ADDRESS < 0xE000)  return wramRead(ADDRESS);
   else if (ADDRESS < 0xFE00)  return 0;
   else if (ADDRESS < 0xFEA0) 
   {
@@ -41,10 +41,10 @@ u8 busRead(u16 ADDRESS)
     return 0x0;
   } 
   else if (ADDRESS < 0xFF00)  return 0;
-  else if (ADDRESS < 0xFF80)  return io_read(ADDRESS);
+  else if (ADDRESS < 0xFF80)  return ioRead(ADDRESS);
   else if (ADDRESS == 0xFFFF) return cpuGetInterrupt();
 
-  return hram_read(ADDRESS);
+  return hramRead(ADDRESS);
 }
 
 void busWrite(u16 ADDRESS, u8 VALUE) 
@@ -52,13 +52,13 @@ void busWrite(u16 ADDRESS, u8 VALUE)
   if      (ADDRESS < 0x8000)    { cartridgeWrite(ADDRESS, VALUE); }
   else if (ADDRESS < 0xA000)    { FORGE_LOG_ERROR("UNSUPPORTED bus_write(%04X)\n", ADDRESS); }
   else if (ADDRESS < 0xC000)    { cartridgeWrite(ADDRESS, VALUE); }
-  else if (ADDRESS < 0xE000)    { wram_write(ADDRESS, VALUE); }
+  else if (ADDRESS < 0xE000)    { wramWrite(ADDRESS, VALUE); }
   else if (ADDRESS < 0xFE00)    {}
   else if (ADDRESS < 0xFEA0)    { FORGE_LOG_ERROR("UNSUPPORTED bus_write(%04X)\n", ADDRESS); }
   else if (ADDRESS < 0xFF00)    {}
-  else if (ADDRESS < 0xFF80)    { io_write(ADDRESS, VALUE); }
+  else if (ADDRESS < 0xFF80)    { ioWrite(ADDRESS, VALUE); }
   else if (ADDRESS == 0xFFFF)   { cpuSetInterrupt(VALUE); } 
-  else                          { hram_write(ADDRESS, VALUE); }
+  else                          { hramWrite(ADDRESS, VALUE); }
 }
 
 

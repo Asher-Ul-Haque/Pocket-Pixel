@@ -48,7 +48,7 @@ FORGE_API RegisterFile* cpuGetRegisters();
 
 // - - - cpu
 FORGE_API void cpuInit();
-FORGE_API bool cpuStep();
+FORGE_API bool cpuTick();
 
 // - - - instruction execution
 typedef void (*INSTRUCTION_PROCESSOR)(CPUcontext *);
