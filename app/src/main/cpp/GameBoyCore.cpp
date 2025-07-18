@@ -1,13 +1,26 @@
 #include "GameBoyCore.h"
 #include "ForgeLibrary/include/asserts.h"
 #include "ForgeLibrary/include/logger.h"
+#include "GameBoy/include/cpu.h"
+#include "GameBoy/include/timer.h"
+#include "GameBoy/include/emu.h"
 
 static u64 frameCount = 0;
 #define FRAME_WIDTH 160
 
-
 void stopEmulator()
-{FORGE_LOG_INFO("Emulator Stopped");}
+{ 
+  FORGE_LOG_INFO("Emulator Stopped");
+  emuGetContext()->running = false;
+}
+
+void startEmulator()
+{
+  FORGE_LOG_INFO("Emulator Start");
+  emuGetContext()->running = true;
+  timerInit();
+  cpuInit();
+}
 
 void getFrame(u8* BUFFER)
 {

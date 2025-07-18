@@ -1,7 +1,11 @@
+#ifdef __ANDROID__
 #include <jni.h>
 #include "defines.h"
 #include "ForgeLibrary/include/asserts.h"
 #include "GameBoyCore.h"
+#include "GameBoy/include/cpu.h"
+#include "GameBoy/include/cartridge.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -10,12 +14,14 @@ JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeStepFrame(
   JNIEnv* JVM,
   jobject THIS)
-{}
+{
+  cpuTick();
+}
 
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeGetFrameBuffer(
-  JNIEnv* JVM,
-  jobject THIS,
+  JNIEnv*    JVM,
+  jobject    THIS,
   jbyteArray FRAME_BUFFER)
 {
   jbyte* buffer = JVM->GetByteArrayElements(FRAME_BUFFER, nullptr);
@@ -26,38 +32,51 @@ Java_just_somebody_templates_domain_GameBoy_nativeGetFrameBuffer(
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeGetAudioBuffer
 (
-  JNIEnv* JVM,
-  jobject THIS,       jbyteArray audio__buffer) {
-  // TODO: implement nativeGetAudioBuffer()
+  JNIEnv*    JVM,
+  jobject    THIS,
+  jbyteArray AUDIO_BUFFER)
+{
+  jbyte* buffer = JVM->GetByteArrayElements(AUDIO_BUFFER, nullptr);
+  getAudio(reinterpret_cast<uint8_t *>(buffer));
+  JVM->ReleaseByteArrayElements(AUDIO_BUFFER, buffer, 0);
+}
+
+
+JNIEXPORT void JNICALL
+Java_just_somebody_templates_domain_GameBoy_nativeLoadROM(
+  JNIEnv*    JVM,
+  jobject    THIS,
+  jbyteArray ROM,
+  jint SIZE)
+{
+  FORGE_LOG_DEBUG("Attempting to read the rom");
+  jbyte* buffer = JVM->GetByteArrayElements(ROM, nullptr);
+  cartridgeLoad(reinterpret_cast<uint8_t *>(buffer), SIZE);
+  JVM->ReleaseByteArrayElements(ROM, buffer, JNI_ABORT);
+  FORGE_LOG_DEBUG("Successfully read the rom");
 }
 
 JNIEXPORT void JNICALL
-Java_just_somebody_templates_domain_GameBoy_nativeLoadROM(JNIEnv *env, jobject thiz,
-                                                          jbyteArray rom) {
-  // TODO: implement nativeLoadROM()
-}
+Java_just_somebody_templates_domain_GameBoy_nativeSetButtonState(
+  JNIEnv*  ENV,
+  jobject  THIS,
+  jint     BUTTON,
+  jboolean PRESSED)
+{ setButton(BUTTON, PRESSED); }
 
 JNIEXPORT void JNICALL
-Java_just_somebody_templates_domain_GameBoy_nativeSetButtonState(JNIEnv *env, jobject thiz,
-                                                                 jint button, jboolean pressed) {
-  // TODO: implement nativeSetButtonState()
-}
+Java_just_somebody_templates_domain_GameBoy_nativeStartEmulator(
+  JNIEnv* ENV,
+  jobject THIS)
+{ startEmulator(); }
 
 JNIEXPORT void JNICALL
-Java_just_somebody_templates_domain_GameBoy_nativeStartEmulator(JNIEnv *env, jobject thiz) {
-  // TODO: implement nativeStartEmulator()
-}
-
-JNIEXPORT void JNICALL
-Java_just_somebody_templates_domain_GameBoy_nativeStopEmulator(JNIEnv *env, jobject thiz) {
-  // TODO: implement nativeStopEmulator()
-}
-
-JNIEXPORT void JNICALL
-Java_just_somebody_templates_domain_GameBoy_nativeStartCPU(JNIEnv *env, jobject thiz) {
-  // TODO: implement nativeStartCPU()
-}
+Java_just_somebody_templates_domain_GameBoy_nativeStopEmulator(
+  JNIEnv* ENV,
+  jobject THIS)
+{ stopEmulator(); }
 
 #ifdef __cplusplus
 }
+#endif
 #endif

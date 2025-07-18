@@ -40,6 +40,7 @@ import just.somebody.templates.R
 import just.somebody.templates.appModule.navigation.NavigationAction
 import just.somebody.templates.presentation.effects.ObserveAsEvents
 import just.somebody.templates.presentation.viewModels.BrowseViewModel
+import just.somebody.templates.presentation.viewModels.EmulatorViewModel
 import just.somebody.templates.presentation.viewModels.GamesViewModel
 import just.somebody.templates.presentation.viewModels.SettingsViewModel
 import just.somebody.templates.presentation.viewModels.viewModelFactory
@@ -56,6 +57,7 @@ fun BrowseScreen(
 )
 {
   val state by VIEW_MODEL.browseState.collectAsState()
+
   val commonViewModel =
     viewModel<GamesViewModel>(factory = viewModelFactory()
     { GamesViewModel(App.appModule.repo)
@@ -70,6 +72,9 @@ fun BrowseScreen(
           DATASTORE       = App.appModule.dataStoreManager)
         }
     )
+  val emulatorViewModel =
+    viewModel<EmulatorViewModel>(factory = viewModelFactory()
+    { EmulatorViewModel() })
 
   Scaffold (
     topBar    =
@@ -206,8 +211,9 @@ fun BrowseScreen(
         LaunchedEffect(Unit) { VIEW_MODEL.showBars(false) }
         val args = it.toRoute<Destination.Emulator>()
         EmulatorScreen(
-          MODIFIER = Modifier.fillMaxSize(),
-          URI      = args.URI)
+          MODIFIER   = Modifier.fillMaxSize(),
+          URI        = args.URI,
+          VIEW_MODEL = emulatorViewModel)
       }
     }
 

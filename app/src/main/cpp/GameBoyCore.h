@@ -16,3 +16,4 @@ FORGE_API void       stepFrame     ();
 FORGE_API void       getFrame      (u8* FRAME_BUFFER);
 FORGE_API void       getAudio      (u8* AUDIO_BUFFER);
 FORGE_API void       setButton     (u8 BUTTON, bool PRESSED);
+FORGE_API void       cycles        (u32 CPU_CYCLES);
