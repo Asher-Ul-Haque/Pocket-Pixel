@@ -91,7 +91,12 @@ RegisterType decodeReg(u8 REG)
 
 // - - - None : Means not implemented yet
 static void procNone(CPUContext* CTX) 
-{  }
+{
+  FORGE_LOG_FATAL("INVALID INSTRUCTION");
+  FORGE_ASSERT(false);
+}
+
+static void procNop(CPUContext* CTX){}
 
 // - - - CB
 static void procCB(CPUContext* CTX)
@@ -223,7 +228,8 @@ static void procCB(CPUContext* CTX)
         return;
       }
   }
-  FORGE_LOG_ERROR("INVALID CB : %02X", op);
+  FORGE_LOG_FATAL("INVALID CB : %02X", op);
+  FORGE_ASSERT(false);
 }
 
 // - - - RLCA
@@ -298,7 +304,7 @@ static void procLoad(CPUContext* CTX)
     cpuSetFlags(CTX, 0, 0, halfCarryFlag, carryFlag);
     cpuSetRegister(
       CTX->currentInst->reg1, 
-      cpuReadRegister(CTX->currentInst->reg2) + (i8)(CTX->readData));
+      cpuReadRegister(CTX->currentInst->reg2) + (char)(CTX->readData));
 
     return;
   }
@@ -310,7 +316,7 @@ static void procLoad(CPUContext* CTX)
 static void procLoadHalf(CPUContext* CTX)
 {
   if (CTX->currentInst->reg1 == REG_A)  cpuSetRegister(REG_A, busRead(0xFF00 | CTX->readData)); 
-  else                                  busWrite(0xFF00 | CTX->readData, CTX->registerFile.accumulator);
+  else                                  busWrite(CTX->memDest, CTX->registerFile.accumulator);
 
   cycles(1);
 }
@@ -335,7 +341,7 @@ static void procPush(CPUContext* CTX)
   cycles(1);
   stackPush(hi);
 
-  u16 lo = (cpuReadRegister(CTX->currentInst->reg2) & 0xFF);
+  u16 lo = (cpuReadRegister(CTX->currentInst->reg1) & 0xFF);
   cycles(1);
   stackPush(lo);
 
@@ -385,18 +391,7 @@ static void procEI(CPUContext* CTX)
 
 // - - - stop (or restart in my case)
 static void procStop(CPUContext* CTX)
-{
-  CTX->readData               = 0;
-  CTX->currentOpcode          = 0;
-  CTX->interrupt              = 0;
-  CTX->memDest                = 0;
-  CTX->registerFile           = {0};
-  CTX->currentInst            = {0};
-  CTX->interruptMasterEnabled = false;
-  CTX->destIsMemory           = false;
-  CTX->steppingMode           = false;
-  cpuInit();
-}
+{ cpuInit(); }
 
 
 // - - - JUMP Insutructions - - -
@@ -417,7 +412,7 @@ static void procRST(CPUContext* CTX)
 // - - - jump relative 
 static void procJumpRelative(CPUContext* CTX)
 {
-  i8  rel  = (i8)(CTX->readData & 0xFF);
+  i8  rel  = (char)(CTX->readData & 0xFF);
   u16 addr = CTX->registerFile.programCounter + rel;
   gotoAddr(CTX, addr, false);
 }
@@ -506,12 +501,12 @@ static void procAdd(CPUContext* CTX)
 
   if (CTX->currentInst->reg1 == REG_SP)
   {
-    val = cpuReadRegister(CTX->currentInst->reg1) + (i8)CTX->readData;
+    val = cpuReadRegister(CTX->currentInst->reg1) + (char)CTX->readData;
   }
 
   int z = (val & 0xFF) == 0;
   int h = (cpuReadRegister(CTX->currentInst->reg1) & 0xF) + (CTX->readData & 0xF) >= 0x10;
-  int c = (i8)(cpuReadRegister(CTX->currentInst->reg1) & 0xFF) + (i8)(CTX->readData & 0xFF) >= 0x100;
+  int c = (int)(cpuReadRegister(CTX->currentInst->reg1) & 0xFF) + (i8)(CTX->readData & 0xFF) >= 0x100;
 
   if (isbig)
   {
@@ -586,7 +581,6 @@ static void procDAA(CPUContext* CTX)
   u8  cFlag = (CTX->registerFile.accumulator & (1 << 4));
   u8  hFlag = (CTX->registerFile.accumulator & (1 << 5));
   u8  nFlag = (CTX->registerFile.accumulator & (1 << 6));
-  u8  zFlag = (CTX->registerFile.accumulator & (1 << 7));
 
   if (hFlag || (!nFlag && (CTX->registerFile.accumulator & 0xF) > 9))
   {
@@ -632,7 +626,7 @@ static void procHalt(CPUContext* CTX)
 static Processor processors[] = 
   {
     [INSTR_NONE] = procNone,
-    [INSTR_NOP]  = procNone,
+    [INSTR_NOP]  = procNop,
     [INSTR_LOAD] = procLoad,
     [INSTR_JUMP] = procJump,
     [INSTR_DI]   = procDI,

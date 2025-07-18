@@ -10,7 +10,7 @@ extern "C" {
 FORGE_API void stackPush(u8 DATA);
 FORGE_API void stackPush16(u16 DATA);
 
-FORGE_API u8 stackPop();
+FORGE_API u8  stackPop();
 FORGE_API u16 stackPop16();
 
 #ifdef __cplusplus

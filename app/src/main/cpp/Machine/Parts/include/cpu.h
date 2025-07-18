@@ -9,14 +9,14 @@ extern "C" {
 
 typedef struct
 {
-  u8 accumulator;
-  u8 flags;
-  u8 b;
-  u8 c;
-  u8 d;
-  u8 e;
-  u8 h;
-  u8 l;
+  u8  accumulator;
+  u8  flags;
+  u8  b;
+  u8  c;
+  u8  d;
+  u8  e;
+  u8  h;
+  u8  l;
   u16 stackPointer;
   u16 programCounter;
 } RegisterFile;
@@ -49,6 +49,8 @@ FORGE_API u8   cpuReadRegister8(RegisterType TYPE);
 FORGE_API void cpuSetRegister8(RegisterType TYPE, u8 VAL);
 FORGE_API void cpuSetInterrupt(u8 INTERRUPT);
 FORGE_API u8   cpuGetInterrupt();
+FORGE_API u8   cpuGetInterruptFlags();
+FORGE_API void cpuSetInterruptFlags(u8 VALUE);
 
 FORGE_API RegisterFile* cpuGetRegisters();
 

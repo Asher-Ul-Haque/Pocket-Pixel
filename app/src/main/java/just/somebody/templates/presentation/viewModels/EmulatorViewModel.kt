@@ -47,6 +47,7 @@ class EmulatorViewModel : ViewModel()
       {
         val frameStart = System.nanoTime()
 
+        /*
         val frameBitmap = gameBoy.getFrameBuffer().config?.let {
           gameBoy
             .getFrameBuffer()
@@ -54,18 +55,21 @@ class EmulatorViewModel : ViewModel()
         }
 
         _frameFlow.emit(frameBitmap)
+         */
 
         gameBoy.stepFrame()
 
 
+
         val frameTime = System.nanoTime() - frameStart
         val frameTimeMillis = frameTime / 1_000_000
-        val targetFrameMillis = 16L
+        val targetFrameMillis = 4L
 
         val sleepMillis = targetFrameMillis - frameTimeMillis
         if (sleepMillis > 0) {
           delay(sleepMillis)
         }
+
 
       }
     }

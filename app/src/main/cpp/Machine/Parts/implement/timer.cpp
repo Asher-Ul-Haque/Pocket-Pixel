@@ -17,29 +17,29 @@ void timerTick()
     case 0b00 : 
       { 
         update = 
-          (prevDiv      & (1 << 9)) && 
-          (timerCTX.div & (1 << 9)); 
+          (prevDiv       & (1 << 9)) &&
+          !(timerCTX.div & (1 << 9));
         break;
       }
     case 0b01 : 
       { 
         update = 
-          (prevDiv      & (1 << 3)) && 
-          (timerCTX.div & (1 << 3)); 
+          (prevDiv       & (1 << 3)) &&
+          !(timerCTX.div & (1 << 3));
         break;
       }
     case 0b10 : 
       { 
         update = 
-          (prevDiv      & (1 << 5)) && 
-          (timerCTX.div & (1 << 5)); 
+          (prevDiv       & (1 << 5)) &&
+          !(timerCTX.div & (1 << 5));
         break;
       }
     case 0b11 : 
       { 
         update = 
-          (prevDiv      & (1 << 7)) && 
-          (timerCTX.div & (1 << 7)); 
+          (prevDiv       & (1 << 7)) &&
+          !(timerCTX.div & (1 << 7));
         break;
       }
   }

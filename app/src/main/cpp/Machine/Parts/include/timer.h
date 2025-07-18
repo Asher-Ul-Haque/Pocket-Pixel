@@ -19,7 +19,7 @@ FORGE_API void timerInit();
 FORGE_API void timerTick();
 
 FORGE_API void timerWrite(u16 ADDRESS, u8 VALUE);
-FORGE_API u8   timerRead(u16 ADDRESS);
+FORGE_API u8   timerRead (u16 ADDRESS);
 
 FORGE_API TimerContext* timerGetContext();
 

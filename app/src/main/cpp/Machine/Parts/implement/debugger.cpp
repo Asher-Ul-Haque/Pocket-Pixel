@@ -9,6 +9,7 @@ void debuggerUpdate()
   if (busRead(0xFF02) == 0x81)
   {
     char c = busRead(0xFF01);
+    FORGE_LOG_TRACE("Read : %c", c);
 
     debugMessage[messageSize++] = c;
 
@@ -18,5 +19,5 @@ void debuggerUpdate()
 
 void debuggerPrint()
 {
-  FORGE_LOG_DEBUG("%s", debugMessage);
+  if (debugMessage[0]) FORGE_LOG_DEBUG("MSG : %s", debugMessage);
 }

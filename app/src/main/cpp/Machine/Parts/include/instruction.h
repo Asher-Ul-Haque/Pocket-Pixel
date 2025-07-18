@@ -81,7 +81,7 @@ typedef enum
   INSTR_EI,
   INSTR_RST,
   INSTR_ERR,
-  //C - - - B instructions...
+  //CB instructions...
   INSTR_RLC,
   INSTR_RRC,
   INSTR_RL,

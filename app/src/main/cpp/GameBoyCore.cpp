@@ -7,6 +7,8 @@
 static u64 frameCount = 0;
 #define FRAME_WIDTH 160
 
+static GBContext CTX;
+
 
 void stopEmulator()
 { FORGE_LOG_INFO("Emulator Stopped");}
@@ -51,11 +53,14 @@ void setButton(u8 BUTTON, bool PRESSED)
   FORGE_LOG_INFO("Received Button %d", BUTTON)
 }
 
-void cycles(u32 CPU_CYCLES, CPUContext* CTX)
+void cycles(u32 CPU_CYCLES)
 {
   for (int i = 0; i < CPU_CYCLES * 4; ++i)
   {
-    CTX->ticks++;
+    CTX.ticks++;
     timerTick();
   }
 }
+
+GBContext* getContext()
+{ return &CTX; }

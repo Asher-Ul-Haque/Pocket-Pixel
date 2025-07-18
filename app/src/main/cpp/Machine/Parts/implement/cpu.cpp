@@ -6,6 +6,7 @@
 #include "../../../GameBoyCore.h"
 #include "../../../ForgeLibrary/include/asserts.h"
 #include "../../../ForgeLibrary/include/logger.h"
+#include "../include/timer.h"
 
 static CPUContext   cpuCTX    = {0};
 
@@ -15,15 +16,19 @@ static CPUContext   cpuCTX    = {0};
 FORGE_API void cpuInit()
 {
   FORGE_LOG_INFO("Started the emulator");
-  cpuCTX.registerFile.programCounter = 0x100;
-  cpuCTX.registerFile.accumulator    = 0x1;
-  *((i16*)&cpuCTX.registerFile.accumulator) = 0x001;
-  *((i16*)&cpuCTX.registerFile.accumulator) = 0x001;
-  *((i16*)&cpuCTX.registerFile.accumulator) = 0x001;
-  *((i16*)&cpuCTX.registerFile.accumulator) = 0x001;
+  cpuCTX.registerFile.programCounter        = 0x100;
+  cpuCTX.registerFile.accumulator           = 0x1;
+  cpuCTX.interrupt                          = 0;
+  cpuCTX.interruptFlags                     = 0;
+  cpuCTX.interruptMasterEnabled             = false;
+  cpuCTX.enableIME                          = false;
+  timerGetContext()->div                    = 0xABCC;
+  *((i16*)&cpuCTX.registerFile.accumulator) = 0xB001;
+  *((i16*)&cpuCTX.registerFile.b)           = 0x1300;
+  *((i16*)&cpuCTX.registerFile.d)           = 0xD800;
+  *((i16*)&cpuCTX.registerFile.h)           = 0x4D01;
 }
 
-static int ticks = 0;
 
 FORGE_API void cpuTick()
 {
@@ -38,6 +43,7 @@ FORGE_API void cpuTick()
     cpuCTX.memDest           = 0;
     cpuCTX.destIsMemory      = false;
 
+    FORGE_ASSERT(cpuCTX.currentInst);
     FORGE_ASSERT(cpuCTX.currentInst->type != INSTR_NONE);
 
     // - - - fetch the data
@@ -77,7 +83,7 @@ FORGE_API void cpuTick()
           u16 hi = busRead(cpuCTX.registerFile.programCounter + 1);
           cycles(1);
 
-          cpuCTX.readData = lo | (hi << 8);
+          cpuCTX.readData                     = lo | (hi << 8);
           cpuCTX.registerFile.programCounter += 2;
           break;
         }
@@ -110,7 +116,7 @@ FORGE_API void cpuTick()
       // - - - increment the HL registers
       case ADDR_MODE_R_HLI   :
         {
-          cpuCTX.readData = busRead(cpuCTX.currentInst->reg2);
+          cpuCTX.readData = busRead(cpuReadRegister(cpuCTX.currentInst->reg2));
           cycles(1);
           cpuSetRegister(REG_HL, cpuReadRegister(REG_HL) + 1);
           break;
@@ -119,7 +125,7 @@ FORGE_API void cpuTick()
       // - - - decrement the HL registers
       case ADDR_MODE_R_HLD   :
         {
-          cpuCTX.readData = busRead(cpuCTX.currentInst->reg2);
+          cpuCTX.readData = busRead(cpuReadRegister(cpuCTX.currentInst->reg2));
           cycles(1);
           cpuSetRegister(REG_HL, cpuReadRegister(REG_HL) - 1);
           break;
@@ -128,8 +134,8 @@ FORGE_API void cpuTick()
       // - - - increment the HL registers
       case ADDR_MODE_HLI_R   :
         {
-          cpuCTX.readData     = busRead(cpuCTX.currentInst->reg2);
-          cpuCTX.memDest      = busRead(cpuCTX.currentInst->reg1);
+          cpuCTX.readData     = cpuReadRegister(cpuCTX.currentInst->reg2);
+          cpuCTX.memDest      = cpuReadRegister(cpuCTX.currentInst->reg1);
           cpuCTX.destIsMemory = true;
           cycles(1);
           cpuSetRegister(REG_HL, cpuReadRegister(REG_HL) + 1);
@@ -139,8 +145,8 @@ FORGE_API void cpuTick()
       // - - - decrement the HL registers
       case ADDR_MODE_HLD_R   :
         {
-          cpuCTX.readData     = busRead(cpuCTX.currentInst->reg2);
-          cpuCTX.memDest      = busRead(cpuCTX.currentInst->reg1);
+          cpuCTX.readData     = cpuReadRegister(cpuCTX.currentInst->reg2);
+          cpuCTX.memDest      = cpuReadRegister(cpuCTX.currentInst->reg1);
           cpuCTX.destIsMemory = true;
           cycles(1);
           cpuSetRegister(REG_HL, cpuReadRegister(REG_HL) - 1);
@@ -218,17 +224,16 @@ FORGE_API void cpuTick()
           u16 hi = busRead(cpuCTX.registerFile.programCounter + 1);
           cycles(1);
 
-          u16 addr = lo | (hi << 8);
+          u16 addr                            = lo | (hi << 8);
           cpuCTX.registerFile.programCounter += 2;
-
-          cpuCTX.readData = busRead(addr);
+          cpuCTX.readData                     = busRead(addr);
           cycles(1);
           break;
         }
 
       default :
       {
-        FORGE_LOG_INFO("Failed to address : %d", cpuCTX.currentInst->mode);
+        FORGE_LOG_FATAL("Failed to address : %d", cpuCTX.currentInst->mode);
         TODO_COMMENT("For now only one addressing mode : Implied")
       }
     }
@@ -238,7 +243,7 @@ FORGE_API void cpuTick()
     getInstrStr(cpuCTX.currentInst, cpuCTX.readData, oldPC, instruction);
     FORGE_LOG_INFO(
       "0x%08X - 0x%04X: \t\t0x%02X : %-20s (A : 0x%02X \t BC : 0x%02X%02X \t DE : 0x%02X%02X \t HL : 0x%02X%02X, \t FLAGS : %c%c%c%c)",
-      ticks++,
+      getContext()->ticks++,
       oldPC,
       cpuCTX.currentOpcode,
       instruction,
@@ -257,9 +262,8 @@ FORGE_API void cpuTick()
     debuggerUpdate();
     debuggerPrint();
 
-
-
     Processor proc = getInstrProcessor(cpuCTX.currentInst->type);
+    FORGE_LOG_INFO("CAUSES ERRO : %d %s", cpuCTX.currentInst->type, instruction);
     FORGE_ASSERT_MESSAGE(proc, "Cannot have a null processor for an instruction");
     proc(&cpuCTX);    
   }
@@ -321,7 +325,8 @@ u8 cpuReadRegister8(RegisterType TYPE)
     case REG_HL : return busRead(cpuReadRegister(REG_HL)); 
     default :
       {
-        FORGE_LOG_ERROR("Invalid 8 bit Register : %d\n", TYPE);
+        FORGE_LOG_FATAL("Invalid 8 bit Register : %d\n", TYPE);
+        FORGE_ASSERT(false);
         return 0;
       }
   }
@@ -342,8 +347,8 @@ void cpuSetRegister8(RegisterType TYPE, u8 VAL)
     case REG_HL : busWrite(cpuReadRegister(REG_HL), VAL);       break;
     default : 
       {
-        FORGE_LOG_ERROR("Invalid 8 bit register : %d\n", TYPE);
-        return;
+        FORGE_LOG_FATAL("Invalid 8 bit Register : %d\n", TYPE);
+        FORGE_ASSERT(false);
       }
   }
 }
@@ -376,11 +381,11 @@ void cpuSetRegister(RegisterType TYPE, u16 VAL)
 u8 cpuGetInterrupt()
 { return cpuCTX.interrupt; }
 
-void cpuSetRegister(u8 INTERRPUT)
-{ cpuCTX.interrupt = INTERRPUT; }
+void cpuSetInterrupt(u8 INTERRUPT)
+{ cpuCTX.interrupt = INTERRUPT; }
 
 RegisterFile* cpuGetRegisters()
 { return &cpuCTX.registerFile; }
 
-void cpuSetInterrupt(u8 INTERRUPT)
-{ cpuCTX.interrupt = INTERRUPT; }
+void cpuRequestInterrupt(InterruptType TYPE)
+{ cpuCTX.interruptFlags |= TYPE; }

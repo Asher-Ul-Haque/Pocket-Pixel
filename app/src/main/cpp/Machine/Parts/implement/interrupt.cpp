@@ -13,7 +13,7 @@ FORGE_INLINE bool interruptCheck(CPUContext* CTX, u16 ADDRESS, InterruptType TYP
   if (CTX->interruptFlags & TYPE && CTX->interrupt & TYPE)
   {
     intHandle(CTX, ADDRESS);
-    CTX->interruptFlags        &= ~INTRPT_VBLANK;
+    CTX->interruptFlags        &= ~TYPE;
     CTX->halted                 = false;
     CTX->interruptMasterEnabled = false;
 
@@ -34,8 +34,4 @@ void cpuHandleInterrupts(CPUContext* CTX)
   {}
   else if (interruptCheck(CTX, 0x60, INTRPT_JOYPAD))
   {}
-}
-
-void cpuRequestInterrupt(InterruptType TYPE)
-{
 }
