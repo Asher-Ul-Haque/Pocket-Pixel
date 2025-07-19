@@ -19,7 +19,6 @@ data class GameEntity(
   @PrimaryKey(autoGenerate = true)
   val id          : Long = 0,
   val title       : String,
-  val publisher   : String,
   val romUri      : String,
   val batterySave : String?,
   val lastPlayed  : Long?,
