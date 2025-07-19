@@ -1,7 +1,11 @@
 package just.somebody.templates.presentation.screens
 
 import android.graphics.Bitmap
+import android.graphics.PixelFormat
 import android.net.Uri
+import android.view.SurfaceHolder
+import android.view.SurfaceView
+import android.view.View
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -14,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -30,6 +35,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toIntSize
+import androidx.compose.ui.viewinterop.AndroidView
 import just.somebody.templates.App
 import just.somebody.templates.domain.models.Game
 import just.somebody.templates.presentation.effects.SnackbarController
@@ -43,36 +49,53 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun EmulatorScreen(
-  MODIFIER   : Modifier = Modifier,
-  VIEW_MODEL : EmulatorViewModel,
-  URI        : String)
-{
+  MODIFIER: Modifier = Modifier,
+  VIEW_MODEL: EmulatorViewModel,
+  URI: String
+) {
+  LaunchedEffect(URI) {
+    VIEW_MODEL.runEmulator(URI)
+  }
 
-
-  val frameCount by VIEW_MODEL.frameSignal.collectAsState()
-
-  LaunchedEffect(URI) { VIEW_MODEL.runEmulator(URI) }
-
-  Column (
-    modifier            = MODIFIER
+  Column(
+    modifier = MODIFIER
       .fillMaxSize()
       .background(GameBoyColors.DarkGreen),
     verticalArrangement = Arrangement.Top,
     horizontalAlignment = Alignment.CenterHorizontally
-  )
-  {
+  ) {
+    AndroidView(
+      factory = { context ->
+        object : SurfaceView(context) {
+          init {
+            holder.setFormat(PixelFormat.RGB_565) // ✅ Use RGB_565 format
+            holder.setFixedSize(160, 144)         // ✅ Match Game Boy resolution
+            setWillNotDraw(false)                 // ✅ Allow native drawing
 
-    Text("$frameCount")
-    Canvas(
-      modifier = Modifier.border(width = 4.dp, color = Color.Black)
+            holder.addCallback(object : SurfaceHolder.Callback {
+              override fun surfaceCreated(holder: SurfaceHolder) {
+                VIEW_MODEL.setNativeSurface(holder.surface)
+              }
+
+              override fun surfaceDestroyed(holder: SurfaceHolder) {
+                VIEW_MODEL.setNativeSurface(null)
+              }
+
+              override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {}
+            })
+          }
+        }.apply {
+          setLayerType(View.LAYER_TYPE_SOFTWARE, null) // ✅ Disable smoothing
+          background = null
+          isFocusable = false
+        }
+      },
+      modifier = Modifier
+        .border(4.dp, Color.Black)
         .fillMaxWidth()
-        .aspectRatio(160f / 144f))
-    {
-      drawImage(
-        image = App.appModule.gameBoy.getFrameBuffer().asImageBitmap(),
-        dstSize = size.toIntSize()
-      )
-    }
+        .aspectRatio(160f / 144f) // ✅ Keeps proper 1:1 pixel scaling
+    )
+
     GameBoyControls(App.appModule.gameBoy)
   }
 }
