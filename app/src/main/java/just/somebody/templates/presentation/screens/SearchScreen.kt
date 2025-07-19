@@ -73,7 +73,7 @@ fun SearchScreen(
         )
         {
           CustomText(
-            TEXT      = "No Results",
+            TEXT      = stringResource(R.string.NO_RES),
             FONT_SIZE = 32
           )
         }

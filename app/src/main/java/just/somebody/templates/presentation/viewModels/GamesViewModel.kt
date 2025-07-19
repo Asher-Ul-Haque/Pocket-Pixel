@@ -185,6 +185,4 @@ class GamesViewModel(private val REPO : GameRepository) : ViewModel()
       }
     }
   }
-
-
 }

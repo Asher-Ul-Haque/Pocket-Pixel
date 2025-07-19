@@ -28,16 +28,11 @@ enum class Buttons
 class GameBoy
 {
   // - - - memory
-  private val audioBuffer = ByteArray(1024)           // - - - TODO : find out how audio on gameboy works
-  private var romData     = ByteArray(1024 * 1024 * 4)    // - - - 1MB ROM size
-  private val ramData     = ByteArray(1024 * 8)       // - - - 8KB RAM
+  private val audioBuffer = ByteArray(1024)               // - - - TODO : find out how audio on gameboy works
 
   // - - - emulation
   fun loadROM(ROM : ByteArray)
-  {
-    romData = ROM;
-    nativeLoadROM(romData, romData.size);
-  }
+  { nativeLoadROM(ROM, ROM.size); }
 
   fun startEmulator  ()                  { nativeStartEmulator(); }
   fun stopEmulator   ()                  {  nativeStopEmulator(); }

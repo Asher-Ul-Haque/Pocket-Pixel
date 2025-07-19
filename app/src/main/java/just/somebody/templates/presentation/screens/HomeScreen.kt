@@ -91,7 +91,7 @@ fun HomeScreen(
       {
         GameList(
           GAMES         = favoriteGames.value,
-          TITLE         = "Favorites",
+          TITLE         = stringResource(R.string.FAV),
           ON_CLICK      = { game -> VIEW_MODEL.markAsPlayed(game) },
           ON_LONG_PRESS = { game -> VIEW_MODEL.selectGame(game)},
           GET_URL       = { game -> VIEW_MODEL.getBoxArtFlow(game.title) }
@@ -99,7 +99,7 @@ fun HomeScreen(
 
         GameList(
           GAMES         = recentGames.value,
-          TITLE         = "Recently played",
+          TITLE         = stringResource(R.string.RECENT),
           ON_CLICK      = { game -> VIEW_MODEL.markAsPlayed(game) },
           ON_LONG_PRESS = { game -> VIEW_MODEL.selectGame(game) },
           GET_URL       = { game -> VIEW_MODEL.getBoxArtFlow(game.title) }
@@ -107,7 +107,7 @@ fun HomeScreen(
 
         GameList(
           GAMES         = newGames.value,
-          TITLE         = "Discover New",
+          TITLE         = stringResource(R.string.DISCOVER),
           ON_CLICK      = { game -> VIEW_MODEL.markAsPlayed(game) },
           ON_LONG_PRESS = { game -> VIEW_MODEL.selectGame(game) },
           GET_URL       = { game -> VIEW_MODEL.getBoxArtFlow(game.title) }

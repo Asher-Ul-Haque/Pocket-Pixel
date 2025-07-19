@@ -48,7 +48,7 @@ fun FavoriteScreen(
     if (empty)
     {
       CustomText(
-        TEXT      = "No Favorites",
+        TEXT      = stringResource(R.string.NO_FAV),
         FONT_SIZE = 42)
     }
     else
@@ -61,7 +61,7 @@ fun FavoriteScreen(
       {
         GameList(
           GAMES         = favoriteGames.value,
-          TITLE         = "Favorites",
+          TITLE         = stringResource(R.string.FAV),
           ON_CLICK      = { game -> VIEW_MODEL.markAsPlayed(game) },
           ON_LONG_PRESS = { game -> VIEW_MODEL.selectGame(game)},
           GET_URL       = { game -> VIEW_MODEL.getBoxArtFlow(game.title) },

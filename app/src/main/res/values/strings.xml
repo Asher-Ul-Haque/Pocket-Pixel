@@ -32,4 +32,12 @@
       This might take a few seconds.
     </string>
     <string name = "DIRECTORY"> Select Directory </string>
+    <string name = "RECENT"> Recently Played </string>
+    <string name = "DISCOVER"> Discover New </string>
+    <string name = "NO_FAV"> No Favorites </string>
+    <string name = "NO_RES"> No Results </string>
+    <string name = "SETTINGS"> Settings </string>
+    <string name = "CHANGE"> Change ROM Directory </string>
+    <string name = "RESCAN"> Rescan ROMs </string>
+    <string name = "FACTORY"> Factory Reset </string>
 </resources>

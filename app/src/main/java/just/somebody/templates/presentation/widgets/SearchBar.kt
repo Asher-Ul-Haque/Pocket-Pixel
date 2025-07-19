@@ -28,6 +28,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import just.somebody.templates.R
@@ -82,10 +83,15 @@ fun SearchBar(
           fontFamily  = PokeFontFamily,
         )
       },
-      textStyle     = TextStyle(
-        color       = GameBoyColors.DarkGreen,
-        fontSize    = 24.sp,
-        fontFamily  = PokeFontFamily
+      textStyle = TextStyle(
+        color           = GameBoyColors.DarkGreen,
+        fontSize        = 24.sp,
+        fontFamily      = PokeFontFamily,
+        lineHeight      = 28.sp,
+        lineHeightStyle = LineHeightStyle(
+          alignment = LineHeightStyle.Alignment.Center,
+          trim      = LineHeightStyle.Trim.None
+        )
       ),
       leadingIcon     =
       {

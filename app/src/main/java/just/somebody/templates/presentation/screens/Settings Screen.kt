@@ -12,8 +12,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import just.somebody.templates.App
+import just.somebody.templates.R
 import just.somebody.templates.presentation.effects.SnackbarController
 import just.somebody.templates.presentation.effects.SnackbarEvent
 import just.somebody.templates.presentation.viewModels.SettingsViewModel
@@ -41,8 +43,9 @@ fun SettingsScreen(
   }
 
   ModalBottomSheet(
+    modifier         = MODIFIFER,
     onDismissRequest = ON_DISMISS,
-    containerColor = GameBoyColors.DarkGreen)
+    containerColor   = GameBoyColors.DarkGreen)
   {
     Column(
       modifier            = Modifier.padding(16.dp),
@@ -50,16 +53,14 @@ fun SettingsScreen(
       horizontalAlignment = Alignment.CenterHorizontally
     )
     {
-      CustomText("Settings")
+      CustomText(stringResource(R.string.SETTINGS))
       CustomButton(
         ON_CLICK = pickDirectory,
         MODIFIER = Modifier
           .padding(0.dp)
           .fillMaxWidth()
       )
-      {
-        CustomText("Change ROM directory")
-      }
+      { CustomText(stringResource(R.string.CHANGE)) }
 
       CustomButton(
         ON_CLICK = { VIEW_MODEL.rescan() },
@@ -67,16 +68,16 @@ fun SettingsScreen(
           .padding(0.dp)
           .fillMaxWidth(),
       )
-      { CustomText("Rescan ROMs") }
+      { CustomText(stringResource(R.string.RESCAN)) }
 
       CustomButton(
         ON_CLICK = { VIEW_MODEL.factoryReset() },
         MODIFIER = Modifier
           .padding(0.dp)
           .fillMaxWidth(),
-        COLOR = GameBoyColors.Error
+        COLOR    = GameBoyColors.Error
       )
-      { CustomText("Factory Reset") }
+      { CustomText(stringResource(R.string.FACTORY)) }
     }
   }
 }

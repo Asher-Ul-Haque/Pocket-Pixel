@@ -50,7 +50,7 @@ void tickLoop() {
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
         int sleepMs = frameDurationMs - static_cast<int>(elapsed.count());
 
-        //if (sleepMs > 0) std::this_thread::sleep_for(std::chrono::milliseconds(sleepMs));
+        if (sleepMs > 0) std::this_thread::sleep_for(std::chrono::milliseconds(sleepMs));
     }
 }
 

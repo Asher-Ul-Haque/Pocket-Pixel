@@ -58,7 +58,7 @@ fun GameCard(
 {
   val SCALE =
     if (BIG) 1f
-    else     0.8f
+    else     0.95f
 
   val initials = remember(GAME.title)
   {

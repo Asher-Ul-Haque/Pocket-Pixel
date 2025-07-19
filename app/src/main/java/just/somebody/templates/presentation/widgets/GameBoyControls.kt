@@ -108,7 +108,7 @@ fun NormalButton(
         else           96.dp)
       .height(
         if (IS_SQUARE) 64.dp
-        else           32.dp)
+        else           48.dp)
       .pointerInteropFilter()
       { motionEvent ->
         when (motionEvent.action)
