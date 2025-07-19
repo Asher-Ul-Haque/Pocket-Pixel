@@ -150,18 +150,20 @@ class DefaultBoxArtFetcher(
     val exactUrl = BASE_URL + urlEncode(possibleExactName)
 
     ForgeLogger.info("Checking exact match URL: $exactUrl")
-    val headResult = withContext(Dispatchers.IO) { NETWORK.head(exactUrl) }
+    val boxArtFiles = listAvailableBoxArtFiles()
 
-    if (headResult is NetworkResult.Success && headResult.data) {
-      ForgeLogger.info("Exact match found: $possibleExactName")
+    // - - - Binary search assumes list is sorted — which RetroArch guarantees
+    val index = boxArtFiles.binarySearch(possibleExactName)
+    if (index >= 0)
+    {
+      ForgeLogger.info("Exact match found via binary search: $possibleExactName")
       cacheJson[GAME_NAME] = possibleExactName
       saveCache(cacheJson)
-      emit(exactUrl)
+      emit(BASE_URL + possibleExactName)
       return@flow
     }
 
     ForgeLogger.info("Starting fuzzy search for: $GAME_NAME")
-    val boxArtFiles = listAvailableBoxArtFiles()
     val candidates = boxArtFiles.map { stripExtension(it) }
 
     val closest = findClosest(stripExtension(GAME_NAME), candidates, 0.5)

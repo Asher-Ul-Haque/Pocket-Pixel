@@ -17,7 +17,6 @@ import kotlinx.coroutines.launch
 
 class SettingsViewModel(
   private val REPO            : GameRepository,
-  private val STORAGE_MANAGER : ExternalStorageManager,
   private val DATASTORE       : DataStoreManager
 ) : ViewModel()
 {
@@ -33,10 +32,9 @@ class SettingsViewModel(
   {
     viewModelScope.launch ()
     {
-      val key = "GAME_BOY_ROMS"
-      if (STORAGE_MANAGER.getDirectory(key) == null) return@launch
-      val repo = App.appModule.repo
-      repo.insertGames(key)
+      val key                     = "GAME_BOY_ROMS"
+      val repo                    = App.appModule.repo
+      repo.syncGamesWithStorage(key)
     }
   }
 

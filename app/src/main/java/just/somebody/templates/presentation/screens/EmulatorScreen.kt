@@ -72,25 +72,6 @@ fun EmulatorScreen(
         image = App.appModule.gameBoy.getFrameBuffer().asImageBitmap(),
         dstSize = size.toIntSize()
       )
-
-      val scanlineHeight = 4f // How thick each scanline is
-      for (i in 0 until (size.height / scanlineHeight).toInt()) {
-        val alpha = (0.3f + Math.sin((i.toFloat() * 0.25f).toDouble()) * 0.2f) // Vary the opacity slightly for effect
-        drawLine(
-          color = Color.Black.copy(alpha = alpha.toFloat()), // Black color for scanlines
-          start = Offset(0f, i * scanlineHeight),
-          end = Offset(size.width, i * scanlineHeight),
-          strokeWidth = scanlineHeight
-        )
-      }
-
-      // Optional: Add vignette effect (darken the edges)
-      drawRect(
-        color = Color.Black.copy(alpha = 0.4f),
-        topLeft = Offset(0f, 0f),
-        size = size,
-        blendMode = BlendMode.DstIn
-      )
     }
     GameBoyControls(App.appModule.gameBoy)
   }

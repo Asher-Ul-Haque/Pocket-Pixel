@@ -13,7 +13,6 @@ class DefaultGameRepository(private val DAO : GameDao) : GameRepository
   private fun GameEntity.toDomain() : Game = Game(
     id              = id,
     title           = title,
-    publisher       = publisher,
     romUri          = romUri,
     batterySavePath = batterySave,
     lastPlayed      = lastPlayed,
@@ -23,7 +22,6 @@ class DefaultGameRepository(private val DAO : GameDao) : GameRepository
   private fun Game.toEntity() : GameEntity = GameEntity(
     id              = id,
     title           = title,
-    publisher       = publisher,
     romUri          = romUri,
     batterySave     = batterySavePath,
     lastPlayed      = lastPlayed,
@@ -42,7 +40,6 @@ class DefaultGameRepository(private val DAO : GameDao) : GameRepository
       ForgeLogger.trace("Detected file : $name")
       Game(
         title           = name.removeSuffix(".gb"),
-        publisher       = "Unkown",
         romUri          = file.uri.toString(),
         batterySavePath = null,
         lastPlayed      = null,
@@ -99,4 +96,58 @@ class DefaultGameRepository(private val DAO : GameDao) : GameRepository
 
   override suspend fun factoryReset()
   { DAO.deleteEverything() }
+
+  override suspend fun syncGamesWithStorage(KEY : String)
+  {
+    val storeManager = App.appModule.externalStorageManager
+    val directory    = storeManager.getDirectory(KEY)
+
+    if (directory == null)
+    {
+      factoryReset()
+      ForgeLogger.warn("Directory with key '$KEY' is missing or invalid, factory resetting")
+      return
+    }
+
+    // - - - Step 1: Scan external storage for all .gb files
+    val docFiles = storeManager.listFiles(KEY, EXTENSION = "gb", RECURSIVE = true)
+
+    // - - - Step 2: Convert to Game domain objects
+    val scannedGames = docFiles.mapNotNull()
+    { file ->
+      val name = file.name ?: return@mapNotNull null
+      val uri  = file.uri.toString()
+
+      Game(
+        title           = name.removeSuffix(".gb"),
+        romUri          = uri,
+        batterySavePath = null,
+        lastPlayed      = null,
+        isFavorite      = false
+      )
+    }
+
+    // - - - Step 3: Fetch games from database
+    val dbGames     = getAllGamesOnce()
+    val dbUris      = dbGames.map { it.romUri }.toSet()
+    val scannedUris = scannedGames.map { it.romUri }.toSet()
+
+    // - - - Step 4: Find and insert new games
+    val newGames = scannedGames.filter { it.romUri !in dbUris }
+    if (newGames.isNotEmpty())
+    {
+      ForgeLogger.info("Inserting ${newGames.size} new game(s).")
+      DAO.insertGames(newGames.map { it.toEntity() })
+    }
+
+    // - - - Step 5: Find and delete missing games
+    val missingGames = dbGames.filter { it.romUri !in scannedUris }
+    if (missingGames.isNotEmpty())
+    {
+      ForgeLogger.info("Deleting ${missingGames.size} removed game(s).")
+      DAO.deleteGames(missingGames.map { it.toEntity() })
+    }
+
+    ForgeLogger.info("Sync complete: ${newGames.size} added, ${missingGames.size} removed.")
+  }
 }

@@ -23,6 +23,8 @@ interface GameDao
 
   @Delete suspend fun deleteGame(GAME : GameEntity)
 
+  @Delete suspend fun deleteGames(GAMES : List<GameEntity>)
+
 
   // - - - Getters - - -
   @Query("SELECT * FROM games")
@@ -66,7 +68,7 @@ interface GameDao
   // - - - Search fuzzy - - -
   @Query("""
         SELECT * FROM games 
-        WHERE title LIKE '%' || :QUERY || '%' OR publisher LIKE '%' || :QUERY || '%'
+        WHERE title LIKE '%' || :QUERY || '%' 
         ORDER BY 
            CASE WHEN lastPlayed IS NULL THEN 1 ELSE 0 END,
            lastPlayed DESC""")

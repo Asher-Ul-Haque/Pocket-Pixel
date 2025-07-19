@@ -63,8 +63,6 @@ class EmulatorViewModel : ViewModel()
         if (sleepMillis > 0) {
           delay(sleepMillis)
         }
-
-
       }
     }
   }

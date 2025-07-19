@@ -27,5 +27,7 @@ interface GameRepository
 
   fun searchGames(QUERY : String) : Flow<List<Game>>
 
+  suspend fun syncGamesWithStorage(KEY : String)
+
   suspend fun factoryReset()
 }

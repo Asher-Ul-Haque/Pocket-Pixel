@@ -13,6 +13,8 @@ import just.somebody.templates.appModule.network.NetworkResult
 import just.somebody.templates.domain.models.Game
 import just.somebody.templates.domain.repositories.GameRepository
 import just.somebody.templates.presentation.screens.Destination
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -25,6 +27,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.Collections
 
 class GamesViewModel(private val REPO : GameRepository) : ViewModel()
 {
@@ -96,11 +99,9 @@ class GamesViewModel(private val REPO : GameRepository) : ViewModel()
   {
     viewModelScope.launch ()
     {
-      val externalStorageManager = App.appModule.externalStorageManager
-      val key = "GAME_BOY_ROMS"
-      if (externalStorageManager.getDirectory(key) == null) return@launch
-      val repo = App.appModule.repo
-      repo.insertGames(key)
+      val key                     = "GAME_BOY_ROMS"
+      val repo                    = App.appModule.repo
+      repo.syncGamesWithStorage(key)
     }
   }
 
@@ -111,8 +112,12 @@ class GamesViewModel(private val REPO : GameRepository) : ViewModel()
 
   private val boxArtFetcher = App.appModule.boxArtFetcher
 
-  private val _boxArtMap : MutableStateFlow<Map<String, String?>> = MutableStateFlow<Map<String, String?>>(emptyMap())
-  public  val boxArtMap  : StateFlow<Map<String, String?>>        = _boxArtMap
+  private val _boxArtMap  : MutableStateFlow<Map<String, String?>> = MutableStateFlow(emptyMap())
+  val boxArtMap           : StateFlow<Map<String, String?>> = _boxArtMap
+
+  private val boxArtQueue  = Channel<String>(capacity = Channel.UNLIMITED)
+  private val queuedTitles = Collections.synchronizedSet(mutableSetOf<String>())
+
 
   fun getBoxArtFlow(title: String): Flow<String?>
   {
@@ -120,7 +125,12 @@ class GamesViewModel(private val REPO : GameRepository) : ViewModel()
     return boxArtMap.map { it[title] }
   }
 
-  init { observeInternetConnectivity() }
+  init
+  {
+    observeInternetConnectivity()
+    startBoxArtWorker()
+    detectAndInsertRoms()
+  }
 
   private fun observeInternetConnectivity()
   {
@@ -144,17 +154,37 @@ class GamesViewModel(private val REPO : GameRepository) : ViewModel()
     for (title in missingGames) { fetchBoxArt(title) }
   }
 
-  private fun fetchBoxArt(title : String)
+  private fun fetchBoxArt(title: String)
   {
-    viewModelScope.launch ()
+    if (_boxArtMap.value.containsKey(title)) return
+    if (queuedTitles.contains(title)) return
+
+    _boxArtMap.update { it + (title to null) }
+    queuedTitles.add(title)
+
+    viewModelScope.launch { boxArtQueue.send(title) }
+  }
+
+  private fun startBoxArtWorker()
+  {
+    viewModelScope.launch(Dispatchers.Default)
     {
-      boxArtFetcher
-        .fetchBoxArt(title)
-        .collect ()
-        { url ->
-          _boxArtMap.update()
-          { old -> old + (title to url) }
+      for (title in boxArtQueue)
+      {
+        try
+        {
+          boxArtFetcher.fetchBoxArt(title).collect()
+          { url -> _boxArtMap.update { it + (title to url) } }
         }
+        catch (e: Exception)
+        {
+          ForgeLogger.error("Failed to fetch box art for $title: $e")
+          _boxArtMap.update { it + (title to null) }
+        }
+        finally { queuedTitles.remove(title) }
+      }
     }
   }
+
+
 }

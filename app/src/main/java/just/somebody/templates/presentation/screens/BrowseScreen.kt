@@ -32,7 +32,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import just.somebody.templates.App
@@ -58,7 +57,7 @@ fun BrowseScreen(
 {
   val state by VIEW_MODEL.browseState.collectAsState()
 
-  val commonViewModel =
+  val gamesViewModel =
     viewModel<GamesViewModel>(factory = viewModelFactory()
     { GamesViewModel(App.appModule.repo)
     })
@@ -68,7 +67,6 @@ fun BrowseScreen(
         {
           SettingsViewModel(
           REPO            = App.appModule.repo,
-          STORAGE_MANAGER = App.appModule.externalStorageManager,
           DATASTORE       = App.appModule.dataStoreManager)
         }
     )
@@ -181,7 +179,7 @@ fun BrowseScreen(
       {
         LaunchedEffect(Unit) { VIEW_MODEL.showBars(true) }
         HomeScreen(
-          VIEW_MODEL = commonViewModel,
+          VIEW_MODEL = gamesViewModel,
           MODIFIFER  = Modifier.fillMaxSize()
         )
       }
@@ -189,7 +187,7 @@ fun BrowseScreen(
       {
         LaunchedEffect(Unit) { VIEW_MODEL.showBars(true) }
         FavoriteScreen(
-          VIEW_MODEL = commonViewModel,
+          VIEW_MODEL = gamesViewModel,
           MODIFIFER  = Modifier.fillMaxSize()
         )
       }
@@ -197,7 +195,7 @@ fun BrowseScreen(
       {
         LaunchedEffect(Unit) { VIEW_MODEL.showBars(true) }
         SearchScreen(
-          VIEW_MODEL = commonViewModel,
+          VIEW_MODEL = gamesViewModel,
           MODIFIFER  = Modifier.fillMaxSize()
         )
       }

@@ -43,10 +43,12 @@ interface ExternalStorageManager
   suspend fun getDirectory(KEY : String) : DocumentFile?
   suspend fun listFiles(
     KEY       : String,
-    EXTENSION : String? = null) : List<DocumentFile>
+    EXTENSION : String? = null,
+    RECURSIVE  : Boolean = true) : List<DocumentFile>
   suspend fun listFilesFromUri(
     URI       : Uri,
-    EXTENSION : String? = null) : List<DocumentFile>
+    EXTENSION : String? = null,
+    RECURSIVE  : Boolean = true) : List<DocumentFile>
   suspend fun saveFile(
     KEY       : String,
     FILE_NAME : String,
@@ -168,7 +170,32 @@ class DefaultExternalStorageManager(
     return docFile
   }
 
-  override suspend fun listFiles(KEY : String, EXTENSION : String?) : List<DocumentFile>
+  private fun collectFilesRecursively(
+    DIRECTORY : DocumentFile,
+    EXTENSION : String?
+  ): List<DocumentFile>
+  {
+    val result = mutableListOf<DocumentFile>()
+
+    DIRECTORY.listFiles().forEach()
+    { file ->
+      if (file.isDirectory) result += collectFilesRecursively(file, EXTENSION)
+      else
+      {
+        val name = file.name.orEmpty()
+        if (EXTENSION == null || name.endsWith(".$EXTENSION", ignoreCase = true))
+        { result += file }
+      }
+    }
+
+    return result
+  }
+
+  override suspend fun listFiles(
+    KEY       : String,
+    EXTENSION : String?,
+    RECURSIVE : Boolean
+  ): List<DocumentFile>
   {
     val dir = getDirectory(KEY)
     if (dir == null)
@@ -177,20 +204,27 @@ class DefaultExternalStorageManager(
       return emptyList()
     }
 
-    val files = dir.listFiles()
-    ForgeLogger.info("Found ${files.size} files in $KEY directory")
+    val files =
+      if (RECURSIVE) collectFilesRecursively(dir, EXTENSION)
+      else
+      {
+        dir.listFiles().filter()
+        {
+          val name = it.name.orEmpty()
+          EXTENSION == null || name.endsWith(".$EXTENSION", ignoreCase = true)
+        }
+      }
 
-    val filtered = files.filter()
-    {
-      val name = it.name.orEmpty()
-      EXTENSION == null || name.endsWith(".$EXTENSION", ignoreCase = true)
-    }
-
-    ForgeLogger.info("Filtered ${filtered.size} files with extension '.$EXTENSION'")
-    return filtered
+    ForgeLogger.info("Found ${files.size} file(s) in $KEY (recursive=$RECURSIVE)")
+    return files
   }
 
-  override suspend fun listFilesFromUri(URI : Uri, EXTENSION : String?): List<DocumentFile>
+
+  override suspend fun listFilesFromUri(
+    URI       : Uri,
+    EXTENSION : String?,
+    RECURSIVE : Boolean
+  ): List<DocumentFile>
   {
     val dir = DocumentFile.fromTreeUri(CONTEXT, URI)
     if (dir == null || !dir.exists() || !dir.isDirectory)
@@ -199,18 +233,21 @@ class DefaultExternalStorageManager(
       return emptyList()
     }
 
-    val files = dir.listFiles()
-    ForgeLogger.info("Listing ${files.size} files from URI: $URI")
+    val files =
+      if (RECURSIVE) collectFilesRecursively(dir, EXTENSION)
+      else
+      {
+        dir.listFiles().filter()
+        {
+          val name = it.name.orEmpty()
+          EXTENSION == null || name.endsWith(".$EXTENSION", ignoreCase = true)
+        }
+      }
 
-    val filtered = files.filter ()
-    {
-      val name = it.name.orEmpty()
-      EXTENSION == null || name.endsWith(".$EXTENSION", ignoreCase = true)
-    }
-
-    ForgeLogger.info("Filtered ${filtered.size} matching '.$EXTENSION'")
-    return filtered
+    ForgeLogger.info("Listed ${files.size} file(s) from URI: $URI (recursive=$RECURSIVE)")
+    return files
   }
+
 
   override suspend fun saveFile(
     KEY       : String,
