@@ -55,8 +55,8 @@ fun TemplateTheme(
     {
       val context = LocalContext.current
 
-      if (darkTheme)  dynamicDarkColorScheme(context)
-      else            dynamicLightColorScheme(context)
+      if (darkTheme)  GameBoyDarkColorScheme
+      else            GameBoyLightColorScheme
     }
     darkTheme -> GameBoyDarkColorScheme
     else      -> GameBoyLightColorScheme

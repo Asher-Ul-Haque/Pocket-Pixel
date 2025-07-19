@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.Template" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.Template" parent="android:Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">#FF0F380F</item>
+        <item name="android:navigationBarColor">#FF0F380F</item>
+    </style>
 
     <style
         name   = "Theme.App.Starting"

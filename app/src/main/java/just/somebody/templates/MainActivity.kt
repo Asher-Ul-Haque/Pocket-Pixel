@@ -7,6 +7,7 @@ import android.view.View
 import android.view.animation.OvershootInterpolator
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.SnackbarHostState
@@ -16,6 +17,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.core.animation.doOnEnd
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import just.somebody.pocketpixel.ui.theme.TemplateTheme
 import just.somebody.templates.presentation.effects.ObserveAsEvents
@@ -33,6 +35,7 @@ class MainActivity : ComponentActivity()
   override fun onCreate(savedInstanceState: Bundle?)
   {
     super.onCreate(savedInstanceState)
+    //enableEdgeToEdge()
 
     val splashViewModel by viewModels<SplashViewModel>()
 
@@ -71,7 +74,6 @@ class MainActivity : ComponentActivity()
         }
       }
     }
-
 
     setContent ()
     {
