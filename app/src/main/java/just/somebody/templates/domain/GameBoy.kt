@@ -1,21 +1,15 @@
 package just.somebody.templates.domain
 
-import android.graphics.Bitmap
+import android.graphics.SurfaceTexture
 import android.net.Uri
 import android.view.Surface
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
+import androidx.core.graphics.createBitmap
+import androidx.core.graphics.set
 import just.somebody.templates.App
 import just.somebody.templates.appModule.ForgeLogger
 import just.somebody.templates.ui.theme.GameBoyColors
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import androidx.core.graphics.createBitmap
-import androidx.core.graphics.set
 
-enum class Buttons
-{
+enum class Buttons {
   UP,
   DOWN,
   LEFT,
@@ -25,49 +19,60 @@ enum class Buttons
   SELECT,
   START
 }
-class GameBoy
-{
-  // - - - memory
-  private val audioBuffer = ByteArray(1024)               // - - - TODO : find out how audio on gameboy works
 
-  // - - - emulation
-  fun loadROM(ROM : ByteArray)
-  { nativeLoadROM(ROM, ROM.size); }
+class GameBoy {
 
-  fun startEmulator  ()                  { nativeStartEmulator(); }
-  fun stopEmulator   ()                  {  nativeStopEmulator(); }
-  fun resetEmulator  ()
-  {
-    nativeStopEmulator();
-    nativeStartEmulator();
+  // - - - Memory
+  private val audioBuffer = ByteArray(1024) // TODO: Replace with real audio logic
+
+  // - - - Lifecycle Control
+  fun prepareSurface(surface: Surface?) {
+    nativeSetSurface(surface)
   }
 
-  // - - - video and audio
-  fun setSurface(SURFACE : Surface?)
-  { nativeSetSurface(SURFACE) }
+  fun loadROM(ROM: ByteArray) {
+    nativeLoadROM(ROM, ROM.size)
+  }
 
-  fun getAudioBuffer () : ByteArray
-  {
+  fun startEmulator() {
+    nativeStartEmulator()
+  }
+
+  fun stopEmulator() {
+    nativeStopEmulator()
+  }
+
+  fun resetEmulator() {
+    nativeStopEmulator()
+    nativeStartEmulator()
+  }
+
+  // - - - Audio
+  fun getAudioBuffer(): ByteArray {
     nativeGetAudioBuffer(audioBuffer)
     return audioBuffer
   }
 
-  // - - - input
+  // - - - Input
   fun sendButton(
-    BUTTON      : Buttons,
-    IS_PRESSED  : Boolean)
-  { nativeSetButtonState(BUTTON.ordinal, IS_PRESSED); }
+    BUTTON: Buttons,
+    IS_PRESSED: Boolean
+  ) {
+    nativeSetButtonState(BUTTON.ordinal, IS_PRESSED)
+  }
 
+  // - - - Native Bindings
 
-  // - - - Native - - -
+  private external fun nativeGetAudioBuffer(AUDIO_BUFFER: ByteArray)
+  private external fun nativeLoadROM(ROM: ByteArray, SIZE: Int)
+  private external fun nativeSetButtonState(BUTTON: Int, PRESSED: Boolean)
+  private external fun nativeStartEmulator()
+  private external fun nativeStopEmulator()
+  private external fun nativeSetSurface(SURFACE: Surface?)
 
-  private external fun nativeGetAudioBuffer (AUDIO_BUFFER : ByteArray)
-  private external fun nativeLoadROM        (ROM : ByteArray, SIZE : Int)
-  private external fun nativeSetButtonState (BUTTON : Int, PRESSED : Boolean)
-  private external fun nativeStartEmulator  ();
-  private external fun nativeStopEmulator   ();
-  private external fun nativeSetSurface     (SURFACE : Surface?)
-
-  // - - - actual c++
-  companion object { init { System.loadLibrary("native-lib") } }
+  companion object {
+    init {
+      System.loadLibrary("native-lib")
+    }
+  }
 }

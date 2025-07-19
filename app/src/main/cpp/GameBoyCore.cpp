@@ -22,42 +22,37 @@ void startEmulator() {
     cpuInit();
 }
 
-// DMG palette (ARGB)
-constexpr u32 DMG_PALETTE[4] = {
-        0xFF9BBC0F, // Lightest
-        0xFF8BAC0F, // Light
-        0xFF306230, // Dark
-        0xFF0F380F  // Darkest
+// Simple grayscale palette (ARGB)
+constexpr u32 TEST_PALETTE[4] = {
+        0xFF000000, // Black
+        0xFF555555, // Dark Gray
+        0xFFAAAAAA, // Light Gray
+        0xFFFFFFFF  // White
 };
 
-void getFrame(u16* buffer) {
+// Generates a checkerboard test pattern with animated motion
+void getFrame(u32* buffer) {
     frameCount++;
+
     for (u64 i = 0; i < FRAME_WIDTH * FRAME_HEIGHT; i++) {
         u64 row = i / FRAME_WIDTH;
         u64 col = i % FRAME_WIDTH;
 
-        // Checkerboard pattern
-        u8 colorIndex = ((row / 8 + col / 8 + frameCount / 10) % 2) * 3;
+        // Checker pattern that shifts every ~10 frames
+        u8 colorIndex = ((row / 8 + col / 8 + frameCount / 10) % 4);
 
-        // Game Boy greens
-        u32 colors[4] = {
-                0x4208, // DarkGreen   (0xff0f380f) → RGB565
-                0x73AE, // MediumGreen (0xff306230)
-                0xBDF0, // Green       (0xff8bac0f)
-                0xC63F  // LightGreen  (0xff9bbc0f)
-        };
-
-        buffer[i] = colors[colorIndex];
+        buffer[i] = TEST_PALETTE[colorIndex];
     }
 }
 
-
+// Dummy audio output
 void getAudio(u8* buffer) {
     for (u64 i = 0; i < FRAME_WIDTH; ++i) {
-        buffer[i] = 0b11001100; // Dummy tone
+        buffer[i] = 0b11001100; // Dummy tone pattern
     }
 }
 
+// Button input handling (optional logging)
 void setButton(u8 button, bool pressed) {
-    FORGE_LOG_INFO("Received button %d (pressed=%d)", button, pressed);
+    FORGE_LOG_INFO("Button %d (pressed=%d)", button, pressed);
 }

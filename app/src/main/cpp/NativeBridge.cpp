@@ -17,6 +17,7 @@
 extern "C" {
 #endif
 
+
 static ANativeWindow* window = nullptr;
 static std::thread emulator_thread;
 static std::atomic<bool> is_running = false;
@@ -28,12 +29,19 @@ void renderLoop() {
     if (!window) return;
 
     ANativeWindow_Buffer buffer;
-    if (ANativeWindow_lock(window, &buffer, nullptr) != 0) return;
+    const int maxRetries = 5;
 
-    u16* pixels = reinterpret_cast<u16*>(buffer.bits);
-    getFrame(pixels);
-
-    ANativeWindow_unlockAndPost(window);
+    for (int attempt = 0; attempt < maxRetries; ++attempt) {
+        if (ANativeWindow_lock(window, &buffer, nullptr) == 0) {
+            u32* pixels = reinterpret_cast<u32*>(buffer.bits);
+            getFrame(pixels);
+            ANativeWindow_unlockAndPost(window);
+            return;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(16)); // Retry after ~1 frame
+    }
+    // If we get here, lock failed
+    // Optional: add logging here
 }
 
 void tickLoop() {
@@ -44,43 +52,48 @@ void tickLoop() {
         auto start = std::chrono::steady_clock::now();
 
         cpuTick();           // Advance emulation
-        renderLoop();        // Draw frame
+        renderLoop();        // Render current frame
 
         auto end = std::chrono::steady_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
         int sleepMs = frameDurationMs - static_cast<int>(elapsed.count());
 
-        if (sleepMs > 0) std::this_thread::sleep_for(std::chrono::milliseconds(sleepMs));
+        if (sleepMs > 0)
+            std::this_thread::sleep_for(std::chrono::milliseconds(sleepMs));
     }
 }
 
+extern "C" {
+
+// Audio bridge
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeGetAudioBuffer(
-        JNIEnv* env, jobject thiz, jbyteArray audioBuffer) {
+        JNIEnv* env, jobject /*thiz*/, jbyteArray audioBuffer) {
     jbyte* buffer = env->GetByteArrayElements(audioBuffer, nullptr);
     getAudio(reinterpret_cast<u8*>(buffer));
     env->ReleaseByteArrayElements(audioBuffer, buffer, 0);
 }
 
+// ROM loading
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeLoadROM(
-        JNIEnv* env, jobject thiz, jbyteArray rom, jint size) {
-    FORGE_LOG_DEBUG("Attempting to read the ROM");
+        JNIEnv* env, jobject /*thiz*/, jbyteArray rom, jint size) {
     jbyte* buffer = env->GetByteArrayElements(rom, nullptr);
     cartridgeLoad(reinterpret_cast<u8*>(buffer), size);
     env->ReleaseByteArrayElements(rom, buffer, JNI_ABORT);
-    FORGE_LOG_DEBUG("Successfully loaded the ROM");
 }
 
+// Button input
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeSetButtonState(
-        JNIEnv* env, jobject thiz, jint button, jboolean pressed) {
+        JNIEnv* /*env*/, jobject /*thiz*/, jint button, jboolean pressed) {
     setButton(static_cast<u8>(button), static_cast<bool>(pressed));
 }
 
+// Set or clear rendering surface
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeSetSurface(
-        JNIEnv* env, jobject thiz, jobject surface) {
+        JNIEnv* env, jobject /*thiz*/, jobject surface) {
     std::lock_guard<std::mutex> lock(window_mutex);
 
     if (window) {
@@ -94,19 +107,21 @@ Java_just_somebody_templates_domain_GameBoy_nativeSetSurface(
     }
 }
 
+// Start emulator thread
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeStartEmulator(
-        JNIEnv* env, jobject thiz) {
+        JNIEnv* /*env*/, jobject /*thiz*/) {
     if (is_running.load()) return;
 
-    startEmulator();
+    startEmulator(); // Resets internal emulator state
     is_running.store(true);
     emulator_thread = std::thread(tickLoop);
 }
 
+// Stop emulator thread and release resources
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeStopEmulator(
-        JNIEnv* env, jobject thiz) {
+        JNIEnv* /*env*/, jobject /*thiz*/) {
     is_running.store(false);
     stopEmulator();
 
@@ -120,6 +135,9 @@ Java_just_somebody_templates_domain_GameBoy_nativeStopEmulator(
         window = nullptr;
     }
 }
+
+} // extern "C"
+
 
 #ifdef __cplusplus
 }
