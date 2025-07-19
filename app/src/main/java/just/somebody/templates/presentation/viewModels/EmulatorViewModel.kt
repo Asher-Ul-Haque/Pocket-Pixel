@@ -19,17 +19,13 @@ class EmulatorViewModel : ViewModel() {
   private val gameBoy: GameBoy = App.appModule.gameBoy
 
   private var currentROM: ByteArray? = null
-  private var surfaceReady: Boolean = false
   private var romReady: Boolean = false
   private var emulatorStarted: Boolean = false
 
-  private val _frameSignal = MutableStateFlow(0)
-  val frameSignal: StateFlow<Int> = _frameSignal
 
   fun stopEmulator() {
     viewModelScope.launch {
       gameBoy.stopEmulator()
-      surfaceReady = false
       romReady = false
       emulatorStarted = false
     }
@@ -55,24 +51,13 @@ class EmulatorViewModel : ViewModel() {
     }
   }
 
-  fun prepareSurface(surface: Surface?) {
-    gameBoy.prepareSurface(surface)
-    surfaceReady = surface != null
-    tryStartEmulator()
-  }
+
 
   private fun tryStartEmulator() {
-    if (!emulatorStarted && surfaceReady && romReady && currentROM != null) {
+    if (!emulatorStarted && romReady && currentROM != null) {
       gameBoy.loadROM(currentROM!!)
       gameBoy.startEmulator()
       emulatorStarted = true
     }
-  }
-
-  override fun onCleared() {
-    gameBoy.stopEmulator()
-    surfaceReady = false
-    romReady = false
-    emulatorStarted = false
   }
 }

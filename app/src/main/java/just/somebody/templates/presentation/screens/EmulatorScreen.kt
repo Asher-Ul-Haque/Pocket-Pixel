@@ -9,11 +9,14 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import just.somebody.templates.App
+import just.somebody.templates.domain.GameBoy
 import just.somebody.templates.presentation.viewModels.EmulatorViewModel
 import just.somebody.templates.presentation.widgets.GameBoyControls
+import just.somebody.templates.presentation.widgets.GameBoyFrame
 import just.somebody.templates.ui.theme.GameBoyColors
 
 @Composable
@@ -39,36 +42,30 @@ fun EmulatorScreen(
       .padding(top = 48.dp),
     verticalArrangement = Arrangement.Top,
     horizontalAlignment = Alignment.CenterHorizontally
-  ) {
-    // Use SurfaceView and set fixed size
+  )
+  {
+    // - - - GameBoy GLSurfaceView here
+    // Game Boy screen resolution: 160x144. Aspect ratio = 160f / 144f
+    val gameBoyAspectRatio = 160f / 144f
+
     AndroidView(
-      factory = { context ->
-        SurfaceView(context).apply {
-          holder.setFixedSize(160, 144) // Native Game Boy resolution
-
-          holder.addCallback(object : SurfaceHolder.Callback {
-            override fun surfaceCreated(holder: SurfaceHolder) {
-              VIEW_MODEL.prepareSurface(holder.surface)
-            }
-
-            override fun surfaceChanged(
-              holder: SurfaceHolder,
-              format: Int,
-              width: Int,
-              height: Int
-            ) {
-              // no-op
-            }
-
-            override fun surfaceDestroyed(holder: SurfaceHolder) {
-              VIEW_MODEL.prepareSurface(null)
-            }
-          })
-        }
-      },
       modifier = Modifier
-        .fillMaxWidth()
-        .aspectRatio(160f / 144f)
+        .fillMaxWidth(0.9f) // Take up 90% of the available width
+        .aspectRatio(gameBoyAspectRatio) // Maintain the Game Boy's aspect ratio
+        .background(Color.Black), // Placeholder background
+      factory = { context ->
+        // Create an instance of your custom GLSurfaceView
+        val gameBoySurfaceView = GameBoyFrame(context)
+
+        // Pass the GameBoy instance to the GLSurfaceView so it can interact with native methods
+
+        gameBoySurfaceView
+      },
+      update = { view ->
+        // This block is called when the state of the AndroidView changes.
+        // You might use it for dynamic updates if needed, but for a GLSurfaceView,
+        // most interaction is handled internally via its Renderer.
+      }
     )
 
     Spacer(modifier = Modifier.height(24.dp))

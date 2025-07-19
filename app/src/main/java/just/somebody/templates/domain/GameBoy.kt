@@ -26,10 +26,6 @@ class GameBoy {
   private val audioBuffer = ByteArray(1024) // TODO: Replace with real audio logic
 
   // - - - Lifecycle Control
-  fun prepareSurface(surface: Surface?) {
-    nativeSetSurface(surface)
-  }
-
   fun loadROM(ROM: ByteArray) {
     nativeLoadROM(ROM, ROM.size)
   }
@@ -61,18 +57,39 @@ class GameBoy {
     nativeSetButtonState(BUTTON.ordinal, IS_PRESSED)
   }
 
-  // - - - Native Bindings
-
+  // - - - Native Bindings for Emulator Core (existing)
   private external fun nativeGetAudioBuffer(AUDIO_BUFFER: ByteArray)
   private external fun nativeLoadROM(ROM: ByteArray, SIZE: Int)
   private external fun nativeSetButtonState(BUTTON: Int, PRESSED: Boolean)
   private external fun nativeStartEmulator()
   private external fun nativeStopEmulator()
-  private external fun nativeSetSurface(SURFACE: Surface?)
 
+  // - - - Native Bindings for OpenGL ES Rendering (NEW)
+  external fun nativeOnSurfaceCreated()
+  external fun nativeOnSurfaceChanged(width: Int, height: Int)
+  external fun nativeOnDrawFrame()
+
+  // Static method for C++ to call back to request a render
+  // This will be called on a JNI thread, and should queue the UI operation
   companion object {
     init {
       System.loadLibrary("native-lib")
+    }
+
+    // Reference to the GLSurfaceView instance to call requestRender()
+    // This will be set by GameBoyGLSurfaceView.kt
+    private var glSurfaceViewInstance: android.opengl.GLSurfaceView? = null
+
+    @JvmStatic
+    fun setGLSurfaceView(view: android.opengl.GLSurfaceView) {
+      glSurfaceViewInstance = view
+    }
+
+    @JvmStatic
+    fun requestRenderFromNative() {
+      glSurfaceViewInstance?.queueEvent { // Ensure requestRender is called on the GL thread
+        glSurfaceViewInstance?.requestRender()
+      }
     }
   }
 }

@@ -16,5 +16,6 @@ add_library(${CMAKE_PROJECT_NAME} SHARED ${PROJECT_SOURCES})
 # Link Android libraries
 target_link_libraries(${CMAKE_PROJECT_NAME}
         android
+        GLESv2
         log
 )
