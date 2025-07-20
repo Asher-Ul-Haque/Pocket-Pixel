@@ -10,7 +10,7 @@ CXX := clang++
 CC  := clang
 
 # Compiler flags
-CXXFLAGS := -I$(GAMEBOY_INC) -I$(FORGE_INC) -I/usr/include/SFML -std=c++17
+CXXFLAGS := -I$(GAMEBOY_INC) -I$(FORGE_INC) -I/usr/include/SFML -std=c++17 -DDEBUG
 CFLAGS   := -I$(GAMEBOY_INC) -I$(FORGE_INC) -std=c11
 
 # SFML link flags

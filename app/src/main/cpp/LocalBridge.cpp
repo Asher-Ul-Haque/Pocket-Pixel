@@ -17,14 +17,14 @@
 #include "GameBoy/include/cartridge.h"
 #include <SFML/Graphics.hpp>
 
-static int scale = 4;
+static int scale = 3;
 static const u64 tileColors[4] = 
-{
-  0xFFFFFFFF,
-  0xFFAAAAAA,
-  0xFF555555,
-  0xFF000000
-};
+  {
+    0xFF0F380F, // - - - dark green
+    0xFF206230, // - - - medium green
+    0xFF8BAC0F, // - - - light green 
+    0xFF9BBC0F  // - - - pale green
+  };
 
 sf::RenderWindow debugWindow;
 sf::Texture      debugTexture;
@@ -171,14 +171,20 @@ int main(int argc, char* argv[])
   FORGE_LOG_DEBUG("ROM loaded successfully (%llu bytes)", fileSize);
 
   cartridgeLoad(reinterpret_cast<u8*>(buffer), fileSize);
-  startEmulator();
-  uiInit();
+  
+  u32* gbPixelBuffer = new u32[160 * 144];
+  startEmulator(gbPixelBuffer);
 
+  #ifdef DEBUG
+  uiInit();
   while (debugWindow.isOpen())
   {
     cpuTick();             // Run one tick of emulation
     updateDBGwindow();     // Update the debug window every 30 ticks
   }
+  #else 
+  while (true) cpuTick();
+  #endif
 
   stopEmulator();
   return 0;

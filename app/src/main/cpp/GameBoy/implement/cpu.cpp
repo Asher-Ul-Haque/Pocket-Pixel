@@ -48,6 +48,7 @@ bool cpuTick()
     emuCycles(1);
     fetchData();
 
+    #ifdef DEBUG
     char flags[16];
     sprintf(flags, "%c%c%c%c", 
         ctx.regs.flags & (1 << 7) ? 'Z' : '-',
@@ -75,14 +76,16 @@ bool cpuTick()
       ctx.regs.h, 
       ctx.regs.l);
 
+
+    debuggerUpdate();
+    debuggerPrint();
+    #endif
+    
     if (ctx.currentInstruction == NULL) 
     {
       FORGE_LOG_FATAL("Unknown Instruction! %02X", ctx.currentOpcode);
       FORGE_ASSERT(false);
     }
-
-    debuggerUpdate();
-    debuggerPrint();
 
     execute();
   } 

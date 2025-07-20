@@ -3,6 +3,7 @@
 #include "../include/emu.h"
 #include "../include/timer.h"
 #include "../include/directMemAccess.h"
+#include "../include/ppu.h"
 
 /* 
   Emu components:
@@ -28,6 +29,7 @@ void emuCycles(i32 CPU_CYCLES)
     {
       ctx.ticks++;
       timerTick();
+      ppuTick();
     }
     dmaTick();
   }

@@ -180,7 +180,6 @@ void* tickLoop(void* ARG)
   const long targetFps           = 60;
   const long frameDurationNs     = 1000000000L / targetFps; // Nanoseconds per frame
 
-  gbPixelBuffer = new u32[GB_SCREEN_WIDTH * GB_SCREEN_HEIGHT];
 
   bool currentIsRunning;
   pthread_mutex_lock(&isRunningMutex);
@@ -271,7 +270,8 @@ Java_just_somebody_templates_domain_GameBoy_nativeStartEmulator(
   isRunning = true;
   pthread_mutex_unlock(&isRunningMutex);
 
-  startEmulator();
+  gbPixelBuffer = new u32[GB_SCREEN_WIDTH * GB_SCREEN_HEIGHT];
+  startEmulator(gbPixelBuffer);
   pthread_create(&emulatorThread, NULL, tickLoop, NULL);
 }
 

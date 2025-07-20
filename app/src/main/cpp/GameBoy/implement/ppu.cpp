@@ -1,13 +1,39 @@
 #include "../include/ppu.h"
 #include "../include/directMemAccess.h"
+#include "../include/lcd.h"
+#include "../include/ppuStateMachine.h"
+#include <cstring>
 
 static PPUcontext ctx;
 
-void ppuInit()
-{ FORGE_LOG_TRACE("PPU init"); }
+
+PPUcontext* ppuGetContext()
+{ return &ctx; }
+
+void ppuInit(u32* FRAME_BUFFER)
+{
+  ctx.currentFrame  = 0;
+  ctx.lineTicks     = 0;
+  ctx.frameBuffer   = FRAME_BUFFER;
+  
+  lcdInit();
+  LCD_STAT_MODE_SET(MODE_OAM);
+  memset(ctx.oamRam, 0, sizeof(ctx.oamRam));
+  memset(ctx.frameBuffer, 0, sizeof(u32) * X_RES * Y_RES);
+}
 
 void ppuTick()
-{ FORGE_LOG_TRACE("PPU tick"); }
+{
+  ctx.lineTicks++;
+
+  switch(LCD_STAT_MODE)
+  {
+    case MODE_OAM     : { ppuModeOAM();    break; }
+    case MODE_XFER    : { ppuModeXfer();   break; }
+    case MODE_VBLANK  : { ppuModeVblank(); break; }
+    case MODE_HBLANK  : { ppuModeHblank(); break; }
+  }
+}
 
 void ppuOAMwrite(u16 ADDRESS, u8 VALUE)
 {

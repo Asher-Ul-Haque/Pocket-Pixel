@@ -4,7 +4,6 @@
 #include "GameBoy/include/ppu.h"
 #include "GameBoy/include/timer.h"
 #include "GameBoy/include/emu.h"
-#include "GameBoy/include/bus.h"
 
 u64 frameCount = 0;
 
@@ -14,14 +13,14 @@ void stopEmulator()
   emuGetContext()->running = false;
 }
 
-void startEmulator() 
+void startEmulator(u32* FRAME_BUFFER) 
 {
   FORGE_LOG_INFO("Emulator started");
   emuGetContext()->running = true;
   emuGetContext()->ticks = 0;
   timerInit();
   cpuInit();
-  ppuInit(); 
+  ppuInit(FRAME_BUFFER); 
 }
 
 // Simple grayscale palette (ARGB)
