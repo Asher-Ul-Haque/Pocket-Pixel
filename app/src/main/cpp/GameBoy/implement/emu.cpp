@@ -2,6 +2,7 @@
 #include "../include/emu.h"
 #include "../include/emu.h"
 #include "../include/timer.h"
+#include "../include/directMemAccess.h"
 
 /* 
   Emu components:
@@ -21,11 +22,13 @@ EMUcontext* emuGetContext()
 
 void emuCycles(i32 CPU_CYCLES) 
 {
-  i32 n = CPU_CYCLES * 4;
-
-  for (i32 i = 0; i < n; i++) 
+  for (int i = 0; i < CPU_CYCLES; ++i)
   {
-    ctx.ticks++;
-    timerTick();
+    for (int n = 0; n < 4; ++n)
+    {
+      ctx.ticks++;
+      timerTick();
+    }
+    dmaTick();
   }
 }

@@ -163,5 +163,5 @@ u8 cartridgeRead(u16 ADDRESS)
 void cartridgeWrite(u16 ADDRESS, u8 VALUE)
 {
   FORGE_LOG_WARNING("Cartridge Write at %08X. Remember to implement", ADDRESS);
-  TODO_COMMENT("For now we have implemented ROM Only") 
+  //TODO_COMMENT("For now we have implemented ROM Only") 
 }

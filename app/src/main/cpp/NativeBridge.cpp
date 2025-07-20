@@ -1,4 +1,4 @@
-//#ifdef __ANDROID__
+#ifdef __ANDROID__
 #include <jni.h>
 #include <pthread.h>
 #include <unistd.h>

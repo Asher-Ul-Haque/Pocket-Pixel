@@ -10,19 +10,24 @@ CXX := clang++
 CC  := clang
 
 # Compiler flags
-CXXFLAGS := -I$(GAMEBOY_INC) -I$(FORGE_INC) -std=c++17
+CXXFLAGS := -I$(GAMEBOY_INC) -I$(FORGE_INC) -I/usr/include/SFML -std=c++17
 CFLAGS   := -I$(GAMEBOY_INC) -I$(FORGE_INC) -std=c11
+
+# SFML link flags
+SFML_LIBS := -lsfml-graphics -lsfml-window -lsfml-system
 
 # Source files
 CPP_SRC := $(shell find $(GAMEBOY_SRC) $(FORGE_SRC) -name '*.cpp')
 C_SRC   := $(shell find $(FORGE_SRC) -name '*.c')
 MAIN_SRC := LocalBridge.cpp
+CORE_SRC := GameBoyCore.cpp
 
 # Object files
 CPP_OBJ := $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(CPP_SRC))
 C_OBJ   := $(patsubst %.c,   $(BUILD_DIR)/%.o, $(C_SRC))
 MAIN_OBJ := $(BUILD_DIR)/LocalBridge.o
-OBJ_FILES := $(CPP_OBJ) $(C_OBJ) $(MAIN_OBJ)
+CORE_OBJ := $(BUILD_DIR)/GameBoyCore.o
+OBJ_FILES := $(CPP_OBJ) $(C_OBJ) $(MAIN_OBJ) $(CORE_OBJ)
 
 # Executable
 OUTPUT := gameboy
@@ -48,10 +53,16 @@ $(MAIN_OBJ): $(MAIN_SRC)
 	@echo "Compiling Main: $<"
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
+# Compile GameBoyCore.cpp
+$(CORE_OBJ): $(CORE_SRC)
+	@mkdir -p $(dir $@)
+	@echo "Compiling Core: $<"
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
 # Link all object files into executable
 $(OUTPUT): $(OBJ_FILES)
 	@echo "Linking executable: $@"
-	$(CXX) $(OBJ_FILES) -o $@
+	$(CXX) $(OBJ_FILES) -o $@ $(SFML_LIBS)
 	@echo "Build complete -> $(OUTPUT)"
 
 # Clean
