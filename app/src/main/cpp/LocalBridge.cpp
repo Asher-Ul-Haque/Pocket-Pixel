@@ -1,6 +1,7 @@
+#ifndef __ANDROID__
+#include "GameBoy/include/ppu.h"
 #include <SFML/System/Time.hpp>
 #include <SFML/Window/Keyboard.hpp>
-#ifndef __ANDROID__
 #include <SFML/Config.hpp>
 #include <SFML/Graphics/RenderWindow.hpp>
 #include <SFML/Graphics/Texture.hpp>
@@ -12,12 +13,11 @@
 #include "defines.h"
 #include "GameBoyCore.h"
 #include "GameBoy/include/cpu.h"
-#include "GameBoy/include/ppu.h"
 #include "GameBoy/include/bus.h"
 #include "GameBoy/include/cartridge.h"
 #include <SFML/Graphics.hpp>
 
-static int scale = 3;
+static int scale = 4;
 static const u64 tileColors[4] = 
   {
     0xFF0F380F, // - - - dark green
@@ -30,6 +30,10 @@ sf::RenderWindow debugWindow;
 sf::Texture      debugTexture;
 sf::Sprite       debugSprite;
 sf::Image        debugImage;
+sf::RenderWindow mainWindow;
+sf::Texture      mainTexture;
+sf::Sprite       mainSprite;
+sf::Image        mainImage;
 
 void uiInit()
 {
@@ -43,6 +47,17 @@ void uiInit()
 
   debugWindow.setFramerateLimit(0);
   debugWindow.setVerticalSyncEnabled(false);
+  
+
+  int mainWidth  = 160 * scale;
+  int mainHeight = 144 * scale;
+  mainWindow.create(sf::VideoMode(mainWidth, mainHeight), "Emulator");
+  mainImage.create(mainWidth, mainHeight, sf::Color(0x11, 0x11, 0x11));
+  mainTexture.create(mainWidth, mainHeight);
+  mainSprite.setTexture(mainTexture, true);
+
+  mainWindow.setFramerateLimit(0);
+  mainWindow.setVerticalSyncEnabled(false);
 }
 
 void delay(u32 MS)
@@ -88,19 +103,17 @@ void displayTile(sf::Image& surface, u16 start, u16 tileNum, u32 tileX, u32 tile
   }
 }
 
-void updateDBGwindow(bool force = false)
+void updateWindows(bool force = false)
 {
   static int tickCounter = 0;
   tickCounter++;
 
-  if (tickCounter < 30 && !force)
+  if (tickCounter < 10000 && !force)
     return;
 
   tickCounter = 0;
 
-  u16 addr = 0x8000;
-  int xDraw = 0, yDraw = 0, tileNum = 0;
-
+  // Clear debug image
   for (unsigned y = 0; y < debugImage.getSize().y; ++y)
   {
     for (unsigned x = 0; x < debugImage.getSize().x; ++x)
@@ -108,6 +121,10 @@ void updateDBGwindow(bool force = false)
       debugImage.setPixel(x, y, sf::Color(0x11, 0x11, 0x11));
     }
   }
+
+  // Redraw tiles
+  u16 addr = 0x8000;
+  int xDraw = 0, yDraw = 0, tileNum = 0;
 
   for (int y = 0; y < 24; ++y)
   {
@@ -121,17 +138,59 @@ void updateDBGwindow(bool force = false)
     xDraw = 0;
   }
 
+  // --- Framebuffer update ---
+  u32* fb = ppuGetContext()->frameBuffer; // 160x144
+  for (int y = 0; y < 144; ++y)
+  {
+    for (int x = 0; x < 160; ++x)
+    {
+      u32 color = fb[x + y * 160];
+
+      sf::Color col(
+        (color >> 16) & 0xFF,
+        (color >> 8)  & 0xFF,
+        (color >> 0)  & 0xFF,
+        (color >> 24) & 0xFF
+      );
+
+      // Scale output (draw pixels as big blocks)
+      for (int dx = 0; dx < scale; ++dx)
+      {
+        for (int dy = 0; dy < scale; ++dy)
+        {
+          mainImage.setPixel(x * scale + dx, y * scale + dy, col);
+        }
+      }
+    }
+  }
+
+  // Upload and draw framebuffer
+  mainTexture.update(mainImage);
+  mainWindow.clear();
+  mainWindow.draw(mainSprite);
+  mainWindow.display();
+
+  // Draw debug window
   debugTexture.update(debugImage);
   debugWindow.clear();
   debugWindow.draw(debugSprite);
   debugWindow.display();
 
+  // Handle debug window events
   sf::Event event;
   while (debugWindow.pollEvent(event))
   {
     if (event.type == sf::Event::Closed)
     {
       debugWindow.close();
+    }
+  }
+
+  while (mainWindow.pollEvent(event))
+  {
+    if (event.type == sf::Event::Closed)
+    {
+      mainWindow.close();
     }
   }
 }
@@ -172,19 +231,14 @@ int main(int argc, char* argv[])
 
   cartridgeLoad(reinterpret_cast<u8*>(buffer), fileSize);
   
-  u32* gbPixelBuffer = new u32[160 * 144];
-  startEmulator(gbPixelBuffer);
+  startEmulator();
 
-  #ifdef DEBUG
   uiInit();
-  while (debugWindow.isOpen())
+  while (debugWindow.isOpen() && mainWindow.isOpen())
   {
     cpuTick();             // Run one tick of emulation
-    updateDBGwindow();     // Update the debug window every 30 ticks
+    updateWindows();     // Update the debug window every 30 ticks
   }
-  #else 
-  while (true) cpuTick();
-  #endif
 
   stopEmulator();
   return 0;

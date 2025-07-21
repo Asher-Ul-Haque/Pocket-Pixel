@@ -7,7 +7,7 @@ import just.somebody.templates.data.entities.GameEntity
 
 @Database(
   entities = [ GameEntity::class ],
-  version  = 1
+  version  = 2
 )
 abstract class PixelPocketDB : RoomDatabase()
 {

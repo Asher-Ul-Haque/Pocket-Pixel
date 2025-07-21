@@ -4,13 +4,16 @@
 
 
 static LCDcontext ctx;
-static u64 colorsDefault[4] = 
-  {
-    0xFF0F380F, // - - - dark green
-    0xFF206230, // - - - medium green
-    0xFF8BAC0F, // - - - light green 
-    0xFF9BBC0F  // - - - pale green
-  };
+#define RGBA(r, g, b, a) ((u32)(a << 24 | b << 16 | g << 8 | r))
+
+static u32 colorsDefault[4] =
+{
+  RGBA(15, 56, 0, 255),    // Darkest green
+  RGBA(48, 98, 48, 255),   // Dark green
+  RGBA(139, 172, 15, 255), // Light green
+  RGBA(155, 188, 15, 255)  // Lightest green
+};
+
 
 void lcdInit()
 {

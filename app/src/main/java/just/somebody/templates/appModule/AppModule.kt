@@ -61,7 +61,9 @@ class AppModule(private val APP_CONTEXT : Context) : AppModuleInterface
   override val internalStorageManager : InternalStorageManager  by lazy { DefaultInternalStorageManager(APP_CONTEXT) }
   override val externalStorageManager : ExternalStorageManager  by lazy { DefaultExternalStorageManager(APP_CONTEXT, dataStoreManager) }
   override val networkService         : NetworkService          by lazy { NetworkService() }
-  override val database               : PixelPocketDB           by lazy { DatabaseFactory(APP_CONTEXT).create().build() }
+  override val database               : PixelPocketDB           by lazy { DatabaseFactory(APP_CONTEXT).create()
+    .fallbackToDestructiveMigration(true)
+    .build() }
   override val gameRomsKey            : String                  by lazy { "GAME_BOY_ROMS" }
   override val boxArtFetcher          : BoxArtFetcher           by lazy { DefaultBoxArtFetcher(internalStorageManager, networkService) }
   override val gameBoy                : GameBoy                 by lazy { GameBoy() }

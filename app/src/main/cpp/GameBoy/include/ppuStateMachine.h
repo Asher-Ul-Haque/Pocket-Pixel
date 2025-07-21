@@ -14,11 +14,6 @@ FORGE_API void ppuModeVblank();
 FORGE_API void ppuModeHblank();
 
 
-
-
-
-
-
 #ifdef __cplusplus
 }
 #endif

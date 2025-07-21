@@ -34,6 +34,42 @@ typedef struct
   u8 flagBGpriority   : 1;
 } OAMentry;
 
+typedef enum
+{
+  FS_TILE,
+  FS_DATA_0,
+  FS_DATA_1,
+  FS_IDLE,
+  FS_PUSH
+} FetchState;
+
+typedef struct FifoEntry
+{
+  struct FifoEntry* next;
+  u32               color;
+} FifoEntry;
+
+typedef struct
+{
+  FifoEntry* head;
+  FifoEntry* tail;
+  u32        size;
+} Fifo;
+
+typedef struct 
+{
+  FetchState  currentFetchState;
+  Fifo        pixelFifo;
+  u8          lineX;
+  u8          pushedX;
+  u8          fetchX;
+  u8          bgFetchData[3];
+  u8          fetchEntryData[6];
+  u8          mapY;
+  u8          mapX;
+  u8          tileY;
+  u8          fifoX;
+} PixelFifoContext;
 
 typedef struct 
 {
@@ -43,8 +79,9 @@ typedef struct
   u32      currentFrame;
   u32      lineTicks;
   u32*     frameBuffer;
-} PPUcontext;
 
+  PixelFifoContext pfc;
+} PPUcontext;
 
 FORGE_API void ppuInit(u32* FRAME_BUFFER);
 FORGE_API void ppuTick();

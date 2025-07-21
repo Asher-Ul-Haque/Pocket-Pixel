@@ -12,9 +12,16 @@ PPUcontext* ppuGetContext()
 
 void ppuInit(u32* FRAME_BUFFER)
 {
-  ctx.currentFrame  = 0;
-  ctx.lineTicks     = 0;
-  ctx.frameBuffer   = FRAME_BUFFER;
+  ctx.currentFrame          = 0;
+  ctx.lineTicks             = 0;
+  ctx.frameBuffer           = FRAME_BUFFER;
+  ctx.pfc.lineX             = 0;
+  ctx.pfc.pushedX           = 0;
+  ctx.pfc.fetchX            = 0;
+  ctx.pfc.pixelFifo.size    = 0;
+  ctx.pfc.pixelFifo.head    = nullptr;
+  ctx.pfc.pixelFifo.tail    = nullptr;
+  ctx.pfc.currentFetchState = FS_TILE;
   
   lcdInit();
   LCD_STAT_MODE_SET(MODE_OAM);

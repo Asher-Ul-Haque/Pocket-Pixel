@@ -230,7 +230,10 @@ static void proc_ccf(CPUcontext* CTX)
 { cpuSetFlags(CTX, -1, 0, 0, CPU_FLAG_C ^ 1); }
 
 static void procHalt(CPUcontext* CTX) 
-{ CTX->halted = true; }
+{
+  FORGE_LOG_DEBUG("Halted");
+  CTX->halted = true; 
+}
 
 static void procRRA(CPUcontext* CTX) 
 {

@@ -11,16 +11,18 @@ void stopEmulator()
 {
   FORGE_LOG_INFO("Emulator stopped");
   emuGetContext()->running = false;
+  if (ppuGetContext()->frameBuffer) free(ppuGetContext()->frameBuffer);
 }
 
-void startEmulator(u32* FRAME_BUFFER) 
+void startEmulator()
 {
   FORGE_LOG_INFO("Emulator started");
   emuGetContext()->running = true;
   emuGetContext()->ticks = 0;
   timerInit();
   cpuInit();
-  ppuInit(FRAME_BUFFER); 
+  u32* framebuffer = (u32*) malloc(sizeof(u32) * 160 * 144);
+  ppuInit(framebuffer);
 }
 
 // Simple grayscale palette (ARGB)
@@ -32,32 +34,11 @@ constexpr u32 TEST_PALETTE[4] =
     0xFFFFFFFF  // White
   };
 
-// Generates a checkerboard test pattern with animated motion
-void getFrame(u32* buffer) 
-{
-  #define FRAME_WIDTH 160
-  #define FRAME_HEIGHT 144
-  frameCount++;
-  for (u64 i = 0; i < FRAME_WIDTH * FRAME_HEIGHT; i++) 
-  {
-    u64 row = i / FRAME_WIDTH;
-    u64 col = i % FRAME_WIDTH;
-
-    // Checker pattern that shifts every ~10 frames
-    u8 colorIndex = ((row / 8 + col / 8 + frameCount) % 4);
-
-    buffer[i] = TEST_PALETTE[colorIndex];
-  }
-}
-
 
 // Dummy audio output
 void getAudio(u8* buffer) 
 {
-  for (u64 i = 0; i < FRAME_WIDTH; ++i) 
-  {
-    buffer[i] = 0b11001100; // Dummy tone pattern
-  }
+
 }
 
 // Button input handling (optional logging)

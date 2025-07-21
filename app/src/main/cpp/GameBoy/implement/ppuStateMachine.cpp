@@ -1,35 +1,11 @@
 #include "../include/ppu.h"
 #include "../include/ppuStateMachine.h"
 #include "../include/lcd.h"
-#include "../include/cpu.h"
 #include "../include/interrupt.h"
 #include <ctime>
 
-
-void incrementLY()
-{
-  lcdGetContext()->ly++;
-  if (lcdGetContext()->ly == lcdGetContext()->lyCompare)
-  {  
-    LCD_STAT_LYC_SET(1); 
-    if (LCDS_STAT_INT(SS_LYC))
-    {
-      cpuRequestInterrupt(IT_LCD_STAT);
-    }
-  }
-  else LCD_STAT_LYC_SET(0);
-}
-
-void ppuModeOAM()
-{
-  if (ppuGetContext()->lineTicks >= 80)        LCD_STAT_MODE_SET(MODE_XFER);
-}
-
-void ppuModeXfer()
-{
-  if (ppuGetContext()->lineTicks >= 80 + 172)  LCD_STAT_MODE_SET(MODE_HBLANK);
-}
-
+void pipelineFifoReset();
+void pipelineProc();
 
 static u32  targetFrameTime = 1000 / 60;
 static long prevFrameTime   = 0;
@@ -52,6 +28,50 @@ static void delay(u64 MS)
     };
   nanosleep(&req, NULL);
 }
+
+void incrementLY()
+{
+  lcdGetContext()->ly++;
+  if (lcdGetContext()->ly == lcdGetContext()->lyCompare)
+  {  
+    LCD_STAT_LYC_SET(1); 
+    if (LCDS_STAT_INT(SS_LYC))
+    {
+      cpuRequestInterrupt(IT_LCD_STAT);
+    }
+  }
+  else LCD_STAT_LYC_SET(0);
+}
+
+void ppuModeOAM()
+{
+  if (ppuGetContext()->lineTicks >= 80)
+  {
+    LCD_STAT_MODE_SET(MODE_XFER);
+
+    ppuGetContext()->pfc.currentFetchState  = FS_TILE;
+    ppuGetContext()->pfc.lineX              = 0;
+    ppuGetContext()->pfc.fetchX             = 0;
+    ppuGetContext()->pfc.pushedX            = 0;
+    ppuGetContext()->pfc.fifoX              = 0;
+  }
+}
+
+void ppuModeXfer()
+{
+  pipelineProc();
+
+  if (ppuGetContext()->pfc.pushedX >= X_RES)  
+  {
+    pipelineFifoReset();
+    LCD_STAT_MODE_SET(MODE_HBLANK);
+
+    if (LCDS_STAT_INT(IT_LCD_STAT))
+    { cpuRequestInterrupt(IT_LCD_STAT); }
+  }
+}
+
+
 
 void ppuModeHblank()
 {
