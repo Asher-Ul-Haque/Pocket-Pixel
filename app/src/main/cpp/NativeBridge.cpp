@@ -6,140 +6,197 @@
 #include <atomic>
 #include <chrono>
 
-// Include necessary OpenGL ES headers
+// - - - OpenGL ES Headers - - -
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
 
+// - - - Project Specific Headers - - -
 #include "defines.h"
 #include "ForgeLibrary/include/asserts.h"
 #include "ForgeLibrary/include/logger.h"
-#include "GameBoyCore.h" // Assumed to contain startEmulator(), stopEmulator()
+#include "GameBoyCore.h" // - - - Assumed to contain startEmulator(), stopEmulator()
 #include "GameBoy/include/cpu.h"
 #include "GameBoy/include/emu.h"
 #include "GameBoy/include/cartridge.h"
-#include "GameBoy/include/ppu.h" // Assuming ppuGetContext() and PPUcontext are defined here
+#include "GameBoy/include/ppu.h" // - - - Assuming ppuGetContext() and PPUcontext are defined here
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
 
+
+// - - - | GLOBAL VARIABLES | - - -
+
+
 // - - - Emulator Thread Management - - -
-static pthread_t            emulatorThread;
-static pthread_mutex_t      isRunningMutex; // Mutex to protect isRunning flag
-static bool                 isRunning       = false;
+
+static pthread_t        emulatorThread;           // - - - main loop
+static pthread_mutex_t  isRunningMutex;           // - - - mutex to protect the running flag
+static bool             isRunning       = false;  // - - - flag indicating whether the thread should continue running
+
 
 // - - - Rendering Globals - - -
-const int GB_SCREEN_WIDTH  = 160;
-const int GB_SCREEN_HEIGHT = 144;
 
-static GLuint gbTextureId      = 0;
-static GLuint gbProgramObject  = 0;
-// gbPixelBuffer is no longer needed as a separate allocation,
-// as the frameBuffer is now managed by the emulator core.
-// We will directly use ppuGetContext()->frameBuffer.
+const i32 GB_SCREEN_WIDTH  = 160;
+const i32 GB_SCREEN_HEIGHT = 144;
+
+static GLuint gbTextureId      = 0; // - - - openGL texture ID for the framebuffer
+static GLuint gbProgramObject  = 0; // - - - openGL program ID for rendering
+
 
 // - - - Thread Synchronization for Frame Buffer - - -
-static pthread_mutex_t frameMutex;
+// TODO: Remember to actually find out how to signal from the gameboy that the frame is ready
+
+static pthread_mutex_t frameMutex; 
 static pthread_cond_t  frameReadyCv;
 static bool            newFrameAvailable = false;
 
-// - - - JNI Callback to Kotlin UI - - -
-static JavaVM* cachedJvm            = nullptr;
-static jclass           gameboyClassGlobalRef = nullptr;
-static jmethodID        requestRenderMethodId = nullptr;
 
-/**
- * @brief Attaches the current thread to the JVM and returns a JNIEnv.
- * @return JNIEnv* The JNI environment pointer, or nullptr on failure.
- */
+// - - - JNI Callback to Kotlin UI - - -
+
+static JavaVM*    cachedJvm             = nullptr;
+static jclass     gameboyClassGlobalRef = nullptr;
+static jmethodID  requestRenderMethodId = nullptr;
+
+
+// - - - Shader Source - - -
+
+// - - - vertex shader
+const char* gVertexShader =
+  "attribute vec4 a_position;\n"
+  "attribute vec2 a_texCoord;\n"
+  "varying vec2 v_texCoord;\n"
+  "void main() {\n"
+  "  gl_Position = a_position;\n"
+  "  v_texCoord = a_texCoord;\n"
+  "}\n";
+
+
+// - - - Fragment Shader Source
+const char* gFragmentShader =
+  "precision mediump float;\n"
+  "varying vec2 v_texCoord;\n"
+  "uniform sampler2D s_texture;\n"
+  "void main() {\n"
+  "  gl_FragColor = texture2D(s_texture, v_texCoord);\n"
+  "}\n";
+
+
+// - - - | HELPER FUNCTIONS | - - -
+
+
+// - - - JNI Environment Retrieval - - -
+
+// - - - Attaches the current native thread to the JVM and returns a JNIEnv pointer. Returns JNIEnv* on success, or nullptr on failure.
 JNIEnv* getJniEnv()
 {
-  JNIEnv* env;
-  // GetEnv can return JNI_EDETACHED if the thread is not attached.
-  // In that case, attach it.
-  int status = cachedJvm->GetEnv((void**)&env, JNI_VERSION_1_6);
-  if (status == JNI_EDETACHED)
+  JNIEnv* ENV;
+  i32     STATUS;
+
+  // - - - GetEnv can return JNI_EDETACHED if the thread is not attached. In that case attach it
+  STATUS = cachedJvm->GetEnv((void**)&ENV, JNI_VERSION_1_6);
+  if (STATUS == JNI_EDETACHED)
   {
     FORGE_LOG_INFO("Attaching current thread to JVM");
-    status = cachedJvm->AttachCurrentThread(&env, NULL);
-    if (status != JNI_OK)
+    STATUS = cachedJvm->AttachCurrentThread(&ENV, NULL);
+    if (STATUS != JNI_OK)
     {
-      FORGE_LOG_ERROR("Failed to attach current thread to JVM: %d", status);
+      FORGE_LOG_ERROR("Failed to attach current thread to JVM: %d", STATUS);
       return nullptr;
     }
   }
-  return env;
+  return ENV;
 }
 
-/**
- * @brief Calls the static requestRenderFromNative() method in GameBoy.kt,
- * signaling GLSurfaceView to redraw.
- */
+
+// - - - Java Render Request - - -
+
+// - - - Calls the static requestRenderFromNative() method in GameBoy.kt, signaling GLSurfaceView to redraw.
 void callJavaRequestRender()
 {
-  JNIEnv* env = getJniEnv();
-  if (env && gameboyClassGlobalRef && requestRenderMethodId)
+  JNIEnv* ENV = getJniEnv();
+  if (ENV && gameboyClassGlobalRef && requestRenderMethodId)
   {
-    env->CallStaticVoidMethod(gameboyClassGlobalRef, requestRenderMethodId);
+    ENV->CallStaticVoidMethod(gameboyClassGlobalRef, requestRenderMethodId);
   }
-  else
-  {
-    FORGE_LOG_ERROR("Cannot call Java requestRender: JNIEnv or class/method ID not cached.");
-  }
+  else  FORGE_LOG_ERROR("Cannot call Java requestRender: JNIEnv or class/method ID not cached.");
 }
 
-/**
- * @brief Compiles an OpenGL ES shader from source.
- * @param TYPE The shader type (e.g., GL_VERTEX_SHADER, GL_FRAGMENT_SHADER).
- * @param SOURCE The shader source code string.
- * @return GLuint The compiled shader ID, or 0 on failure.
- */
+
+// - - - OpenGL Shader Compilation - - -
+
+// - - - compile from source
 GLuint loadShader(GLenum TYPE, const char* SOURCE)
 {
-  GLuint shader = glCreateShader(TYPE);
-  if (shader == 0)
+  GLuint  SHADER = glCreateShader(TYPE);
+  GLint   COMPILED;
+  GLint   INFO_LEN = 0;
+  char* INFO_LOG = nullptr;
+
+  if (SHADER == 0)
   {
     FORGE_LOG_ERROR("Failed to create shader of type %d", TYPE);
     return 0;
   }
-  glShaderSource(shader, 1, &SOURCE, NULL);
-  glCompileShader(shader);
+  glShaderSource(SHADER, 1, &SOURCE, NULL);
+  glCompileShader(SHADER);
 
-  GLint compiled;
-  glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
-  if (!compiled)
+  glGetShaderiv(SHADER, GL_COMPILE_STATUS, &COMPILED);
+  if (!COMPILED)
   {
-    GLint infoLen = 0;
-    glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &infoLen);
-    if (infoLen > 1)
+    glGetShaderiv(SHADER, GL_INFO_LOG_LENGTH, &INFO_LEN);
+    if (INFO_LEN > 1)
     {
-      char* infoLog = (char*)malloc(sizeof(char) * infoLen);
-      glGetShaderInfoLog(shader, infoLen, NULL, infoLog);
-      FORGE_LOG_ERROR("Error compiling shader (type %d):\n%s", TYPE, infoLog);
-      free(infoLog);
+      INFO_LOG = (char*)malloc(sizeof(char) * INFO_LEN);
+      glGetShaderInfoLog(SHADER, INFO_LEN, NULL, INFO_LOG);
+      FORGE_LOG_ERROR("Error compiling shader (type %d):\n%s", TYPE, INFO_LOG);
+      free(INFO_LOG);
     }
-    glDeleteShader(shader);
+    glDeleteShader(SHADER);
     return 0;
   }
-  return shader;
+  return SHADER;
 }
 
-/**
- * @brief Performs the actual OpenGL ES rendering of the Game Boy frame.
- * It waits for a new frame to be available from the emulator thread
- * and then updates the texture with the emulator's frameBuffer.
- */
+
+// - - - OpenGL Frame Rendering - - -
+
+// - - - actually render the fram
 void renderFrameGl()
 {
-  // Wait for a new frame to be available from the emulator thread
+  GLfloat vertices[] =
+    {
+      -1.0f,  1.0f, 0.0f, // - - - Top-left
+      -1.0f, -1.0f, 0.0f, // - - - Bottom-left
+       1.0f, -1.0f, 0.0f, // - - - Bottom-right
+       1.0f,  1.0f, 0.0f  // - - - Top-right
+    };
+
+  GLfloat texCoords[] =
+    {
+      0.0f, 0.0f, // - - - Top-left of texture
+      0.0f, 1.0f, // - - - Bottom-left of texture
+      1.0f, 1.0f, // - - - Bottom-right of texture
+      1.0f, 0.0f  // - - - Top-right of texture
+    };
+
+  PPUcontext* ppuCTX       = nullptr;
+  GLushort    indices[]    = { 0, 1, 2, 0, 2, 3 };
+  GLint       positionLoc;
+  GLint       texCoordLoc;
+  GLint       samplerLoc;
+
+  // - - - Wait for a new frame to be available from the emulator thread
+  /*
   pthread_mutex_lock(&frameMutex);
   while (!newFrameAvailable)
   {
     pthread_cond_wait(&frameReadyCv, &frameMutex);
   }
-  newFrameAvailable = false; // Consume the frame
+  newFrameAvailable = false; // - - - Consume the frame
   pthread_mutex_unlock(&frameMutex);
+   */
 
   glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT);
@@ -149,38 +206,20 @@ void renderFrameGl()
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, gbTextureId);
 
-  // Directly use the emulator's frameBuffer
-  PPUcontext* ppu_ctx = ppuGetContext();
-  if (ppu_ctx && ppu_ctx->frameBuffer)
+  // - - - Directly use the emulator's frameBuffer
+  ppuCTX = ppuGetContext();
+  if (ppuCTX && ppuCTX->frameBuffer)
   {
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, GB_SCREEN_WIDTH, GB_SCREEN_HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, ppu_ctx->frameBuffer);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, GB_SCREEN_WIDTH, GB_SCREEN_HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, ppuCTX->frameBuffer);
   }
   else
   {
     FORGE_LOG_ERROR("Emulator frameBuffer is NULL in renderFrameGl!");
   }
 
-  GLfloat vertices[] =
-      {
-          -1.0f,  1.0f, 0.0f, // Top-left
-          -1.0f, -1.0f, 0.0f, // Bottom-left
-          1.0f, -1.0f, 0.0f, // Bottom-right
-          1.0f,  1.0f, 0.0f  // Top-right
-      };
-
-  GLfloat texCoords[] =
-      {
-          0.0f, 0.0f, // Top-left of texture
-          0.0f, 1.0f, // Bottom-left of texture
-          1.0f, 1.0f, // Bottom-right of texture
-          1.0f, 0.0f  // Top-right of texture
-      };
-
-  GLushort indices[] = { 0, 1, 2, 0, 2, 3 };
-
-  GLint positionLoc = glGetAttribLocation(gbProgramObject, "a_position");
-  GLint texCoordLoc = glGetAttribLocation(gbProgramObject, "a_texCoord");
-  GLint samplerLoc  = glGetUniformLocation(gbProgramObject, "s_texture");
+  positionLoc = glGetAttribLocation(gbProgramObject, "a_position");
+  texCoordLoc = glGetAttribLocation(gbProgramObject, "a_texCoord");
+  samplerLoc  = glGetUniformLocation(gbProgramObject, "s_texture");
 
   glEnableVertexAttribArray(positionLoc);
   glVertexAttribPointer(positionLoc, 3, GL_FLOAT, GL_FALSE, 0, vertices);
@@ -196,62 +235,40 @@ void renderFrameGl()
   glDisableVertexAttribArray(texCoordLoc);
 }
 
-// - - - Vertex Shader Source
-const char* gVertexShader =
-    "attribute vec4 a_position;\n"
-    "attribute vec2 a_texCoord;\n"
-    "varying vec2 v_texCoord;\n"
-    "void main() {\n"
-    "    gl_Position = a_position;\n"
-    "    v_texCoord = a_texCoord;\n"
-    "}\n";
 
-// - - - Fragment Shader Source
-const char* gFragmentShader =
-    "precision mediump float;\n"
-    "varying vec2 v_texCoord;\n"
-    "uniform sampler2D s_texture;\n"
-    "void main() {\n"
-    "    gl_FragColor = texture2D(s_texture, v_texCoord);\n"
-    "}\n";
+// - - - | EMULATOR THREAD | - - -
 
-/**
- * @brief The main emulation loop running on a separate thread.
- * It continuously ticks the Game Boy CPU, and signals the rendering
- * thread when a new frame is ready.
- * @param ARG Unused thread argument.
- * @return void* Always returns nullptr.
- */
+
+// - - - Emulator Tick Loop - - - 
+
+// - - - The main emulation loop running on a separate thread.
 void* tickLoop(void* ARG)
 {
   bool currentIsRunning;
+
   pthread_mutex_lock(&isRunningMutex);
   currentIsRunning = isRunning;
   pthread_mutex_unlock(&isRunningMutex);
 
   while (currentIsRunning)
   {
-    // Tick the CPU and update the PPU, which generates the frameBuffer.
-    // It's crucial that cpuTick() (or an internal PPU update)
-    // completes a full frame before signaling for a render.
-    // If cpuTick() only advances by a few cycles, you might see
-    // partially drawn frames. For optimal results, ensure that
-    // the newFrameAvailable signal is triggered only when the
-    // PPU has completed a full frame (e.g., at VBlank interrupt).
     cpuTick();
-
-    // Signal that a new frame is available for rendering
-    pthread_mutex_lock(&frameMutex);
     newFrameAvailable = true;
+
+    // - - - Signal that a new frame is available for rendering
+    /*
+    static i32 ticks = 0;
+    pthread_mutex_lock(&frameMutex);
+    //if (ticks++ % 10000 == 0)
+      newFrameAvailable = true;
     pthread_cond_signal(&frameReadyCv);
     pthread_mutex_unlock(&frameMutex);
+     */
 
-    // Request a render from the Java/Kotlin UI thread
-    // REMOVED THE 10,000 TICK THROTTLING.
-    // Now, a render request is made every time a new frame is signaled.
+    // - - - Request a render from the Java/Kotlin UI thread
     callJavaRequestRender();
 
-    // Check if the emulator should continue running
+    // - - - Check if the emulator should continue running
     pthread_mutex_lock(&isRunningMutex);
     currentIsRunning = isRunning;
     pthread_mutex_unlock(&isRunningMutex);
@@ -260,166 +277,193 @@ void* tickLoop(void* ARG)
   return nullptr;
 }
 
-extern "C"
-{
 
+// - - - | JNI EXPORTED FUNCTIONS | - - -
+
+
+// - - - Get Audio Buffer - - -
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeGetAudioBuffer(
-    JNIEnv* ENV, jobject THIZ, jbyteArray AUDIO_BUFFER)
+  JNIEnv*    ENV,
+  jobject    THIZ,
+  jbyteArray AUDIO_BUFFER)
 {
-// Bridges audio buffer retrieval to the native Game Boy core.
-jbyte* buffer = ENV->GetByteArrayElements(AUDIO_BUFFER, nullptr);
-getAudio(reinterpret_cast<u8*>(buffer));
-ENV->ReleaseByteArrayElements(AUDIO_BUFFER, buffer, 0);
+  jbyte* BUFFER = ENV->GetByteArrayElements(AUDIO_BUFFER, nullptr);
+  getAudio(reinterpret_cast<u8*>(BUFFER));
+  ENV->ReleaseByteArrayElements(AUDIO_BUFFER, BUFFER, 0);
 }
 
+// - - - Loads the Game Boy ROM i32o the native core.
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeLoadROM(
-    JNIEnv* ENV, jobject THIZ, jbyteArray ROM, jint SIZE)
+  JNIEnv*    ENV,
+  jobject    THIZ,
+  jbyteArray ROM,
+  jint       SIZE)
 {
-// Loads the Game Boy ROM into the native core.
-jbyte* buffer = ENV->GetByteArrayElements(ROM, nullptr);
-cartridgeLoad(reinterpret_cast<u8*>(buffer), SIZE);
-ENV->ReleaseByteArrayElements(ROM, buffer, JNI_ABORT);
+  jbyte* BUFFER = ENV->GetByteArrayElements(ROM, nullptr);
+  cartridgeLoad(reinterpret_cast<u8*>(BUFFER), SIZE);
+  ENV->ReleaseByteArrayElements(ROM, BUFFER, JNI_ABORT);
 }
 
+// - - - Sets the state of a Game Boy button in the native core.
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeSetButtonState(
-    JNIEnv* ENV, jobject THIZ, jint BUTTON, jboolean PRESSED)
+  JNIEnv* ENV,
+  jobject   THIZ,
+  jint      BUTTON,
+  jboolean  PRESSED)
 {
-// Sets the state of a Game Boy button in the native core.
-setButton(static_cast<u8>(BUTTON), static_cast<bool>(PRESSED));
+  setButton(static_cast<u8>(BUTTON), static_cast<bool>(PRESSED));
 }
 
+// - - - Starts the Game Boy emulator thread.
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeStartEmulator(
-    JNIEnv* ENV, jobject THIZ)
+    JNIEnv* ENV,
+    jobject THIZ)
 {
-// Starts the Game Boy emulator thread.
-pthread_mutex_lock(&isRunningMutex);
-if (isRunning)
-{
-pthread_mutex_unlock(&isRunningMutex);
-return; // Emulator is already running
-}
-isRunning = true;
-pthread_mutex_unlock(&isRunningMutex);
+  pthread_mutex_lock(&isRunningMutex);
+  if (isRunning)
+  {
+    pthread_mutex_unlock(&isRunningMutex);
+    return; // - - - Emulator is already running
+  }
+  isRunning = true;
+  pthread_mutex_unlock(&isRunningMutex);
 
-// Initialize and allocate frameBuffer within the emulator core
-startEmulator();
-// Create the emulator tick loop thread
-pthread_create(&emulatorThread, NULL, tickLoop, NULL);
+  // - - - Initialize and allocate frameBuffer within the emulator core
+  startEmulator();
+  // - - - Create the emulator tick loop thread
+  pthread_create(&emulatorThread, NULL, tickLoop, NULL);
 }
 
+// - - - Stops the Game Boy emulator thread and releases resources.
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeStopEmulator(
-    JNIEnv* ENV, jobject THIZ)
+  JNIEnv* ENV,
+  jobject THIZ)
 {
-// Stops the Game Boy emulator thread and releases resources.
-pthread_mutex_lock(&isRunningMutex);
-if (!isRunning)
-{
-pthread_mutex_unlock(&isRunningMutex);
-return; // Emulator is not running
+  pthread_mutex_lock(&isRunningMutex);
+  if (!isRunning)
+  {
+    pthread_mutex_unlock(&isRunningMutex);
+    return; // - - - Emulator is not running
+  }
+  isRunning = false; // - - - Signal the tickLoop to stop
+  pthread_mutex_unlock(&isRunningMutex);
+
+  // - - - Wait for the emulator thread to finish its execution
+  pthread_join(emulatorThread, NULL);
+
+  // - - - Deallocate frameBuffer and clean up within the emulator core
+  stopEmulator();
 }
-isRunning = false; // Signal the tickLoop to stop
-pthread_mutex_unlock(&isRunningMutex);
 
-// Wait for the emulator thread to finish its execution
-pthread_join(emulatorThread, NULL);
 
-// Deallocate frameBuffer and clean up within the emulator core
-stopEmulator();
-}
-
+// - - - Initializes OpenGL ES resources when the rendering surface is created.
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeOnSurfaceCreated(JNIEnv* ENV, jobject THIZ)
 {
-// Initializes OpenGL ES resources when the rendering surface is created.
-FORGE_LOG_INFO("nativeOnSurfaceCreated: Initializing OpenGL ES");
+  GLuint  VERTEX_SHADER;
+  GLuint  FRAGMENT_SHADER;
+  GLint   LINKED;
+  GLint   INFO_LEN = 0;
+  char* INFO_LOG = nullptr;
 
-GLuint vertexShader   = loadShader(GL_VERTEX_SHADER, gVertexShader);
-GLuint fragmentShader = loadShader(GL_FRAGMENT_SHADER, gFragmentShader);
+  FORGE_LOG_INFO("nativeOnSurfaceCreated: Initializing OpenGL ES");
 
-gbProgramObject = glCreateProgram();
-glAttachShader(gbProgramObject, vertexShader);
-glAttachShader(gbProgramObject, fragmentShader);
-glLinkProgram(gbProgramObject);
+  VERTEX_SHADER   = loadShader(GL_VERTEX_SHADER, gVertexShader);
+  FRAGMENT_SHADER = loadShader(GL_FRAGMENT_SHADER, gFragmentShader);
 
-GLint linked;
-glGetProgramiv(gbProgramObject, GL_LINK_STATUS, &linked);
-if (!linked)
-{
-GLint infoLen = 0;
-glGetProgramiv(gbProgramObject, GL_INFO_LOG_LENGTH, &infoLen);
-if (infoLen > 1)
-{
-char* infoLog = (char*)malloc(sizeof(char) * infoLen);
-glGetProgramInfoLog(gbProgramObject, infoLen, NULL, infoLog);
-FORGE_LOG_ERROR("Error linking program:\n%s", infoLog);
-free(infoLog);
+  gbProgramObject = glCreateProgram();
+  glAttachShader(gbProgramObject, VERTEX_SHADER);
+  glAttachShader(gbProgramObject, FRAGMENT_SHADER);
+  glLinkProgram(gbProgramObject);
+
+  glGetProgramiv(gbProgramObject, GL_LINK_STATUS, &LINKED);
+  if (!LINKED)
+  {
+    glGetProgramiv(gbProgramObject, GL_INFO_LOG_LENGTH, &INFO_LEN);
+    if (INFO_LEN > 1)
+    {
+      INFO_LOG = (char*)malloc(sizeof(char) * INFO_LEN);
+      glGetProgramInfoLog(gbProgramObject, INFO_LEN, NULL, INFO_LOG);
+      FORGE_LOG_ERROR("Error linking program:\n%s", INFO_LOG);
+      free(INFO_LOG);
+    }
+    glDeleteProgram(gbProgramObject);
+    gbProgramObject = 0;
+    return;
+  }
+
+  glGenTextures(1, &gbTextureId);
+  glBindTexture(GL_TEXTURE_2D, gbTextureId);
+
+  // - - - Set texture parameters for nearest filtering (pixelated look) and clamping
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+  // - - - Allocate texture memory on the GPU. Data will be updated with glTexSubImage2D.
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, GB_SCREEN_WIDTH, GB_SCREEN_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+
+  glUseProgram(gbProgramObject);
 }
-glDeleteProgram(gbProgramObject);
-gbProgramObject = 0;
-return;
-}
 
-glGenTextures(1, &gbTextureId);
-glBindTexture(GL_TEXTURE_2D, gbTextureId);
 
-// Set texture parameters for nearest filtering (pixelated look) and clamping
-glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-// Allocate texture memory on the GPU. Data will be updated with glTexSubImage2D.
-glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, GB_SCREEN_WIDTH, GB_SCREEN_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-
-glUseProgram(gbProgramObject);
-}
-
+// - - - Updates the OpenGL ES viewport when the rendering surface changes size.
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeOnSurfaceChanged(
-    JNIEnv* ENV, jobject THIZ, jint WIDTH, jint HEIGHT)
+  JNIEnv* ENV,
+  jobject THIZ,
+  jint    WIDTH,
+  jint    HEIGHT)
 {
-// Updates the OpenGL ES viewport when the rendering surface changes size.
-FORGE_LOG_INFO("nativeOnSurfaceChanged: %d x %d", WIDTH, HEIGHT);
-glViewport(0, 0, WIDTH, HEIGHT);
+  FORGE_LOG_INFO("nativeOnSurfaceChanged: %d x %d", WIDTH, HEIGHT);
+  glViewport(0, 0, WIDTH, HEIGHT);
 }
 
+
+// - - - Triggers the OpenGL ES rendering for a new frame.
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeOnDrawFrame(JNIEnv* ENV, jobject THIZ)
 {
-// Triggers the OpenGL ES rendering for a new frame.
-renderFrameGl();
+  renderFrameGl();
 }
 
+
+// - - - | JNI LIFECYCLE FUNCTIONS | - - -
+
+
+// - - - Called when the native library is loaded by the JVM, caching essential JNI references.
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* VM, void* RESERVED)
 {
-  // Called when the native library is loaded by the JVM, caching essential JNI references.
+  JNIEnv* ENV;
+  jclass  LOCAL_GAMEBOY_CLASS;
+
   FORGE_LOG_INFO("JNI_OnLoad: Caching JVM and method IDs.");
   cachedJvm = VM;
 
-  JNIEnv* env;
-  if (VM->GetEnv((void**)&env, JNI_VERSION_1_6) != JNI_OK)
+  if (VM->GetEnv((void**)&ENV, JNI_VERSION_1_6) != JNI_OK)
   {
     FORGE_LOG_ERROR("Failed to get JNIEnv on JNI_OnLoad");
     return JNI_ERR;
   }
 
-  // Find the GameBoy Java class and create a global reference
-  jclass localGameboyClass = env->FindClass("just/somebody/templates/domain/GameBoy");
-  if (!localGameboyClass)
+  // - - - Find the GameBoy Java class and create a global reference
+  LOCAL_GAMEBOY_CLASS = ENV->FindClass("just/somebody/templates/domain/GameBoy");
+  if (!LOCAL_GAMEBOY_CLASS)
   {
     FORGE_LOG_ERROR("Failed to find GameBoy class");
     return JNI_ERR;
   }
-  gameboyClassGlobalRef = (jclass)env->NewGlobalRef(localGameboyClass);
-  env->DeleteLocalRef(localGameboyClass); // Release local reference
+  gameboyClassGlobalRef = (jclass)ENV->NewGlobalRef(LOCAL_GAMEBOY_CLASS);
+  ENV->DeleteLocalRef(LOCAL_GAMEBOY_CLASS); // - - - Release local reference
 
-  // Get the method ID for requestRenderFromNative
-  requestRenderMethodId = env->GetStaticMethodID(
+  // - - - Get the method ID for requestRenderFromNative
+  requestRenderMethodId = ENV->GetStaticMethodID(
       gameboyClassGlobalRef,
       "requestRenderFromNative",
       "()V");
@@ -429,7 +473,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* VM, void* RESERVED)
     return JNI_ERR;
   }
 
-  // Initialize pthread mutexes and condition variables
+  // - - - Initialize pthread mutexes and condition variables
   pthread_mutex_init(&frameMutex, NULL);
   pthread_cond_init(&frameReadyCv, NULL);
   pthread_mutex_init(&isRunningMutex, NULL);
@@ -437,63 +481,63 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* VM, void* RESERVED)
   return JNI_VERSION_1_6;
 }
 
+// - - - Called when the native library is unloaded, cleaning up resources.
 JNIEXPORT void JNICALL JNI_OnUnload(JavaVM* VM, void* RESERVED)
 {
-// Called when the native library is unloaded, cleaning up resources.
-FORGE_LOG_INFO("JNI_OnUnload: Cleaning up resources.");
+  JNIEnv* ENV;
 
-JNIEnv* env;
-// Attempt to get JNIEnv, but proceed with cleanup even if it fails
-if (VM->GetEnv((void**)&env, JNI_VERSION_1_6) == JNI_OK)
-{
-if (gameboyClassGlobalRef)
-{
-env->DeleteGlobalRef(gameboyClassGlobalRef);
-gameboyClassGlobalRef = nullptr;
-}
-}
+  FORGE_LOG_INFO("JNI_OnUnload: Cleaning up resources.");
 
-// Ensure emulator thread is stopped and joined before cleaning up
-pthread_mutex_lock(&isRunningMutex);
-if (isRunning)
-{
-isRunning = false; // Signal the tickLoop to stop
-pthread_mutex_unlock(&isRunningMutex);
-stopEmulator(); // Signal emulator core to stop and free its buffer
-pthread_join(emulatorThread, NULL); // Wait for thread to terminate
-}
-else
-{
-pthread_mutex_unlock(&isRunningMutex);
-}
+  // - - - Attempt to get JNIEnv, but proceed with cleanup even if it fails
+  if (VM->GetEnv((void**)&ENV, JNI_VERSION_1_6) == JNI_OK)
+  {
+    if (gameboyClassGlobalRef)
+    {
+      ENV->DeleteGlobalRef(gameboyClassGlobalRef);
+      gameboyClassGlobalRef = nullptr;
+    }
+  }
 
-// OpenGL ES resource cleanup
-if (gbProgramObject != 0)
-{
-glDeleteProgram(gbProgramObject);
-gbProgramObject = 0;
-}
-if (gbTextureId != 0)
-{
-glDeleteTextures(1, &gbTextureId);
-gbTextureId = 0;
-}
+  // - - - Ensure emulator thread is stopped and joined before cleaning up
+  pthread_mutex_lock(&isRunningMutex);
+  if (isRunning)
+  {
+    isRunning = false; // - - - Signal the tickLoop to stop
+    pthread_mutex_unlock(&isRunningMutex);
+    stopEmulator(); // - - - Signal emulator core to stop and free its buffer
+    pthread_join(emulatorThread, NULL); // - - - Wait for thread to terminate
+  }
+  else
+  {
+    pthread_mutex_unlock(&isRunningMutex);
+  }
 
-// frameBuffer is managed by stopEmulator(), no need to delete here.
+  // - - - OpenGL ES resource cleanup
+  if (gbProgramObject != 0)
+  {
+    glDeleteProgram(gbProgramObject);
+    gbProgramObject = 0;
+  }
+  if (gbTextureId != 0)
+  {
+    glDeleteTextures(1, &gbTextureId);
+    gbTextureId = 0;
+  }
 
-// Destroy pthread mutexes and condition variables
-pthread_mutex_destroy(&frameMutex);
-pthread_cond_destroy(&frameReadyCv);
-pthread_mutex_destroy(&isRunningMutex);
+  // - - - frameBuffer is managed by stopEmulator(), no need to delete here.
 
-// Clear cached JNI references
-cachedJvm             = nullptr;
-requestRenderMethodId = nullptr;
+  // - - - Destroy pthread mutexes and condition variables
+  pthread_mutex_destroy(&frameMutex);
+  pthread_cond_destroy(&frameReadyCv);
+  pthread_mutex_destroy(&isRunningMutex);
+
+  // - - - Clear cached JNI references
+  cachedJvm             = nullptr;
+  requestRenderMethodId = nullptr;
 }
 
 } // extern "C"
 
 #ifdef __cplusplus
-}
 #endif
 #endif // __ANDROID__

@@ -190,7 +190,7 @@ class DefaultBoxArtFetcher(
       ForgeLogger.info("Starting fuzzy search for: $GAME_NAME")
       val candidates = boxArtFiles.map { stripExtension(it) }
 
-      val closest = findClosest(stripExtension(GAME_NAME), candidates, 0.5)
+      val closest = findClosest(stripExtension(GAME_NAME), candidates, 0.65)
       if (!closest.isNullOrBlank())
       {
         val closestFileName = boxArtFiles.firstOrNull { stripExtension(it) == closest }

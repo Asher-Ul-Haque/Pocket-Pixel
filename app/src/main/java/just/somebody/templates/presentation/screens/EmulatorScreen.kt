@@ -46,19 +46,27 @@ fun EmulatorScreen(
   {
     val gameBoyAspectRatio = 160f / 144f
 
-    AndroidView(
-      modifier  = Modifier
+    Column(
+      modifier = Modifier
         .border(4.dp, Color.Black, RectangleShape)
         .fillMaxWidth(1f)
         .aspectRatio(gameBoyAspectRatio)
         .background(Color.Black),
-      factory   =
-        { context ->
-          val gameBoySurfaceView = GameBoyFrame(context)
-          gameBoySurfaceView
-        },
-      update    = { view -> }
+      horizontalAlignment = Alignment.CenterHorizontally
     )
+    {
+      AndroidView(
+        modifier  = Modifier
+          .fillMaxWidth(1f)
+          .aspectRatio(gameBoyAspectRatio),
+        factory   =
+          { context ->
+            val gameBoySurfaceView = GameBoyFrame(context)
+            gameBoySurfaceView
+          },
+        update    = { view -> }
+      )
+    }
 
     Spacer(modifier = Modifier.height(24.dp))
 
