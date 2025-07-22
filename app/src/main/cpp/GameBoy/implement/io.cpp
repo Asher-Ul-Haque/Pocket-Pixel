@@ -4,7 +4,6 @@
 #include "../include/cpu.h"
 #include "../include/lcd.h"
 #include "../include/io.h"
-#include "../include/directMemAccess.h"
 
 static char serialData[2];
 
@@ -22,8 +21,7 @@ u8 ioRead(u16 ADDRESS)
 
 void ioWrite(u16 ADDRESS, u8 VALUE) 
 {
-  FORGE_LOG_WARNING("Recieved io writing : %04X value : $02X", ADDRESS, VALUE);
-  if (ADDRESS == 0xFF01) 
+  if (ADDRESS == 0xFF01)
   {
     serialData[0] = VALUE;
     return;

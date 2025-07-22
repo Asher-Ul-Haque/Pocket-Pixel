@@ -28,7 +28,7 @@
 u8 busRead(u16 ADDRESS) 
 {
   if      (ADDRESS < 0x8000)  return cartridgeRead(ADDRESS);
-  else if (ADDRESS < 0xA000)  return ppuVRAMread(ADDRESS);
+  else if (ADDRESS < 0xA000)  return ppuVramRead(ADDRESS);
   else if (ADDRESS < 0xC000)  return cartridgeRead(ADDRESS);
   else if (ADDRESS < 0xE000)  return wramRead(ADDRESS);
   else if (ADDRESS < 0xFE00)  return 0;
@@ -43,7 +43,7 @@ u8 busRead(u16 ADDRESS)
 void busWrite(u16 ADDRESS, u8 VALUE) 
 {
   if      (ADDRESS < 0x8000)    { cartridgeWrite(ADDRESS, VALUE); }
-  else if (ADDRESS < 0xA000)    { ppuVRAMwrite(ADDRESS, VALUE); }
+  else if (ADDRESS < 0xA000)    { ppuVramWrite(ADDRESS, VALUE); }
   else if (ADDRESS < 0xC000)    { cartridgeWrite(ADDRESS, VALUE); }
   else if (ADDRESS < 0xE000)    { wramWrite(ADDRESS, VALUE); }
   else if (ADDRESS < 0xFE00)    {}

@@ -224,17 +224,10 @@ const char* gFragmentShader =
  */
 void* tickLoop(void* ARG)
 {
-  // The target FPS and frame duration are no longer used for explicit sleep,
-  // allowing the emulator to run at maximum speed.
-  // const long targetFps        = 60;
-  // const long frameDurationNs  = 1000000000L / targetFps; // Nanoseconds per frame
-
   bool currentIsRunning;
   pthread_mutex_lock(&isRunningMutex);
   currentIsRunning = isRunning;
   pthread_mutex_unlock(&isRunningMutex);
-
-  static u16 ticks = 0;
 
   while (currentIsRunning)
   {
@@ -254,25 +247,9 @@ void* tickLoop(void* ARG)
     pthread_mutex_unlock(&frameMutex);
 
     // Request a render from the Java/Kotlin UI thread
-    if (ticks++ % 1000 == 0)
-    {
-      callJavaRequestRender();
-      ticks = 0;
-    }
-
-    // Removed explicit nanosleep to allow the emulator to run at full speed.
-    // The rendering will now be implicitly throttled by GLSurfaceView's
-    // own rendering frequency.
-    // auto end          = std::chrono::steady_clock::now();
-    // auto elapsedNs    = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-    // long sleepNs      = frameDurationNs - elapsedNs;
-    // if (sleepNs > 0)
-    // {
-    //     struct timespec req = {0, 0};
-    //     req.tv_sec  = sleepNs / 1000000000L;
-    //     req.tv_nsec = sleepNs % 1000000000L;
-    //     nanosleep(&req, NULL);
-    // }
+    // REMOVED THE 10,000 TICK THROTTLING.
+    // Now, a render request is made every time a new frame is signaled.
+    callJavaRequestRender();
 
     // Check if the emulator should continue running
     pthread_mutex_lock(&isRunningMutex);

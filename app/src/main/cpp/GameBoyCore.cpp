@@ -21,8 +21,7 @@ void startEmulator()
   emuGetContext()->ticks = 0;
   timerInit();
   cpuInit();
-  u32* framebuffer = (u32*) malloc(sizeof(u32) * 160 * 144);
-  ppuInit(framebuffer);
+  ppuInit();
 }
 
 // Simple grayscale palette (ARGB)

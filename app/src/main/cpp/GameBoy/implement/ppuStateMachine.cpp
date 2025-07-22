@@ -1,16 +1,25 @@
-#include "../include/ppu.h"
 #include "../include/ppuStateMachine.h"
 #include "../include/lcd.h"
+#include "../include/cpu.h"
+#include "../include/ppu.h"
 #include "../include/interrupt.h"
 #include <ctime>
+#include <string.h>
 
+
+// - - - forward declare pipeline functions
 void pipelineFifoReset();
-void pipelineProc();
+void pipelineProcess();
 
-static u32  targetFrameTime = 1000 / 60;
-static long prevFrameTime   = 0;
-static long startTimer      = 0;
-static long frameCount      = 0;
+// - - - fps calculations variables - - - 
+static u8  targetFPS        = 120;
+static u32 targetFrameTime  = 1000 / targetFPS;
+static u64 prevFrameTime    = 0;
+static u64 startTimer       = 0;
+static u64 frameCount       = 0;
+
+
+// - - - sleeping functions - - -
 
 static u64 getTicks()
 {
@@ -24,108 +33,173 @@ static void delay(u64 MS)
   struct timespec req = 
     {
       .tv_sec  = (time_t)(MS / 1000),
-      .tv_nsec = (long)((MS % 1000) * 1000000)
+      .tv_nsec = (i64)((MS % 1000) * 1000000)
     };
   nanosleep(&req, NULL);
 }
 
-void incrementLY()
+
+// - - - loading functions - - - 
+
+void incrementLy() 
 {
   lcdGetContext()->ly++;
-  if (lcdGetContext()->ly == lcdGetContext()->lyCompare)
-  {  
-    LCD_STAT_LYC_SET(1); 
-    if (LCDS_STAT_INT(SS_LYC))
-    {
-      cpuRequestInterrupt(IT_LCD_STAT);
-    }
+
+  if (lcdGetContext()->ly == lcdGetContext()->lyCompare) 
+  {
+    LCD_STAT_LYC_SET(1);
+
+    if (LCDS_STAT_INT(SS_LYC))  cpuRequestInterrupt(IT_LCD_STAT);
+    else                        LCD_STAT_LYC_SET(0);
   }
-  else LCD_STAT_LYC_SET(0);
 }
 
-void ppuModeOAM()
+void loadLineSprites() 
 {
-  if (ppuGetContext()->lineTicks >= 80)
+  int curY = lcdGetContext()->ly;
+
+  u8 spriteHeight = LCD_CNTRL_OBJ_HEIGHT;
+  memset(ppuGetContext()->lineEntryArray, 0, sizeof(ppuGetContext()->lineEntryArray));
+
+  for (int i = 0; i < 40; i++) 
+  {
+    OAMentry e = ppuGetContext()->oamRam[i];
+
+    if (!e.x) continue;
+
+    if (ppuGetContext()->lineSpriteCount >= 10)            break;
+
+    if (e.y <= curY + 16 && e.y + spriteHeight > curY + 16) 
+    {
+      OAMlineEntry *entry = &ppuGetContext()->lineEntryArray[ppuGetContext()->lineSpriteCount++];
+
+      entry->entry = e;
+      entry->next = NULL;
+
+      if (!ppuGetContext()->lineSprites || ppuGetContext()->lineSprites->entry.x > e.x) 
+      {
+        entry->next = ppuGetContext()->lineSprites;
+        ppuGetContext()->lineSprites = entry;
+        continue;
+      }
+
+      // - - - do some sorting
+
+      OAMlineEntry *le = ppuGetContext()->lineSprites;
+      OAMlineEntry *prev = le;
+
+      while(le) 
+      {
+        if (le->entry.x > e.x) 
+        {
+          prev->next = entry;
+          entry->next = le;
+          break;
+        }
+
+        if (!le->next) 
+        {
+          le->next = entry;
+          break;
+        }
+
+        prev = le;
+        le = le->next;
+      }
+    }
+  }
+}
+
+
+// - - - various ppu modes - - - 
+
+void ppuModeOAM() 
+{
+  if (ppuGetContext()->lineTicks >= 80) 
   {
     LCD_STAT_MODE_SET(MODE_XFER);
 
-    ppuGetContext()->pfc.currentFetchState  = FS_TILE;
-    ppuGetContext()->pfc.lineX              = 0;
-    ppuGetContext()->pfc.fetchX             = 0;
-    ppuGetContext()->pfc.pushedX            = 0;
-    ppuGetContext()->pfc.fifoX              = 0;
+    ppuGetContext()->pfc.curFetchState  = FS_TILE;
+    ppuGetContext()->pfc.lineX          = 0;
+    ppuGetContext()->pfc.fetchX         = 0;
+    ppuGetContext()->pfc.pushedX        = 0;
+    ppuGetContext()->pfc.fifoX          = 0;
+  }
+
+  // - - - read oam on the first tick only...
+  if (ppuGetContext()->lineTicks == 1) 
+  {
+    ppuGetContext()->lineSprites     = 0;
+    ppuGetContext()->lineSpriteCount = 0;
+
+    loadLineSprites();
   }
 }
 
-void ppuModeXfer()
+void ppuModeXfer() 
 {
-  pipelineProc();
+  pipelineProcess();
 
-  if (ppuGetContext()->pfc.pushedX >= X_RES)  
+  if (ppuGetContext()->pfc.pushedX >= XRES) 
   {
-    pipelineFifoReset();
-    LCD_STAT_MODE_SET(MODE_HBLANK);
+     pipelineFifoReset();
+     LCD_STAT_MODE_SET(MODE_HBLANK);
 
-    if (LCDS_STAT_INT(IT_LCD_STAT))
-    { cpuRequestInterrupt(IT_LCD_STAT); }
+     if (LCDS_STAT_INT(SS_HBLANK)) cpuRequestInterrupt(IT_LCD_STAT);
   }
 }
 
-
-
-void ppuModeHblank()
+void ppuModeVblank() 
 {
-  if (ppuGetContext()->lineTicks >= TICKS_PER_LINE)
+  if (ppuGetContext()->lineTicks >= TICKS_PER_LINE) 
   {
-    incrementLY();
+    incrementLy();
 
-    if (lcdGetContext()->ly >= Y_RES)
+    if (lcdGetContext()->ly >= LINES_PER_FRAME) 
+    {
+      LCD_STAT_MODE_SET(MODE_OAM);
+      lcdGetContext()->ly = 0;
+    }
+
+    ppuGetContext()->lineTicks = 0;
+  }
+}
+
+void ppuModeHblank() 
+{
+  if (ppuGetContext()->lineTicks >= TICKS_PER_LINE) 
+  {
+    incrementLy();
+
+    if (lcdGetContext()->ly >= YRES) 
     {
       LCD_STAT_MODE_SET(MODE_VBLANK);
       cpuRequestInterrupt(IT_VBLANK);
 
-      if (LCDS_STAT_INT(SS_VBLANK))
-      { cpuRequestInterrupt(IT_LCD_STAT); }
-
+      if (LCDS_STAT_INT(SS_VBLANK))     cpuRequestInterrupt(IT_LCD_STAT);
       ppuGetContext()->currentFrame++;
 
-      u64 end       = getTicks();
+      // - - - calc FPS...
+      u32 end       = getTicks();
       u32 frameTime = end - prevFrameTime;
 
-      if (frameTime < targetFrameTime) 
-      { delay(targetFrameTime - frameTime); }
+      if (frameTime < targetFrameTime) delay((targetFrameTime - frameTime));
 
-      if (end - startTimer >= 1000)
+      if (end - startTimer >= 1000) 
       {
-        u32 fps = frameCount;
-        startTimer = end;
-        frameCount = 0;
+        u32 fps     = frameCount;
+        startTimer  = end;
+        frameCount  = 0;
 
-        FORGE_LOG_TRACE("fps : %d", fps);
+        FORGE_LOG_TRACE("FPS: %d", fps);
       }
 
       frameCount++;
       prevFrameTime = getTicks();
-    }
+
+    } 
     else LCD_STAT_MODE_SET(MODE_OAM);
 
     ppuGetContext()->lineTicks = 0;
   }
 }
-
-void ppuModeVblank()
-{
-  if (ppuGetContext()->lineTicks >= TICKS_PER_LINE) 
-  {
-    incrementLY();
-
-    if (lcdGetContext()->ly >= LINES_PER_FRAME)      
-    {
-      LCD_STAT_MODE_SET(MODE_OAM);
-      lcdGetContext()->ly = 0;  
-    }
-
-    ppuGetContext()->lineTicks = 0;
-  }
-}
-

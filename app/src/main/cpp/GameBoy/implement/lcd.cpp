@@ -4,14 +4,14 @@
 
 
 static LCDcontext ctx;
-#define RGBA(r, g, b, a) ((u32)(a << 24 | b << 16 | g << 8 | r))
+#define RGBA(r, g, b) ((u32)(255 << 24 | b << 16 | g << 8 | r))
 
 static u32 colorsDefault[4] =
 {
-  RGBA(15, 56, 0, 255),    // Darkest green
-  RGBA(48, 98, 48, 255),   // Dark green
-  RGBA(139, 172, 15, 255), // Light green
-  RGBA(155, 188, 15, 255)  // Lightest green
+  RGBA(8,24,32),    // Darkest green
+  RGBA(52,104,86),   // Dark green
+  RGBA(136,192,112), // Light green
+  RGBA(224,248,208)  // Lightest green
 };
 
 
@@ -76,5 +76,5 @@ void lcdWrite(u16 ADDRESS, u8 VALUE)
   if      (offset == 6)       dmaStart(VALUE);
   else if (ADDRESS == 0xFF47) updatePallete(VALUE, 0);
   else if (ADDRESS == 0xFF48) updatePallete(VALUE & 0b11111100, 1);
-  else if (ADDRESS == 0xFF49) updatePallete(VALUE & 0b11111100, 1);
+  else if (ADDRESS == 0xFF49) updatePallete(VALUE & 0b11111100, 2);
 }

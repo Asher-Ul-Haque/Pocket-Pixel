@@ -54,15 +54,16 @@ typedef enum
 #define LCD_STAT_LYC            (BIT(lcdGetContext()->status, 2))
 #define LCD_STAT_LYC_SET(b)     (BIT_SET(lcdGetContext()->status, 2, b))
 
+#define LCDS_STAT_INT(src)      (lcdGetContext()->status & src)
+
 typedef enum 
 {
   SS_HBLANK = (1 << 3),
   SS_VBLANK = (1 << 4),
   SS_OAM    = (1 << 5),
   SS_LYC    = (1 << 6),
-} statSrc;
+} StatSrc;
 
-#define LCDS_STAT_INT(src) (lcdGetContext()->status & src)
 
 FORGE_API LCDcontext*  lcdGetContext();
 FORGE_API void         lcdInit();
