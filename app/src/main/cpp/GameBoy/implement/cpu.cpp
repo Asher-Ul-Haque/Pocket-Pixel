@@ -48,7 +48,7 @@ bool cpuTick()
     emuCycles(1);
     fetchData();
 
-    #ifndef DEBUG
+    #ifdef DEBUG
     char flags[16];
     sprintf(flags, "%c%c%c%c", 
         ctx.regs.flags & (1 << 7) ? 'Z' : '-',

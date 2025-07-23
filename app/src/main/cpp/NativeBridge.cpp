@@ -1,4 +1,4 @@
-//#ifdef __ANDROID__
+#ifdef __ANDROID__
 #include <jni.h>
 #include <pthread.h>
 #include <unistd.h>
@@ -188,15 +188,6 @@ void renderFrameGl()
   GLint       samplerLoc;
 
   // - - - Wait for a new frame to be available from the emulator thread
-  /*
-  pthread_mutex_lock(&frameMutex);
-  while (!newFrameAvailable)
-  {
-    pthread_cond_wait(&frameReadyCv, &frameMutex);
-  }
-  newFrameAvailable = false; // - - - Consume the frame
-  pthread_mutex_unlock(&frameMutex);
-   */
 
   glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT);
@@ -244,38 +235,26 @@ void renderFrameGl()
 // - - - The main emulation loop running on a separate thread.
 void* tickLoop(void* ARG)
 {
-  bool currentIsRunning;
-
-  pthread_mutex_lock(&isRunningMutex);
-  currentIsRunning = isRunning;
-  pthread_mutex_unlock(&isRunningMutex);
-
-  while (currentIsRunning)
+  u64 lastFrame = 0;
+  while (true)
   {
-    cpuTick();
-    static u64 prevFrame = 0;
-
-    // - - - Signal that a new frame is available for rendering
-    pthread_mutex_lock(&frameMutex);
-    if (prevFrame == ppuGetContext()->currentFrame)
-    {
-      newFrameAvailable = false; // - - - No new frame, skip signaling
-    }
-    else 
-    {
-      prevFrame = ppuGetContext()->currentFrame;
-      newFrameAvailable = true;
-    }
-    pthread_cond_signal(&frameReadyCv);
-    pthread_mutex_unlock(&frameMutex);
-
-    // - - - Request a render from the Java/Kotlin UI thread
-    callJavaRequestRender();
-
-    // - - - Check if the emulator should continue running
     pthread_mutex_lock(&isRunningMutex);
-    currentIsRunning = isRunning;
+    if (!isRunning)
+    {
+      pthread_mutex_unlock(&isRunningMutex);
+      break;
+    }
     pthread_mutex_unlock(&isRunningMutex);
+
+    cpuTick();
+
+    // Only trigger render if a full frame has been generated (e.g. at VBlank)
+    u64 currentFrame = ppuGetContext()->currentFrame;
+    if (lastFrame != currentFrame)
+    {
+      lastFrame = currentFrame;
+      callJavaRequestRender(); // Let Java decide when to draw
+    }
   }
 
   return nullptr;
