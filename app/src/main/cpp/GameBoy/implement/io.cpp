@@ -4,11 +4,13 @@
 #include "../include/cpu.h"
 #include "../include/lcd.h"
 #include "../include/io.h"
+#include "../include/gamepad.h"
 
 static char serialData[2];
 
 u8 ioRead(u16 ADDRESS)
 {
+  if (ADDRESS == 0xFF00)                return gamepadRead();
   if (ADDRESS == 0xFF01)                return serialData[0];
   if (ADDRESS == 0xFF02)                return serialData[1];
   if (BETWEEN(ADDRESS, 0xFF04, 0xFF07)) return timerRead(ADDRESS);
@@ -21,6 +23,12 @@ u8 ioRead(u16 ADDRESS)
 
 void ioWrite(u16 ADDRESS, u8 VALUE) 
 {
+  if (ADDRESS == 0xFF00)
+  {
+    gamepadWrite(VALUE);
+    return;
+  }
+
   if (ADDRESS == 0xFF01)
   {
     serialData[0] = VALUE;

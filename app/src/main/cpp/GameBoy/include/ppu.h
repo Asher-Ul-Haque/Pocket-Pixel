@@ -101,6 +101,8 @@ typedef struct
 
   u8        fetchedEntryCount;
   OAMentry  fetchedEntries[3];      // - - - entries fetched during pipeline.
+  
+  u8 windowLine;
 
   u32   currentFrame;
   u32   lineTicks;

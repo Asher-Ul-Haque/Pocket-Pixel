@@ -28,6 +28,7 @@ void ppuInit()
 
   ctx.lineSprites         = 0;
   ctx.fetchedEntryCount   = 0;
+  ctx.windowLine          = 0;
 
   lcdInit();
   LCD_STAT_MODE_SET(MODE_OAM);

@@ -297,7 +297,7 @@ Java_just_somebody_templates_domain_GameBoy_nativeSetButtonState(
   jint      BUTTON,
   jboolean  PRESSED)
 {
-  setButton(static_cast<u8>(BUTTON), static_cast<bool>(PRESSED));
+  setButton(static_cast<Buttons>(BUTTON), static_cast<bool>(PRESSED));
 }
 
 // - - - Starts the Game Boy emulator thread.

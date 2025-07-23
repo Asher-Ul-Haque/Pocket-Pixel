@@ -35,6 +35,38 @@ u32 pixelFifoPop()
 }
 
 
+// - - - Window - - - 
+
+bool windowVisible()
+{
+  return LCD_CNTRL_WIN_ENABLE && 
+  lcdGetContext()->windowX >= 0 && lcdGetContext()->windowX <= XRES + 6 &&
+  lcdGetContext()->windowY >= 0 && lcdGetContext()->windowY < YRES;
+}
+
+void pipelineLoadWindowTile()
+{
+  if (!LCD_CNTRL_WIN_ENABLE) return;
+
+  u8 windowY = lcdGetContext()->windowY;
+  u8 windowX = lcdGetContext()->windowX;
+  if (ppuGetContext()->pfc.fetchX + 7 >= windowX &&
+      ppuGetContext()->pfc.fetchX + 7  < windowX + YRES + 14)
+  {
+    if (lcdGetContext()->ly >= windowY && lcdGetContext()->ly < windowY + XRES)
+    {
+      u8 windowTileY = ppuGetContext()->windowLine / 8;
+      ppuGetContext()->pfc.bgFetchData[0] = busRead(LCD_CNTRL_WIN_MAP_AREA + ((ppuGetContext()->pfc.fetchX + 7 - lcdGetContext()->windowX) / 8) + (windowTileY * 32));
+
+      if (LCD_CNTRL_BGW_DATA_AREA == 0x8800)
+      {
+        ppuGetContext()->pfc.bgFetchData[0] += 128;
+      }
+    }
+  }
+}
+
+
 // - - - Sprites - - - 
 
 u32 fetchSpritePixels(i32 BIT, u32 COLOR, u8 BG_COLOR) 
@@ -163,6 +195,8 @@ void pipelineFetch()
         
           if (LCD_CNTRL_BGW_DATA_AREA == 0x8800) ppuGetContext()->pfc.bgFetchData[0] += 128;
         }
+
+        pipelineLoadWindowTile();
 
         if (LCD_CNTRL_OBJ_ENABLE && ppuGetContext()->lineSprites) pipeleinLoadSpriteTile();
 

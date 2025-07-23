@@ -4,6 +4,7 @@
 #include "GameBoy/include/ppu.h"
 #include "GameBoy/include/timer.h"
 #include "GameBoy/include/emu.h"
+#include "GameBoy/include/gamepad.h"
 
 u64 frameCount = 0;
 
@@ -24,15 +25,6 @@ void startEmulator()
   ppuInit();
 }
 
-// Simple grayscale palette (ARGB)
-constexpr u32 TEST_PALETTE[4] = 
-  {
-    0xFF000000, // Black
-    0xFF555555, // Dark Gray
-    0xFFAAAAAA, // Light Gray
-    0xFFFFFFFF  // White
-  };
-
 
 // Dummy audio output
 void getAudio(u8* buffer) 
@@ -40,8 +32,20 @@ void getAudio(u8* buffer)
 
 }
 
-// Button input handling (optional logging)
-void setButton(u8 button, bool pressed) 
+void setButton(Buttons BUTTON, bool PRESSED) 
 {
-  FORGE_LOG_INFO("Button %d (pressed=%d)", button, pressed);
+  GamepadState* state = gamepadGetState();
+  switch (BUTTON)
+  {
+    case UP    : { state->up    = PRESSED; break; }
+    case DOWN  : { state->down  = PRESSED; break; }
+    case LEFT  : { state->left  = PRESSED; break; }
+    case RIGHT : { state->right = PRESSED; break; }
+
+    case A : { state->a = PRESSED; break; }
+    case B : { state->b = PRESSED; break; }
+
+    case START  : { state->start  = PRESSED; break; } 
+    case SELECT : { state->select = PRESSED; break; }
+  }
 }

@@ -8,6 +8,7 @@
 // - - - forward declarations because who is making a header file for 2 functions
 void pipelineFifoReset();
 void pipelineProcess();
+bool windowVisible();
 
 
 // - - - FPS controls - - - 
@@ -37,6 +38,10 @@ static void delay(u64 MS)
 
 void incrementLY() 
 {
+  if (windowVisible() && 
+    lcdGetContext()->ly >= lcdGetContext()->windowY &&
+    lcdGetContext()->ly < lcdGetContext()->windowY + YRES)
+  {  ppuGetContext()->windowLine++; }
   lcdGetContext()->ly++;
 
   if (lcdGetContext()->ly == lcdGetContext()->lyCompare) 
@@ -153,7 +158,8 @@ void ppuModeVblank()
     if (lcdGetContext()->ly >= LINES_PER_FRAME) 
     {
       LCD_STAT_MODE_SET(MODE_OAM);
-      lcdGetContext()->ly = 0;
+      lcdGetContext()->ly         = 0;
+      ppuGetContext()->windowLine = 0;
     }
 
     ppuGetContext()->lineTicks = 0;

@@ -21,6 +21,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -39,6 +41,8 @@ import just.somebody.templates.ui.theme.PokeFontFamily
 @Composable
 fun GameBoyControls(GAME_BOY : GameBoy)
 {
+  val lastDirection = remember { mutableStateOf<Buttons?>(null) }
+
   Column(
     horizontalAlignment = Alignment.CenterHorizontally,
     verticalArrangement = Arrangement.SpaceBetween,

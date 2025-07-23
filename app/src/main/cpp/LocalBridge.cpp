@@ -187,6 +187,42 @@ void updateWindows(bool force = false)
     {
       mainWindow.close();
     }
+    else if (event.type == sf::Event::KeyPressed)
+    {
+      switch (event.key.code)
+      {
+        case sf::Keyboard::A      : { setButton(A,      true);   break; }
+        case sf::Keyboard::B      : { setButton(B,      true);   break; }
+
+        case sf::Keyboard::K      : { setButton(START,  true);   break; }
+        case sf::Keyboard::Enter  : { setButton(SELECT, true);   break; }
+        
+        case sf::Keyboard::Down   : { setButton(DOWN,   true);   break; }
+        case sf::Keyboard::Left   : { setButton(LEFT,   true);   break; }
+        case sf::Keyboard::Right  : { setButton(RIGHT,  true);   break; }
+        case sf::Keyboard::Up     : { setButton(UP,     true);   break; }
+
+        default : break;
+      }
+    }
+    else if (event.type == sf::Event::KeyReleased)
+    {
+      switch (event.key.code)
+      {
+        case sf::Keyboard::A      : { setButton(A,      false);   break; }
+        case sf::Keyboard::B      : { setButton(B,      false);   break; }
+
+        case sf::Keyboard::K      : { setButton(START,  false);   break; }
+        case sf::Keyboard::Enter  : { setButton(SELECT, false);   break; }
+        
+        case sf::Keyboard::Down   : { setButton(DOWN,   false);   break; }
+        case sf::Keyboard::Left   : { setButton(LEFT,   false);   break; }
+        case sf::Keyboard::Right  : { setButton(RIGHT,  false);   break; }
+        case sf::Keyboard::Up     : { setButton(UP,     false);   break; }
+
+        default : break;
+      }
+    }
   }
 }
 
