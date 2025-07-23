@@ -1,25 +1,21 @@
+#include "../include/ppu.h"
 #include "../include/ppuStateMachine.h"
 #include "../include/lcd.h"
-#include "../include/cpu.h"
-#include "../include/ppu.h"
 #include "../include/interrupt.h"
-#include <ctime>
 #include <string.h>
+#include <time.h>
 
-
-// - - - forward declare pipeline functions
+// - - - forward declarations because who is making a header file for 2 functions
 void pipelineFifoReset();
 void pipelineProcess();
 
-// - - - fps calculations variables - - - 
-static u8  targetFPS        = 120;
-static u32 targetFrameTime  = 1000 / targetFPS;
-static u64 prevFrameTime    = 0;
-static u64 startTimer       = 0;
-static u64 frameCount       = 0;
 
+// - - - FPS controls - - - 
 
-// - - - sleeping functions - - -
+static u32 targetFPS      = 60;
+static u64 prevFrameTime  = 0;
+static u64 startTimer     = 0;
+static u64 frameCount     = 0;
 
 static u64 getTicks()
 {
@@ -39,9 +35,7 @@ static void delay(u64 MS)
 }
 
 
-// - - - loading functions - - - 
-
-void incrementLy() 
+void incrementLY() 
 {
   lcdGetContext()->ly++;
 
@@ -49,50 +43,53 @@ void incrementLy()
   {
     LCD_STAT_LYC_SET(1);
 
-    if (LCDS_STAT_INT(SS_LYC))  cpuRequestInterrupt(IT_LCD_STAT);
-    else                        LCD_STAT_LYC_SET(0);
-  }
+    if (LCD_STAT_STAT_INT(SS_LYC)) cpuRequestInterrupt(IT_LCD_STAT);
+  } 
+  else  LCD_STAT_LYC_SET(0);
 }
 
 void loadLineSprites() 
 {
-  int curY = lcdGetContext()->ly;
+  i32 curY = lcdGetContext()->ly;
 
   u8 spriteHeight = LCD_CNTRL_OBJ_HEIGHT;
-  memset(ppuGetContext()->lineEntryArray, 0, sizeof(ppuGetContext()->lineEntryArray));
+  memset(ppuGetContext()->lineEntryArray, 0, 
+    sizeof(ppuGetContext()->lineEntryArray));
 
-  for (int i = 0; i < 40; i++) 
+  for (i32 i = 0; i < 40; i++) 
   {
-    OAMentry e = ppuGetContext()->oamRam[i];
+    OAMentry e = ppuGetContext()->oamRAM[i];
 
-    if (!e.x) continue;
+    // - - - invisible
+    if (!e.x)                                    continue;
 
-    if (ppuGetContext()->lineSpriteCount >= 10)            break;
+    // - - - max 10 sprites per line
+    if (ppuGetContext()->lineSpriteCount >= 10)  break;
 
+    // - - - sprite is not on the current line
     if (e.y <= curY + 16 && e.y + spriteHeight > curY + 16) 
     {
-      OAMlineEntry *entry = &ppuGetContext()->lineEntryArray[ppuGetContext()->lineSpriteCount++];
+      OAMlineEntry* entry = &ppuGetContext()->lineEntryArray[ppuGetContext()->lineSpriteCount++];
+      entry->entry        = e;
+      entry->next         = NULL;
 
-      entry->entry = e;
-      entry->next = NULL;
-
-      if (!ppuGetContext()->lineSprites || ppuGetContext()->lineSprites->entry.x > e.x) 
+      if (!ppuGetContext()->lineSprites ||
+           ppuGetContext()->lineSprites->entry.x > e.x) 
       {
-        entry->next = ppuGetContext()->lineSprites;
-        ppuGetContext()->lineSprites = entry;
+        entry->next                   = ppuGetContext()->lineSprites;
+        ppuGetContext()->lineSprites  = entry;
         continue;
       }
 
       // - - - do some sorting
-
-      OAMlineEntry *le = ppuGetContext()->lineSprites;
-      OAMlineEntry *prev = le;
+      OAMlineEntry* le   = ppuGetContext()->lineSprites;
+      OAMlineEntry* prev = le;
 
       while(le) 
       {
         if (le->entry.x > e.x) 
         {
-          prev->next = entry;
+          prev->next  = entry;
           entry->next = le;
           break;
         }
@@ -104,14 +101,11 @@ void loadLineSprites()
         }
 
         prev = le;
-        le = le->next;
+        le   = le->next;
       }
     }
   }
 }
-
-
-// - - - various ppu modes - - - 
 
 void ppuModeOAM() 
 {
@@ -126,7 +120,7 @@ void ppuModeOAM()
     ppuGetContext()->pfc.fifoX          = 0;
   }
 
-  // - - - read oam on the first tick only...
+  // - - - read oam on the first tick only
   if (ppuGetContext()->lineTicks == 1) 
   {
     ppuGetContext()->lineSprites     = 0;
@@ -142,10 +136,11 @@ void ppuModeXfer()
 
   if (ppuGetContext()->pfc.pushedX >= XRES) 
   {
-     pipelineFifoReset();
-     LCD_STAT_MODE_SET(MODE_HBLANK);
+    pipelineFifoReset();
 
-     if (LCDS_STAT_INT(SS_HBLANK)) cpuRequestInterrupt(IT_LCD_STAT);
+    LCD_STAT_MODE_SET(MODE_HBLANK);
+
+    if (LCD_STAT_STAT_INT(SS_HBLANK)) cpuRequestInterrupt(IT_LCD_STAT);
   }
 }
 
@@ -153,7 +148,7 @@ void ppuModeVblank()
 {
   if (ppuGetContext()->lineTicks >= TICKS_PER_LINE) 
   {
-    incrementLy();
+    incrementLY();
 
     if (lcdGetContext()->ly >= LINES_PER_FRAME) 
     {
@@ -165,38 +160,47 @@ void ppuModeVblank()
   }
 }
 
+
 void ppuModeHblank() 
 {
   if (ppuGetContext()->lineTicks >= TICKS_PER_LINE) 
   {
-    incrementLy();
+    incrementLY();
 
     if (lcdGetContext()->ly >= YRES) 
     {
       LCD_STAT_MODE_SET(MODE_VBLANK);
+
       cpuRequestInterrupt(IT_VBLANK);
 
-      if (LCDS_STAT_INT(SS_VBLANK))     cpuRequestInterrupt(IT_LCD_STAT);
+      if (LCD_STAT_STAT_INT(SS_VBLANK)) cpuRequestInterrupt(IT_LCD_STAT);
+
       ppuGetContext()->currentFrame++;
 
-      // - - - calc FPS...
-      u32 end       = getTicks();
-      u32 frameTime = end - prevFrameTime;
+      // - - - calc FPS
+      u64 currentTime   = getTicks();
+      u64 frameDuration = 1000 / targetFPS;
 
-      if (frameTime < targetFrameTime) delay((targetFrameTime - frameTime));
-
-      if (end - startTimer >= 1000) 
+      // - - - Delay to maintain target FPS
+      u64 elapsed = currentTime - prevFrameTime;
+      if (elapsed < frameDuration) 
       {
-        u32 fps     = frameCount;
-        startTimer  = end;
-        frameCount  = 0;
+        delay(frameDuration - elapsed);
+        currentTime = getTicks();
+      }
+
+      frameCount++;
+
+      if (currentTime - startTimer >= 1000) 
+      {
+        u32 fps    = frameCount;
+        startTimer = currentTime;
+        frameCount = 0;
 
         FORGE_LOG_TRACE("FPS: %d", fps);
       }
 
-      frameCount++;
-      prevFrameTime = getTicks();
-
+      prevFrameTime = currentTime;
     } 
     else LCD_STAT_MODE_SET(MODE_OAM);
 

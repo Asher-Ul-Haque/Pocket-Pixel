@@ -7,32 +7,32 @@
 extern "C" {
 #endif
 
+// - - - structs and enums - - -
 
-// - - - Constants - - - 
-static const u16 LINES_PER_FRAME = 154;
-static const u16 TICKS_PER_LINE  = 456;
-static const u16 YRES            = 144;
-static const u16 XRES            = 160;
+// - - - constants
+static const i32 LINES_PER_FRAME = 154;
+static const i32 TICKS_PER_LINE  = 456;
+static const i32 YRES            = 144;
+static const i32 XRES            = 160;
 
-
-// - - - Structs and Enums - - - 
-
-// - - - current state of fetching 
+// - - - fetch states (what are we doing rn)
 typedef enum 
 {
-  FS_TILE,   // - - - current state of the tile fetching 
-  FS_DATA0,  // - - - fetching the data byte 1 
-  FS_DATA1,  // - - - fetching the data byte 2 
-  FS_IDLE,   // - - - doing nothing
-  FS_PUSH    // - - - actually push to the framebuffer 
+  FS_TILE,
+  FS_DATA0,
+  FS_DATA1,
+  FS_IDLE,
+  FS_PUSH
 } FetchState;
 
-typedef struct FifoEntry
+// - - - linked list of fifo
+typedef struct fifoEntry 
 {
-  struct FifoEntry* next;
-  u32               color;
+  struct fifoEntry* next;
+  u32               color; 
 } FifoEntry;
 
+// - - - fifo structure
 typedef struct 
 {
   FifoEntry* head;
@@ -40,6 +40,7 @@ typedef struct
   u32        size;
 } Fifo;
 
+// - - - pixel fifo context
 typedef struct 
 {
   FetchState curFetchState;
@@ -55,18 +56,19 @@ typedef struct
   u8         fifoX;
 } PixelFifoContext;
 
+// - - - OAM entry structure
 typedef struct 
 {
   u8 y;
   u8 x;
   u8 tile;
-  
-  u8 flagCGBpalleteNo : 3;
-  u8 flagCGBvrankBank : 1;
-  u8 flagPalleteNo    : 1;
-  u8 flagXflip        : 1;
-  u8 flagYflip        : 1;
-  u8 flagBGpallete    : 1;
+    
+  u8 flagCGBPaletteNo   : 3;
+  u8 flagCGBvramBank    : 1;
+  u8 flagPaletteNo      : 1;
+  u8 flagXflip          : 1;
+  u8 flagYflip          : 1;
+  u8 flagBGpalette      : 1;
 } OAMentry;
 
 /*
@@ -78,40 +80,49 @@ typedef struct
  Bit2-0 Palette number  **CGB Mode Only**     (OBP0-7)
  */
 
+// - - - OAM line entry structure
 typedef struct oamLineEntry 
 {
   OAMentry             entry;
   struct oamLineEntry* next;
 } OAMlineEntry;
 
+// - - - PPU context structure
 typedef struct 
 {
-  OAMentry  oamRam[40];
+  OAMentry  oamRAM[40];
   u8        vram[0x2000];
 
   PixelFifoContext pfc;
 
-  u8            lineSpriteCount;    // - - - 0 - 10 sprites
+  u8            lineSpriteCount;    // - - - 0 to 10 sprites.
   OAMlineEntry* lineSprites;        // - - - linked list of current sprites on line.
   OAMlineEntry  lineEntryArray[10]; // - - - memory to use for list.
 
-  u8       fetchedEntryCount;
-  OAMentry fetchedEntries[3];       // - - - entries fetched during pipeline.
+  u8        fetchedEntryCount;
+  OAMentry  fetchedEntries[3];      // - - - entries fetched during pipeline.
 
-  u32  currentFrame;
-  u32  lineTicks;
-  u32* frameBuffer;
+  u32   currentFrame;
+  u32   lineTicks;
+  u32*  frameBuffer;
 } PPUcontext;
 
+
+// - - - Functions - - - 
+
+// - - - PPU functions
 FORGE_API void ppuInit();
 FORGE_API void ppuTick();
 
-FORGE_API void ppuOAMwrite(u16 ADDRESS, u8 VALUE);
-FORGE_API u8   ppuOAMread (u16 ADDRESS);
+// - - - OAM read and write
+FORGE_API void  ppuOAMwrite(u16 ADDRESS, u8 VALUE);
+FORGE_API u8    ppuOAMread(u16 ADDRESS);
 
-FORGE_API void ppuVramWrite(u16 ADDRESS, u8 VALUE);
-FORGE_API u8   ppuVramRead (u16 ADDRESS);
+// - - - PPU VRAM read and write
+FORGE_API void  ppuVRAMwrite(u16 ADDRESS, u8 VALUE);
+FORGE_API u8    ppuVRAMread(u16 ADDRESS);
 
+// - - - PPU context
 FORGE_API PPUcontext* ppuGetContext();
 
 

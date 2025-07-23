@@ -1,4 +1,4 @@
-#ifdef __ANDROID__
+//#ifdef __ANDROID__
 #include <jni.h>
 #include <pthread.h>
 #include <unistd.h>
@@ -129,10 +129,10 @@ void callJavaRequestRender()
 // - - - compile from source
 GLuint loadShader(GLenum TYPE, const char* SOURCE)
 {
-  GLuint  SHADER = glCreateShader(TYPE);
+  GLuint  SHADER   = glCreateShader(TYPE);
   GLint   COMPILED;
   GLint   INFO_LEN = 0;
-  char* INFO_LOG = nullptr;
+  char*   INFO_LOG = nullptr;
 
   if (SHADER == 0)
   {
@@ -253,17 +253,21 @@ void* tickLoop(void* ARG)
   while (currentIsRunning)
   {
     cpuTick();
-    newFrameAvailable = true;
+    static u64 prevFrame = 0;
 
     // - - - Signal that a new frame is available for rendering
-    /*
-    static i32 ticks = 0;
     pthread_mutex_lock(&frameMutex);
-    //if (ticks++ % 10000 == 0)
+    if (prevFrame == ppuGetContext()->currentFrame)
+    {
+      newFrameAvailable = false; // - - - No new frame, skip signaling
+    }
+    else 
+    {
+      prevFrame = ppuGetContext()->currentFrame;
       newFrameAvailable = true;
+    }
     pthread_cond_signal(&frameReadyCv);
     pthread_mutex_unlock(&frameMutex);
-     */
 
     // - - - Request a render from the Java/Kotlin UI thread
     callJavaRequestRender();
@@ -369,7 +373,7 @@ Java_just_somebody_templates_domain_GameBoy_nativeOnSurfaceCreated(JNIEnv* ENV, 
   GLuint  FRAGMENT_SHADER;
   GLint   LINKED;
   GLint   INFO_LEN = 0;
-  char* INFO_LOG = nullptr;
+  char*   INFO_LOG = nullptr;
 
   FORGE_LOG_INFO("nativeOnSurfaceCreated: Initializing OpenGL ES");
 

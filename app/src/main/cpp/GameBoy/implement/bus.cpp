@@ -4,6 +4,7 @@
 #include "../include/cpu.h"
 #include "../include/ppu.h"
 #include "../include/io.h"
+#include "../include/directMemAccess.h"
 #include "../../ForgeLibrary/include/asserts.h"
 
 /* 
@@ -28,11 +29,15 @@
 u8 busRead(u16 ADDRESS) 
 {
   if      (ADDRESS < 0x8000)  return cartridgeRead(ADDRESS);
-  else if (ADDRESS < 0xA000)  return ppuVramRead(ADDRESS);
+  else if (ADDRESS < 0xA000)  return ppuVRAMread(ADDRESS);
   else if (ADDRESS < 0xC000)  return cartridgeRead(ADDRESS);
   else if (ADDRESS < 0xE000)  return wramRead(ADDRESS);
   else if (ADDRESS < 0xFE00)  return 0;
-  else if (ADDRESS < 0xFEA0)  return ppuOAMread(ADDRESS);
+  else if (ADDRESS < 0xFEA0)  
+  {
+    if (dmaTransferring()) return 0xFF;
+    return ppuOAMread(ADDRESS);
+  }
   else if (ADDRESS < 0xFF00)  return 0;
   else if (ADDRESS < 0xFF80)  return ioRead(ADDRESS);
   else if (ADDRESS == 0xFFFF) return cpuGetInterrupt();
@@ -43,11 +48,15 @@ u8 busRead(u16 ADDRESS)
 void busWrite(u16 ADDRESS, u8 VALUE) 
 {
   if      (ADDRESS < 0x8000)    { cartridgeWrite(ADDRESS, VALUE); }
-  else if (ADDRESS < 0xA000)    { ppuVramWrite(ADDRESS, VALUE); }
+  else if (ADDRESS < 0xA000)    { ppuVRAMwrite(ADDRESS, VALUE); }
   else if (ADDRESS < 0xC000)    { cartridgeWrite(ADDRESS, VALUE); }
   else if (ADDRESS < 0xE000)    { wramWrite(ADDRESS, VALUE); }
   else if (ADDRESS < 0xFE00)    {}
-  else if (ADDRESS < 0xFEA0)    { ppuOAMwrite(ADDRESS, VALUE); }
+  else if (ADDRESS < 0xFEA0)    
+  {
+    if (dmaTransferring()) return; // - - - if DMA is transferring, ignore writes to OAM.
+    ppuOAMwrite(ADDRESS, VALUE); 
+  }
   else if (ADDRESS < 0xFF00)    {}
   else if (ADDRESS < 0xFF80)    { ioWrite(ADDRESS, VALUE); }
   else if (ADDRESS == 0xFFFF)   { cpuSetInterrupt(VALUE); } 

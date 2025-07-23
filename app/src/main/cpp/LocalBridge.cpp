@@ -105,14 +105,9 @@ void displayTile(sf::Image& surface, u16 start, u16 tileNum, u32 tileX, u32 tile
 
 void updateWindows(bool force = false)
 {
-  static int tickCounter = 0;
-  tickCounter++;
-
-  if (tickCounter < 10000 && !force)
-    return;
-
-  tickCounter = 0;
-
+  static int prevFrame = 0;
+  if (prevFrame == ppuGetContext()->currentFrame) return;
+  prevFrame = ppuGetContext()->currentFrame;
   // Clear debug image
   for (unsigned y = 0; y < debugImage.getSize().y; ++y)
   {

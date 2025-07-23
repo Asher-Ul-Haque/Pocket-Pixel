@@ -8,11 +8,11 @@
 extern "C" {
 #endif
 
+// - - - functions for PPU state machine
 FORGE_API void ppuModeOAM();
 FORGE_API void ppuModeXfer();
 FORGE_API void ppuModeVblank();
 FORGE_API void ppuModeHblank();
-
 
 #ifdef __cplusplus
 }
