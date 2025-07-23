@@ -1,7 +1,7 @@
-#include "../include/ppu.h"
-#include "../include/ppuStateMachine.h"
-#include "../include/lcd.h"
-#include "../include/interrupt.h"
+#include "../../include/ppu.h"
+#include "../../include/ppuStateMachine.h"
+#include "../../include/lcd.h"
+#include "../../include/interrupt.h"
 #include <string.h>
 #include <time.h>
 
@@ -30,7 +30,7 @@ static void delay(u64 MS)
   struct timespec req = 
     {
       .tv_sec  = (time_t)(MS / 1000),
-      .tv_nsec = (i64)((MS % 1000) * 1000000)
+      .tv_nsec = (long)((MS % 1000) * 1000000)
     };
   nanosleep(&req, NULL);
 }
@@ -38,16 +38,17 @@ static void delay(u64 MS)
 
 void incrementLY() 
 {
-  if (windowVisible() && 
-    lcdGetContext()->ly >= lcdGetContext()->windowY &&
-    lcdGetContext()->ly < lcdGetContext()->windowY + YRES)
-  {  ppuGetContext()->windowLine++; }
-  lcdGetContext()->ly++;
+  LCDcontext* lcdCtx = lcdGetContext();
 
-  if (lcdGetContext()->ly == lcdGetContext()->lyCompare) 
+  if (windowVisible() && 
+    lcdCtx->ly >= lcdCtx->windowY &&
+    lcdCtx->ly  < lcdCtx->windowY + YRES)
+  {  ppuGetContext()->windowLine++; }
+  lcdCtx->ly++;
+
+  if (lcdCtx->ly == lcdCtx->lyCompare) 
   {
     LCD_STAT_LYC_SET(1);
-
     if (LCD_STAT_STAT_INT(SS_LYC)) cpuRequestInterrupt(IT_LCD_STAT);
   } 
   else  LCD_STAT_LYC_SET(0);
@@ -55,39 +56,40 @@ void incrementLY()
 
 void loadLineSprites() 
 {
-  i32 curY = lcdGetContext()->ly;
+  PPUcontext* ppuCtx        = ppuGetContext();
+  i32         curY          = lcdGetContext()->ly;
+  u8          spriteHeight  = LCD_CNTRL_OBJ_HEIGHT;
 
-  u8 spriteHeight = LCD_CNTRL_OBJ_HEIGHT;
-  memset(ppuGetContext()->lineEntryArray, 0, 
-    sizeof(ppuGetContext()->lineEntryArray));
+  memset(ppuCtx->lineEntryArray, 0, 
+    sizeof(ppuCtx->lineEntryArray));
 
   for (i32 i = 0; i < 40; i++) 
   {
-    OAMentry e = ppuGetContext()->oamRAM[i];
+    OAMentry e = ppuCtx->oamRAM[i];
 
     // - - - invisible
-    if (!e.x)                                    continue;
+    if (!e.x) continue;
 
     // - - - max 10 sprites per line
-    if (ppuGetContext()->lineSpriteCount >= 10)  break;
+    if (ppuCtx->lineSpriteCount >= 10)  break;
 
     // - - - sprite is not on the current line
     if (e.y <= curY + 16 && e.y + spriteHeight > curY + 16) 
     {
-      OAMlineEntry* entry = &ppuGetContext()->lineEntryArray[ppuGetContext()->lineSpriteCount++];
+      OAMlineEntry* entry = &ppuCtx->lineEntryArray[ppuCtx->lineSpriteCount++];
       entry->entry        = e;
       entry->next         = NULL;
 
-      if (!ppuGetContext()->lineSprites ||
-           ppuGetContext()->lineSprites->entry.x > e.x) 
+      if (!ppuCtx->lineSprites ||
+           ppuCtx->lineSprites->entry.x > e.x) 
       {
-        entry->next                   = ppuGetContext()->lineSprites;
-        ppuGetContext()->lineSprites  = entry;
+        entry->next                   = ppuCtx->lineSprites;
+        ppuCtx->lineSprites  = entry;
         continue;
       }
 
       // - - - do some sorting
-      OAMlineEntry* le   = ppuGetContext()->lineSprites;
+      OAMlineEntry* le   = ppuCtx->lineSprites;
       OAMlineEntry* prev = le;
 
       while(le) 
@@ -114,22 +116,24 @@ void loadLineSprites()
 
 void ppuModeOAM() 
 {
-  if (ppuGetContext()->lineTicks >= 80) 
+  PPUcontext* ppuCtx = ppuGetContext();
+
+  if (ppuCtx->lineTicks >= 80) 
   {
     LCD_STAT_MODE_SET(MODE_XFER);
 
-    ppuGetContext()->pfc.curFetchState  = FS_TILE;
-    ppuGetContext()->pfc.lineX          = 0;
-    ppuGetContext()->pfc.fetchX         = 0;
-    ppuGetContext()->pfc.pushedX        = 0;
-    ppuGetContext()->pfc.fifoX          = 0;
+    ppuCtx->pfc.curFetchState  = FS_TILE;
+    ppuCtx->pfc.lineX          = 0;
+    ppuCtx->pfc.fetchX         = 0;
+    ppuCtx->pfc.pushedX        = 0;
+    ppuCtx->pfc.fifoX          = 0;
   }
 
   // - - - read oam on the first tick only
-  if (ppuGetContext()->lineTicks == 1) 
+  if (ppuCtx->lineTicks == 1) 
   {
-    ppuGetContext()->lineSprites     = 0;
-    ppuGetContext()->lineSpriteCount = 0;
+    ppuCtx->lineSprites     = 0;
+    ppuCtx->lineSpriteCount = 0;
 
     loadLineSprites();
   }

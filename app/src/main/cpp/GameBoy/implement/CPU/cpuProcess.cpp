@@ -1,8 +1,8 @@
-#include "../include/cpu.h"
-#include "../include/emu.h"
-#include "../include/bus.h"
-#include "../include/stack.h"
-#include "../include/common.h"
+#include "../../include/cpu.h"
+#include "../../include/emu.h"
+#include "../../include/bus.h"
+#include "../../include/stack.h"
+#include "../../include/common.h"
 
 
 void cpuSetFlags(CPUcontext* CTX, i8 Z, i8 N, i8 H, i8 C) 

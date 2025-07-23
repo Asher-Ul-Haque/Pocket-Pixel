@@ -1,6 +1,5 @@
-#include "../include/lcd.h"
-#include "../include/ppu.h"
-#include "../include/directMemAccess.h"
+#include "../../include/lcd.h"
+#include "../../include/directMemAccess.h"
 
 static LCDcontext ctx;
 

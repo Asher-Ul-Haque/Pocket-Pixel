@@ -1,7 +1,7 @@
-#include "../include/ppu.h"
-#include "../include/lcd.h"
+#include "../../include/ppu.h"
+#include "../../include/lcd.h"
 #include <string.h>
-#include "../include/ppuStateMachine.h"
+#include "../../include/ppuStateMachine.h"
 
 // - - - context 
 static PPUcontext ctx;

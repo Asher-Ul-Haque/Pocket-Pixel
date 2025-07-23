@@ -1,10 +1,10 @@
-#include "../include/cpu.h"
-#include "../include/bus.h"
-#include "../include/interrupt.h"
-#include "../include/debugger.h"
-#include "../include/instruction.h"
-#include "../include/timer.h"
-#include "../include/emu.h"
+#include "../../include/cpu.h"
+#include "../../include/bus.h"
+#include "../../include/interrupt.h"
+#include "../../include/instruction.h"
+#include "../../include/timer.h"
+#include "../../include/emu.h"
+#include "../../include/debugger.h"
 
 CPUcontext ctx = {0};
 
@@ -20,7 +20,7 @@ void cpuInit()
   ctx.interruptFlags             = 0;
   ctx.interruptMasterEnabled     = false;
   ctx.enablingIme                = false;
-  timerGetContext()->div       = 0xABCC;
+  timerGetContext()->div         = 0xABCC;
 }
 
 static void fetchInstruction() 

@@ -1,5 +1,5 @@
-#include "../include/cpu.h"
-#include "../include/bus.h"
+#include "../../include/cpu.h"
+#include "../../include/bus.h"
 
 extern CPUcontext ctx;
 
