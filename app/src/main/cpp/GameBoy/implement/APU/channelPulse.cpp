@@ -49,14 +49,11 @@ void channelPulseSweep(ChannelPulse* CHANNEL, u8 VALUE)
   CHANNEL->sweepShift = VALUE & 0x7;
 }
 
-void channelPulseSetNRx3PeriodLow(ChannelPulse* CHANNEL, u8 VALUE)
-{ CHANNEL->NRX3periodLo = VALUE; }
-
 void channelPulseSetNRx1LengthTimerDutyCycle(ChannelPulse* CHANNEL, u8 VALUE)
 {
   CHANNEL->NRX1             = VALUE | 0x3F;
   CHANNEL->wavePatternDuty  = (VALUE >> 6) & 0x3;
-  CHANNEL->length           = VALUE & 0x3F;
+  CHANNEL->length           = 64 - (VALUE & 0x3F);
 }
 
 void channelPulseSetNRx2EnvelopeVolume(ChannelPulse* CHANNEL, u8 VALUE)
@@ -66,6 +63,9 @@ void channelPulseSetNRx2EnvelopeVolume(ChannelPulse* CHANNEL, u8 VALUE)
   CHANNEL->envelopeDirection        = (VALUE >> 3) & 0x1;
   CHANNEL->envelopeSweep            = VALUE & 0x7;
 }
+
+void channelPulseSetNRx3PeriodLow(ChannelPulse* CHANNEL, u8 VALUE)
+{ CHANNEL->NRX3periodLo = VALUE; }
 
 void channelPulseSetNRx4PeriodHiControl(ChannelPulse* CHANNEL, u8 VALUE)
 {
@@ -91,7 +91,14 @@ static void channelPulseHandleTrigger(ChannelPulse* CHANNEL)
   CHANNEL->envelopeVolume   = CHANNEL->envelopeInitialVolume;
   CHANNEL->sweepCounter     = CHANNEL->sweepTime;
 
-  if (CHANNEL->sweepShift > 0) channelPulseInternalSweep(CHANNEL);
+  CHANNEL->counter             = (2048 - CHANNEL->frequency) * 4;
+  CHANNEL->wavePatternPosition = 0;
+
+  if (CHANNEL->sweepShift > 0)
+  {
+    i32 sweep = channelPulseInternalSweep(CHANNEL);
+    if (sweep > 2047) CHANNEL->isEnabled = false;
+  }
 }
 
 void channelPulseTickLength(ChannelPulse* CHANNEL)
@@ -103,51 +110,47 @@ void channelPulseTickLength(ChannelPulse* CHANNEL)
 
 void channelPulseTickSweep(ChannelPulse* CHANNEL)
 {
-  if (CHANNEL->sweepCounter > 0) CHANNEL->sweepCounter--;
-  if (CHANNEL->sweepTime > 0)
+  if (CHANNEL->sweepTime == 0) return;
+
+  if (--CHANNEL->sweepCounter <= 0)
   {
-    if (CHANNEL->sweepShift > 0 && CHANNEL->sweepCounter == 0)
+    i32 sweep = channelPulseInternalSweep(CHANNEL);
+    if (sweep <= 2047 && CHANNEL->sweepShift > 0)
     {
-      i32 sweep = channelPulseInternalSweep(CHANNEL);
-      if (sweep <= 2047 && CHANNEL->sweepShift > 0)
-      {
-        CHANNEL->periodHi     = (sweep >> 8) & 0xFF;
-        CHANNEL->NRX3periodLo = sweep & 0xFF;
-      }
-      CHANNEL->sweepCounter = CHANNEL->sweepTime;
+      CHANNEL->frequency    = sweep;
+      CHANNEL->periodHi     = (sweep >> 8) & 0x7;
+      CHANNEL->NRX3periodLo = sweep & 0xFF;
     }
+    else CHANNEL->isEnabled = false;
+
+    CHANNEL->sweepCounter = CHANNEL->sweepTime;
   }
 }
 
 static i32 channelPulseInternalSweep(ChannelPulse* CHANNEL)
 {
-  i32 step      = (CHANNEL->sweepStep == 1) ? -1 : 1;
-  u32 shifted   = CHANNEL->frequency >> CHANNEL->sweepShift;
-  u16 sweep     = (u16)(CHANNEL->frequency + step * shifted);
+  i32 step    = (CHANNEL->sweepStep == 1) ? -1 : 1;
+  u16 freq    = CHANNEL->frequency;
+  i32 shifted = freq >> CHANNEL->sweepShift;
+  i32 result  = freq + step * shifted;
 
-  if (sweep > 2047) CHANNEL->isEnabled = false;
-
-  return sweep;
+  return result;
 }
 
 void channelPulseTickEnvelope(ChannelPulse* CHANNEL)
 {
   if (CHANNEL->envelopeSweep > 0)
   {
-    if (CHANNEL->envelopeCounter  > 0) CHANNEL->envelopeCounter--;
-    if (CHANNEL->envelopeCounter == 0) 
+    if (--CHANNEL->envelopeCounter <= 0)
     {
-      i32 direction = (CHANNEL->envelopeDirection == 1) ? 1 : -1;
-      CHANNEL->envelopeVolume += direction;
-
-      if (CHANNEL->envelopeVolume < 0x0) CHANNEL->envelopeVolume = 0;
-      if (CHANNEL->envelopeVolume > 0xF) CHANNEL->envelopeVolume = 0xF;
-
       CHANNEL->envelopeCounter = CHANNEL->envelopeSweep;
+
+      i32 newVol = CHANNEL->envelopeVolume + (CHANNEL->envelopeDirection ? 1 : -1);
+
+      if (newVol >= 0 && newVol <= 15) CHANNEL->envelopeVolume = newVol;
     }
   }
 }
-
 void channelPulseTickSampleGenerator(ChannelPulse* CHANNEL, i32 CYCLES)
 {
   CHANNEL->counter -= CYCLES;
@@ -155,11 +158,11 @@ void channelPulseTickSampleGenerator(ChannelPulse* CHANNEL, i32 CYCLES)
   if (CHANNEL->counter <= 0)
   {
     CHANNEL->frequency              = ((u16)CHANNEL->periodHi << 8) | CHANNEL->NRX3periodLo;
-    CHANNEL->counter                = (2048 - CHANNEL->frequency) * 2;
+    CHANNEL->counter                = (2048 - CHANNEL->frequency) * 4;
     CHANNEL->wavePatternPosition    = (CHANNEL->wavePatternPosition + 1) & 0x7;
 
     u8  wave    = CHANNEL->waveform[CHANNEL->wavePatternDuty];
-    i32 output  = (wave >> CHANNEL->wavePatternPosition) & 0x1;
+    i32 output  = (wave >> (7 - CHANNEL->wavePatternPosition)) & 0x01;
 
     CHANNEL->sample = CHANNEL->isEnabled ? (i8)(output * CHANNEL->envelopeVolume) : 0;
   }

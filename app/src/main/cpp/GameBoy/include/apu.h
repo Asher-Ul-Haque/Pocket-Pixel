@@ -2,7 +2,9 @@
 #include "../../defines.h"
 #include "../../ForgeLibrary/include/logger.h"
 #include "../../ForgeLibrary/include/asserts.h"
+#include "channelNoise.h"
 #include "channelPulse.h"
+#include "channelWave.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -16,11 +18,13 @@ typedef struct APUcontext
 
   ChannelPulse channel1;
   ChannelPulse channel2;
+  ChannelWave  channel3;
+  ChannelNoise channel4;
 
 
   // - - - Buffer - - - 
 
-  i32 bufferPtr = 0;
+  i32 bufferPtr;
   u8  sampleBuffer[APU_BUFFER_SIZE];
   
 
@@ -42,6 +46,10 @@ typedef struct APUcontext
   bool channel1Right;
   bool channel2Left;
   bool channel2Right;
+  bool channel3Left;
+  bool channel3Right;
+  bool channel4Left;
+  bool channel4Right;
 
   bool isEnabled;
 
