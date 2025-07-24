@@ -15,6 +15,7 @@ typedef struct APUcontext
   // - - - Channel - - - 
 
   ChannelPulse channel1;
+  ChannelPulse channel2;
 
 
   // - - - Buffer - - - 
@@ -39,6 +40,8 @@ typedef struct APUcontext
 
   bool channel1Left;
   bool channel1Right;
+  bool channel2Left;
+  bool channel2Right;
 
   bool isEnabled;
 

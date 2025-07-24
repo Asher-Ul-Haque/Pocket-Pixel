@@ -40,29 +40,58 @@ sf::Image        mainImage;
 
 void playAudio()
 {
-  static sf::Sound       sound;
-  static sf::SoundBuffer buffer;
+    static sf::Sound sound;
+    static sf::SoundBuffer buffer;
+    static std::vector<sf::Int16> converted;
+    static int accumulatedSamples = 0;
+    static bool initialized = false;
 
-  APUcontext* ctx = apuGetContext();
+    APUcontext* ctx = apuGetContext();
 
-  static std::vector<sf::Int16> converted;
-  converted.clear();
+    // Make sure buffer is large enough for stereo samples (2 * buffer size)
+    if (converted.size() < APU_BUFFER_SIZE * 4)
+        converted.resize(APU_BUFFER_SIZE * 4);
 
-  for (int i = 0; i < APU_BUFFER_SIZE; ++i)
-  {
-    int sample = ctx->sampleBuffer[i] - 128;
-    sample *= 256;
-    converted.push_back(static_cast<sf::Int16>(sample));
-  }
+    // Mix and accumulate new samples
+    for (int i = 0; i < APU_BUFFER_SIZE; i += 2)
+    {
+        // Assuming buffer is interleaved L R L R ...
+        int left  = (ctx->sampleBuffer[i]   - 128) * 256;
+        int right = (ctx->sampleBuffer[i+1] - 128) * 256;
 
-  if (!buffer.loadFromSamples(converted.data(), converted.size(), 2, 44100))
-  {
-    return;
-  }
+        converted[accumulatedSamples * 2 + 0] = static_cast<sf::Int16>(left);
+        converted[accumulatedSamples * 2 + 1] = static_cast<sf::Int16>(right);
 
-  sound.setBuffer(buffer);
-  sound.play();
+        accumulatedSamples++;
+    }
 
+    // Wait until enough samples are accumulated
+    if (accumulatedSamples < 2048)
+        return;
+
+    // Load samples into buffer and play
+    u32 total = accumulatedSamples * 2;
+
+    if (!initialized)
+    {
+        if (!buffer.loadFromSamples(converted.data(), total, 2, 44100))
+            return;
+        sound.setBuffer(buffer);
+        sound.setLoop(false);
+        sound.play();
+        initialized = true;
+    }
+    else
+    {
+        bool wasPlaying = sound.getStatus() == sf::Sound::Playing;
+        if (wasPlaying) sound.stop();
+
+        buffer.loadFromSamples(converted.data(), total, 2, 44100);
+        sound.setBuffer(buffer);
+        sound.play();
+    }
+
+    accumulatedSamples = 0;
 }
 
 void uiInit()

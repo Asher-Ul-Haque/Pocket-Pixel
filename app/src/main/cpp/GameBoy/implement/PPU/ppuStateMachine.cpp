@@ -13,7 +13,7 @@ bool windowVisible();
 
 // - - - FPS controls - - - 
 
-static u32 targetFPS      = 60;
+static u32 targetFPS      = 120;
 static u64 prevFrameTime  = 0;
 static u64 startTimer     = 0;
 static u64 frameCount     = 0;
