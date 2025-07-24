@@ -14,7 +14,7 @@ CXXFLAGS := -I$(GAMEBOY_INC) -I$(FORGE_INC) -I/usr/include/SFML -std=c++17 -DDEB
 CFLAGS   := -I$(GAMEBOY_INC) -I$(FORGE_INC) -std=c11
 
 # SFML link flags
-SFML_LIBS := -lsfml-graphics -lsfml-window -lsfml-system
+SFML_LIBS := -lsfml-graphics -lsfml-window -lsfml-system -lsfml-audio
 
 # Source files
 CPP_SRC := $(shell find $(GAMEBOY_SRC) $(FORGE_SRC) -name '*.cpp')

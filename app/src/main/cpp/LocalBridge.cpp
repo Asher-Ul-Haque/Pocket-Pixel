@@ -1,3 +1,4 @@
+#include <SFML/Audio/SoundBuffer.hpp>
 #ifndef __ANDROID__
 #include "GameBoy/include/ppu.h"
 #include <SFML/System/Time.hpp>
@@ -15,7 +16,9 @@
 #include "GameBoy/include/cpu.h"
 #include "GameBoy/include/bus.h"
 #include "GameBoy/include/cartridge.h"
+#include "GameBoy/include/apu.h"
 #include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
 
 static int scale = 4;
 static const u64 tileColors[4] = 
@@ -34,6 +37,33 @@ sf::RenderWindow mainWindow;
 sf::Texture      mainTexture;
 sf::Sprite       mainSprite;
 sf::Image        mainImage;
+
+void playAudio()
+{
+  static sf::Sound       sound;
+  static sf::SoundBuffer buffer;
+
+  APUcontext* ctx = apuGetContext();
+
+  static std::vector<sf::Int16> converted;
+  converted.clear();
+
+  for (int i = 0; i < APU_BUFFER_SIZE; ++i)
+  {
+    int sample = ctx->sampleBuffer[i] - 128;
+    sample *= 256;
+    converted.push_back(static_cast<sf::Int16>(sample));
+  }
+
+  if (!buffer.loadFromSamples(converted.data(), converted.size(), 2, 44100))
+  {
+    return;
+  }
+
+  sound.setBuffer(buffer);
+  sound.play();
+
+}
 
 void uiInit()
 {
