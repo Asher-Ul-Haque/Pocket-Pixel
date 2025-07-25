@@ -2,7 +2,7 @@
 #include <jni.h>
 #include <pthread.h>
 #include <unistd.h>
-#include <time.h>
+#include <ctime>
 #include <atomic>
 #include <chrono>
 
@@ -17,8 +17,10 @@
 #include "GameBoyCore.h" // - - - Assumed to contain startEmulator(), stopEmulator()
 #include "GameBoy/include/cpu.h"
 #include "GameBoy/include/emu.h"
+#include "GameBoy/include/apu.h"
 #include "GameBoy/include/cartridge.h"
 #include "GameBoy/include/ppu.h" // - - - Assuming ppuGetContext() and PPUcontext are defined here
+
 
 #ifdef __cplusplus
 extern "C"
@@ -48,39 +50,40 @@ static GLuint gbProgramObject  = 0; // - - - openGL program ID for rendering
 // - - - Thread Synchronization for Frame Buffer - - -
 // TODO: Remember to actually find out how to signal from the gameboy that the frame is ready
 
-static pthread_mutex_t frameMutex; 
+static pthread_mutex_t frameMutex;
 static pthread_cond_t  frameReadyCv;
 static bool            newFrameAvailable = false;
 
-
 // - - - JNI Callback to Kotlin UI - - -
 
-static JavaVM*    cachedJvm             = nullptr;
+static JavaVM* cachedJvm             = nullptr;
 static jclass     gameboyClassGlobalRef = nullptr;
 static jmethodID  requestRenderMethodId = nullptr;
+static jmethodID  playAudioMethodId     = nullptr;
+static jmethodID  stopAudioMethodId     = nullptr; // Added for completeness, though not used in this flow yet
 
 
 // - - - Shader Source - - -
 
 // - - - vertex shader
 const char* gVertexShader =
-  "attribute vec4 a_position;\n"
-  "attribute vec2 a_texCoord;\n"
-  "varying vec2 v_texCoord;\n"
-  "void main() {\n"
-  "  gl_Position = a_position;\n"
-  "  v_texCoord = a_texCoord;\n"
-  "}\n";
+    "attribute vec4 a_position;\n"
+    "attribute vec2 a_texCoord;\n"
+    "varying vec2 v_texCoord;\n"
+    "void main() {\n"
+    "  gl_Position = a_position;\n"
+    "  v_texCoord = a_texCoord;\n"
+    "}\n";
 
 
 // - - - Fragment Shader Source
 const char* gFragmentShader =
-  "precision mediump float;\n"
-  "varying vec2 v_texCoord;\n"
-  "uniform sampler2D s_texture;\n"
-  "void main() {\n"
-  "  gl_FragColor = texture2D(s_texture, v_texCoord);\n"
-  "}\n";
+    "precision mediump float;\n"
+    "varying vec2 v_texCoord;\n"
+    "uniform sampler2D s_texture;\n"
+    "void main() {\n"
+    "  gl_FragColor = texture2D(s_texture, v_texCoord);\n"
+    "}\n";
 
 
 // - - - | HELPER FUNCTIONS | - - -
@@ -132,7 +135,7 @@ GLuint loadShader(GLenum TYPE, const char* SOURCE)
   GLuint  SHADER   = glCreateShader(TYPE);
   GLint   COMPILED;
   GLint   INFO_LEN = 0;
-  char*   INFO_LOG = nullptr;
+  char* INFO_LOG = nullptr;
 
   if (SHADER == 0)
   {
@@ -166,20 +169,20 @@ GLuint loadShader(GLenum TYPE, const char* SOURCE)
 void renderFrameGl()
 {
   GLfloat vertices[] =
-    {
-      -1.0f,  1.0f, 0.0f, // - - - Top-left
-      -1.0f, -1.0f, 0.0f, // - - - Bottom-left
-       1.0f, -1.0f, 0.0f, // - - - Bottom-right
-       1.0f,  1.0f, 0.0f  // - - - Top-right
-    };
+      {
+          -1.0f,  1.0f, 0.0f, // - - - Top-left
+          -1.0f, -1.0f, 0.0f, // - - - Bottom-left
+          1.0f, -1.0f, 0.0f, // - - - Bottom-right
+          1.0f,  1.0f, 0.0f  // - - - Top-right
+      };
 
   GLfloat texCoords[] =
-    {
-      0.0f, 0.0f, // - - - Top-left of texture
-      0.0f, 1.0f, // - - - Bottom-left of texture
-      1.0f, 1.0f, // - - - Bottom-right of texture
-      1.0f, 0.0f  // - - - Top-right of texture
-    };
+      {
+          0.0f, 0.0f, // - - - Top-left of texture
+          0.0f, 1.0f, // - - - Bottom-left of texture
+          1.0f, 1.0f, // - - - Bottom-right of texture
+          1.0f, 0.0f  // - - - Top-right of texture
+      };
 
   PPUcontext* ppuCTX       = nullptr;
   GLushort    indices[]    = { 0, 1, 2, 0, 2, 3 };
@@ -226,16 +229,60 @@ void renderFrameGl()
   glDisableVertexAttribArray(texCoordLoc);
 }
 
+// - - - Sound - - -
+// This function is now responsible for processing GameBoy audio
+// and passing it to Kotlin via JNI.
+void playAudio()
+{
+  APUcontext* ctx = apuGetContext();
+
+  // Check if there are any samples to play.
+  // ctx->bufferPtr holds the number of 8-bit bytes (stereo samples) accumulated.
+  if (ctx->bufferPtr <= 0) {
+    return; // No samples to play
+  }
+
+  JNIEnv* ENV = getJniEnv(); // Get JNIEnv for this thread
+  if (ENV && gameboyClassGlobalRef && playAudioMethodId)
+  {
+    // Create a new Java byte array with the exact size of the accumulated stereo data
+    jbyteArray audioBuffer = ENV->NewByteArray(ctx->bufferPtr);
+
+    if (audioBuffer)
+    {
+      // Copy the raw 8-bit stereo samples from apuCtx.sampleBuffer into the Java byte array
+      // ctx->sampleBuffer already contains interleaved L/R 8-bit samples.
+      ENV->SetByteArrayRegion(audioBuffer, 0, ctx->bufferPtr, (const jbyte*)ctx->sampleBuffer);
+
+      // Call the Kotlin method to play audio
+      ENV->CallStaticVoidMethod(gameboyClassGlobalRef, playAudioMethodId, audioBuffer);
+
+      // Delete the local reference to the Java byte array
+      ENV->DeleteLocalRef(audioBuffer);
+    }
+    else
+    {
+      FORGE_LOG_ERROR("Failed to create new Java byte array for audio.");
+    }
+    ctx->bufferPtr = 0; // Reset APU buffer pointer after sending samples to Kotlin
+  }
+  else
+  {
+    FORGE_LOG_ERROR("Cannot call Java nativePlayAudio: JNIEnv or class/method ID not cached.");
+  }
+}
 
 // - - - | EMULATOR THREAD | - - -
 
 
-// - - - Emulator Tick Loop - - - 
+// - - - Emulator Tick Loop - - -
 
 // - - - The main emulation loop running on a separate thread.
 void* tickLoop(void* ARG)
 {
   u64 lastFrame = 0;
+  // APUcontext* apu_ctx = apuGetContext(); // This is not needed here as apuUpdate handles the audio buffering and calling playAudio
+
   while (true)
   {
     pthread_mutex_lock(&isRunningMutex);
@@ -246,7 +293,7 @@ void* tickLoop(void* ARG)
     }
     pthread_mutex_unlock(&isRunningMutex);
 
-    cpuTick();
+    cpuTick(); // cpuTick() will internally call apuUpdate() which then calls playAudio()
 
     // Only trigger render if a full frame has been generated (e.g. at VBlank)
     u64 currentFrame = ppuGetContext()->currentFrame;
@@ -265,24 +312,27 @@ void* tickLoop(void* ARG)
 
 
 // - - - Get Audio Buffer - - -
+/*
+// This function is no longer needed as audio data is pushed from C++ to Kotlin.
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeGetAudioBuffer(
-  JNIEnv*    ENV,
+  JNIEnv* ENV,
   jobject    THIZ,
   jbyteArray AUDIO_BUFFER)
 {
   jbyte* BUFFER = ENV->GetByteArrayElements(AUDIO_BUFFER, nullptr);
-  getAudio(reinterpret_cast<u8*>(BUFFER));
+  //getAudio(reinterpret_cast<u8*>(BUFFER));
   ENV->ReleaseByteArrayElements(AUDIO_BUFFER, BUFFER, 0);
 }
+*/
 
 // - - - Loads the Game Boy ROM i32o the native core.
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeLoadROM(
-  JNIEnv*    ENV,
-  jobject    THIZ,
-  jbyteArray ROM,
-  jint       SIZE)
+    JNIEnv* ENV,
+    jobject    THIZ,
+    jbyteArray ROM,
+    jint       SIZE)
 {
   jbyte* BUFFER = ENV->GetByteArrayElements(ROM, nullptr);
   cartridgeLoad(reinterpret_cast<u8*>(BUFFER), SIZE);
@@ -292,10 +342,10 @@ Java_just_somebody_templates_domain_GameBoy_nativeLoadROM(
 // - - - Sets the state of a Game Boy button in the native core.
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeSetButtonState(
-  JNIEnv* ENV,
-  jobject   THIZ,
-  jint      BUTTON,
-  jboolean  PRESSED)
+    JNIEnv* ENV,
+    jobject   THIZ,
+    jint      BUTTON,
+    jboolean  PRESSED)
 {
   setButton(static_cast<Buttons>(BUTTON), static_cast<bool>(PRESSED));
 }
@@ -324,8 +374,8 @@ Java_just_somebody_templates_domain_GameBoy_nativeStartEmulator(
 // - - - Stops the Game Boy emulator thread and releases resources.
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeStopEmulator(
-  JNIEnv* ENV,
-  jobject THIZ)
+    JNIEnv* ENV,
+    jobject THIZ)
 {
   pthread_mutex_lock(&isRunningMutex);
   if (!isRunning)
@@ -352,7 +402,7 @@ Java_just_somebody_templates_domain_GameBoy_nativeOnSurfaceCreated(JNIEnv* ENV, 
   GLuint  FRAGMENT_SHADER;
   GLint   LINKED;
   GLint   INFO_LEN = 0;
-  char*   INFO_LOG = nullptr;
+  char* INFO_LOG = nullptr;
 
   FORGE_LOG_INFO("nativeOnSurfaceCreated: Initializing OpenGL ES");
 
@@ -399,10 +449,10 @@ Java_just_somebody_templates_domain_GameBoy_nativeOnSurfaceCreated(JNIEnv* ENV, 
 // - - - Updates the OpenGL ES viewport when the rendering surface changes size.
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeOnSurfaceChanged(
-  JNIEnv* ENV,
-  jobject THIZ,
-  jint    WIDTH,
-  jint    HEIGHT)
+    JNIEnv* ENV,
+    jobject THIZ,
+    jint    WIDTH,
+    jint    HEIGHT)
 {
   FORGE_LOG_INFO("nativeOnSurfaceChanged: %d x %d", WIDTH, HEIGHT);
   glViewport(0, 0, WIDTH, HEIGHT);
@@ -454,6 +504,28 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* VM, void* RESERVED)
   {
     FORGE_LOG_ERROR("Failed to find method ID for requestRenderFromNative");
     return JNI_ERR;
+  }
+
+  // - - - Get the method ID for audio playing
+  playAudioMethodId = ENV->GetStaticMethodID(
+      gameboyClassGlobalRef,
+      "nativePlayAudio",
+      "([B)V"); // Signature: takes a byte array ([B) and returns void (V)
+  if (!playAudioMethodId)
+  {
+    FORGE_LOG_ERROR("Failed to find method ID for nativePlayAudio");
+    return JNI_ERR;
+  }
+
+  // - - - Get the method ID for stopping audio (for cleanup)
+  stopAudioMethodId = ENV->GetStaticMethodID(
+      gameboyClassGlobalRef,
+      "nativeStopAudio",
+      "()V"); // Signature: takes no arguments () and returns void (V)
+  if (!stopAudioMethodId)
+  {
+    FORGE_LOG_WARNING("Failed to find method ID for nativeStopAudio. This is optional but recommended.");
+    // Not a fatal error, but good to log.
   }
 
   // - - - Initialize pthread mutexes and condition variables
@@ -517,6 +589,8 @@ JNIEXPORT void JNICALL JNI_OnUnload(JavaVM* VM, void* RESERVED)
   // - - - Clear cached JNI references
   cachedJvm             = nullptr;
   requestRenderMethodId = nullptr;
+  playAudioMethodId     = nullptr; // Clear new method ID
+  stopAudioMethodId     = nullptr; // Clear new method ID
 }
 
 } // extern "C"

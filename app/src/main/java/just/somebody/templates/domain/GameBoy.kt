@@ -1,5 +1,6 @@
 package just.somebody.templates.domain
 
+import android.annotation.SuppressLint
 import android.graphics.SurfaceTexture
 import android.net.Uri
 import android.view.Surface
@@ -7,6 +8,7 @@ import androidx.core.graphics.createBitmap
 import androidx.core.graphics.set
 import just.somebody.templates.App
 import just.somebody.templates.appModule.ForgeLogger
+import just.somebody.templates.presentation.widgets.GameBoySpeaker
 import just.somebody.templates.ui.theme.GameBoyColors
 
 enum class Buttons {
@@ -69,27 +71,32 @@ class GameBoy {
   external fun nativeOnSurfaceChanged(width: Int, height: Int)
   external fun nativeOnDrawFrame()
 
-  // Static method for C++ to call back to request a render
-  // This will be called on a JNI thread, and should queue the UI operation
-  companion object {
-    init {
-      System.loadLibrary("native-lib")
-    }
+  // - - - Static method for C++ to call back to request a render
+  companion object
+  {
+    init { System.loadLibrary("native-lib") }
 
-    // Reference to the GLSurfaceView instance to call requestRender()
-    // This will be set by GameBoyGLSurfaceView.kt
+    // - - - Reference to the GLSurfaceView instance to call requestRender()
+    @SuppressLint("StaticFieldLeak")
     private var glSurfaceViewInstance: android.opengl.GLSurfaceView? = null
+    private val speaker = GameBoySpeaker()
 
     @JvmStatic
-    fun setGLSurfaceView(view: android.opengl.GLSurfaceView) {
-      glSurfaceViewInstance = view
+    fun setGLSurfaceView(view: android.opengl.GLSurfaceView)
+    { glSurfaceViewInstance = view }
+
+    @JvmStatic
+    fun requestRenderFromNative()
+    {
+      glSurfaceViewInstance?.queueEvent { glSurfaceViewInstance?.requestRender() }
     }
 
     @JvmStatic
-    fun requestRenderFromNative() {
-      glSurfaceViewInstance?.queueEvent { // Ensure requestRender is called on the GL thread
-        glSurfaceViewInstance?.requestRender()
-      }
-    }
+    fun nativePlayAudio(SAMPLE_BUFFER : ByteArray)
+    { speaker.play(SAMPLE_BUFFER)  }
+
+    @JvmStatic
+    fun nativeStopAudio()
+    {  }
   }
 }

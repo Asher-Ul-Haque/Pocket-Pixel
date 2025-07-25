@@ -1,5 +1,6 @@
 #include "GameBoyCore.h"
 #include "ForgeLibrary/include/logger.h"
+#include "GameBoy/include/apu.h"
 #include "GameBoy/include/cpu.h"
 #include "GameBoy/include/ppu.h"
 #include "GameBoy/include/timer.h"
@@ -23,13 +24,7 @@ void startEmulator()
   timerInit();
   cpuInit();
   ppuInit();
-}
-
-
-// Dummy audio output
-void getAudio(u8* buffer) 
-{
-
+  apuInit();
 }
 
 void setButton(Buttons BUTTON, bool PRESSED) 

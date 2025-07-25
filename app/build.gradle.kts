@@ -20,7 +20,8 @@ android {
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     externalNativeBuild {
       cmake {
-        cppFlags += ""
+        cppFlags += "";
+        arguments("-DANDROID_STL=c++_shared")
       }
     }
   }
@@ -40,6 +41,7 @@ android {
   }
   buildFeatures {
     compose = true
+    prefab = true
   }
   externalNativeBuild {
     cmake {
@@ -52,6 +54,7 @@ android {
 dependencies {
 
   implementation(libs.androidx.core.ktx)
+  implementation("com.google.oboe:oboe:1.5.0")
   implementation(libs.androidx.lifecycle.runtime.ktx)
   implementation(libs.androidx.activity.compose)
   implementation(platform(libs.androidx.compose.bom))

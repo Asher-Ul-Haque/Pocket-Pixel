@@ -1,4 +1,5 @@
 #ifndef __ANDROID__
+#include <SFML/Audio/SoundBuffer.hpp>
 #include "GameBoy/include/ppu.h"
 #include <SFML/System/Time.hpp>
 #include <SFML/Window/Keyboard.hpp>
@@ -15,7 +16,9 @@
 #include "GameBoy/include/cpu.h"
 #include "GameBoy/include/bus.h"
 #include "GameBoy/include/cartridge.h"
+#include "GameBoy/include/apu.h"
 #include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
 
 static int scale = 4;
 static const u64 tileColors[4] = 
@@ -34,6 +37,62 @@ sf::RenderWindow mainWindow;
 sf::Texture      mainTexture;
 sf::Sprite       mainSprite;
 sf::Image        mainImage;
+
+void playAudio()
+{
+    static sf::Sound sound;
+    static sf::SoundBuffer buffer;
+    static std::vector<sf::Int16> converted;
+    static int accumulatedSamples = 0;
+    static bool initialized = false;
+
+    APUcontext* ctx = apuGetContext();
+
+    // Make sure buffer is large enough for stereo samples (2 * buffer size)
+    if (converted.size() < APU_BUFFER_SIZE * 4)
+        converted.resize(APU_BUFFER_SIZE * 4);
+
+    // Mix and accumulate new samples
+    for (int i = 0; i < APU_BUFFER_SIZE; i += 2)
+    {
+        // Assuming buffer is interleaved L R L R ...
+        int left  = (ctx->sampleBuffer[i]   - 128) * 256;
+        int right = (ctx->sampleBuffer[i+1] - 128) * 256;
+
+        converted[accumulatedSamples * 2 + 0] = static_cast<sf::Int16>(left);
+        converted[accumulatedSamples * 2 + 1] = static_cast<sf::Int16>(right);
+
+        accumulatedSamples++;
+    }
+
+    // Wait until enough samples are accumulated
+    if (accumulatedSamples < 2048)
+        return;
+
+    // Load samples into buffer and play
+    u32 total = accumulatedSamples * 2;
+
+    if (!initialized)
+    {
+        if (!buffer.loadFromSamples(converted.data(), total, 2, 44100))
+            return;
+        sound.setBuffer(buffer);
+        sound.setLoop(false);
+        sound.play();
+        initialized = true;
+    }
+    else
+    {
+        bool wasPlaying = sound.getStatus() == sf::Sound::Playing;
+        if (wasPlaying) sound.stop();
+
+        buffer.loadFromSamples(converted.data(), total, 2, 44100);
+        sound.setBuffer(buffer);
+        sound.play();
+    }
+
+    accumulatedSamples = 0;
+}
 
 void uiInit()
 {

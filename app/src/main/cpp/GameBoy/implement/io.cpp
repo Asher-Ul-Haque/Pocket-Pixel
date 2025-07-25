@@ -2,6 +2,7 @@
 #include "../include/common.h"
 #include "../include/timer.h"
 #include "../include/cpu.h"
+#include "../include/apu.h"
 #include "../include/lcd.h"
 #include "../include/io.h"
 #include "../include/gamepad.h"
@@ -16,6 +17,8 @@ u8 ioRead(u16 ADDRESS)
   if (BETWEEN(ADDRESS, 0xFF04, 0xFF07)) return timerRead(ADDRESS);
   if (ADDRESS == 0xFF0F)                return cpuGetInterruptFlags();
   if (BETWEEN(ADDRESS, 0xFF40, 0xFF4B)) return lcdRead(ADDRESS);
+  if (BETWEEN(ADDRESS, 0xFF10, 0xFF26) || (BETWEEN(ADDRESS, 0xFF30, 0xFF3F))) 
+    return apuRead(ADDRESS);
 
   FORGE_LOG_ERROR("UNSUPPORTED bus_read(%04X)\n", ADDRESS);
   return 0;
@@ -56,6 +59,12 @@ void ioWrite(u16 ADDRESS, u8 VALUE)
   if (BETWEEN(ADDRESS, 0xFF40, 0xFF4B))
   {
     lcdWrite(ADDRESS, VALUE);
+    return;
+  }
+
+  if (BETWEEN(ADDRESS, 0xFF10, 0xFF26) || (BETWEEN(ADDRESS, 0xFF30, 0xFF3F))) 
+  { 
+    apuWrite(ADDRESS, VALUE);
     return;
   }
 
