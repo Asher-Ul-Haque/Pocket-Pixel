@@ -10,10 +10,10 @@ extern "C" {
 
 typedef struct 
 {
-  u8    NR30;
-  u8    NR31;
-  u8    NR32;
-  u8    NRX4;
+  i8    NR30;
+  i8    NR31;
+  i8    NR32;
+  i8    NRX4;
 
   u8    wavePatternRAM[16];
 
@@ -27,7 +27,7 @@ typedef struct
 
   i32   counter;
   u8    waveIndex;
-  u8    nibble;
+  i8    nibble;
 
   u8    sample;
   u8    periodLo;

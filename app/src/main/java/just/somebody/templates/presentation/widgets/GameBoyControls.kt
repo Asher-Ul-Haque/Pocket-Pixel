@@ -101,9 +101,9 @@ fun GameBoyControls(GAME_BOY : GameBoy)
       horizontalArrangement   = Arrangement.Center,
       verticalAlignment       = Alignment.CenterVertically)
     {
-      NormalButton("Start", Buttons.START, GAME_BOY)
-      Spacer(Modifier.padding(16.dp))
       NormalButton("Select", Buttons.SELECT, GAME_BOY)
+      Spacer(Modifier.padding(16.dp))
+      NormalButton("Start", Buttons.START, GAME_BOY)
     }
   }
 }

@@ -1,5 +1,5 @@
-#include <SFML/Audio/SoundBuffer.hpp>
 #ifndef __ANDROID__
+#include <SFML/Audio/SoundBuffer.hpp>
 #include "GameBoy/include/ppu.h"
 #include <SFML/System/Time.hpp>
 #include <SFML/Window/Keyboard.hpp>
