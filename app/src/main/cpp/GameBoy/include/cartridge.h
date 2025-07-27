@@ -26,6 +26,15 @@ typedef struct CartridgeMetadata
 	u16 	globalChecksum;			// - - - 2 bytes
 } CartridgeMetadata; 		// - - - total : 80 bytes
 
+// - - - Platform specific File I/O 
+typedef struct CartridgeFileIO 
+{
+  // - - - save ram data to a file 
+  bool (*saveRamToFile)   (const u8* RAM_DATA, u32 RAM_SIZE);
+  bool (*loadRamFromFile) (u8* RAM_DATA_BUFFER, u32 BUFFER_SIZE);
+  u32  (*getExpectedSaveSize)();
+} CartridgeFileIO;
+
 // - - - Cartridge Context Structure 
 typedef struct 
 {
@@ -48,6 +57,8 @@ typedef struct
     MBC3State       mbc3;
     MBC5State       mbc5;
   } mapperState;
+
+  CartridgeFileIO* fileIO;
 } CartContext;
 
 FORGE_API CartContext* cartridgeGetContext();
@@ -71,6 +82,8 @@ FORGE_API void cartridgeTickRTC();
 
 // - - - Cleanup function (important for freeing allocated RAM)
 FORGE_API void cartridgeUnload();
+
+FORGE_API void cartridgeFlushRAM();
 
 #ifdef __cplusplus
 }
