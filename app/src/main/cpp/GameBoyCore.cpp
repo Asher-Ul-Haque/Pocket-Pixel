@@ -1,6 +1,7 @@
 #include "GameBoyCore.h"
 #include "ForgeLibrary/include/logger.h"
 #include "GameBoy/include/apu.h"
+#include "GameBoy/include/cartridge.h"
 #include "GameBoy/include/cpu.h"
 #include "GameBoy/include/ppu.h"
 #include "GameBoy/include/timer.h"
@@ -14,6 +15,7 @@ void stopEmulator()
   FORGE_LOG_INFO("Emulator stopped");
   emuGetContext()->running = false;
   if (ppuGetContext()->frameBuffer) free(ppuGetContext()->frameBuffer);
+  cartridgeUnload();
 }
 
 void startEmulator()
@@ -42,5 +44,7 @@ void setButton(Buttons BUTTON, bool PRESSED)
 
     case START  : { state->start  = PRESSED; break; } 
     case SELECT : { state->select = PRESSED; break; }
+
+    case DOUBLE_SPEED : { if (PRESSED) doubleSpeed(); break; }
   }
 }

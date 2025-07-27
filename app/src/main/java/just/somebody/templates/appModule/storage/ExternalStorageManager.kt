@@ -1,11 +1,12 @@
 package just.somebody.templates.appModule.storage
 
-import android.content.Context
-import android.content.Intent
 import android.net.Uri
+import androidx.compose.runtime.Composable
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.runtime.*
+import android.content.Intent
+import android.content.Context
+import androidx.compose.runtime.remember
 import androidx.documentfile.provider.DocumentFile
 import just.somebody.templates.appModule.ForgeLogger
 import just.somebody.templates.appModule.storage.dataStore.DataStoreManager
@@ -59,6 +60,14 @@ interface ExternalStorageManager
   suspend fun deleteFile(
     KEY       : String,
     FILE_NAME : String)         : Boolean
+
+  suspend fun saveFileFromUri(
+    TARGET_FILE_URI : Uri,
+    CONTENT         : ByteArray
+  ) : Boolean
+
+  suspend fun readFileFromUri(TARGET_FILE_URI : Uri) : ByteArray?
+  suspend fun deleteFileFromUri(TARGET_FILE_URI : Uri) : Boolean
 }
 
 class DefaultExternalStorageManager(
@@ -219,7 +228,6 @@ class DefaultExternalStorageManager(
     return files
   }
 
-
   override suspend fun listFilesFromUri(
     URI       : Uri,
     EXTENSION : String?,
@@ -247,7 +255,6 @@ class DefaultExternalStorageManager(
     ForgeLogger.info("Listed ${files.size} file(s) from URI: $URI (recursive=$RECURSIVE)")
     return files
   }
-
 
   override suspend fun saveFile(
     KEY       : String,
@@ -294,6 +301,62 @@ class DefaultExternalStorageManager(
     val file    = dir.listFiles().firstOrNull { it.name == FILE_NAME } ?: return false
     val deleted = file.delete()
     ForgeLogger.info("Deleted file $FILE_NAME: $deleted")
+    return deleted
+  }
+
+  override suspend fun saveFileFromUri(
+    TARGET_FILE_URI : Uri,
+    CONTENT         : ByteArray
+  ) : Boolean
+  {
+    val targetFile = DocumentFile.fromSingleUri(CONTEXT, TARGET_FILE_URI)
+    if (targetFile == null || !targetFile.canWrite())
+    {
+      ForgeLogger.error("Failed to resolve or write to target save file URI: $TARGET_FILE_URI")
+      return false
+    }
+
+    return try
+    {
+      contentResolver.openOutputStream(targetFile.uri)?.use { it.write(CONTENT) } ?: return false
+      ForgeLogger.info("Saved file to URI: $TARGET_FILE_URI")
+      true
+    }
+    catch (e: Exception)
+    {
+      ForgeLogger.error("Failed to save file to URI $TARGET_FILE_URI: $e")
+      false
+    }
+  }
+
+  override suspend fun readFileFromUri(TARGET_FILE_URI : Uri) : ByteArray?
+  {
+    val targetFile = DocumentFile.fromSingleUri(CONTEXT, TARGET_FILE_URI)
+    if (targetFile == null || !targetFile.exists() || !targetFile.isFile || !targetFile.canRead())
+    {
+      ForgeLogger.warn("Failed to resolve or read from target save file URI: $TARGET_FILE_URI")
+      return null
+    }
+
+    return try
+    { contentResolver.openInputStream(targetFile.uri)?.use { it.readBytes() } }
+    catch (e: Exception)
+    {
+      ForgeLogger.error("Failed to read file from URI $TARGET_FILE_URI: $e")
+      null
+    }
+  }
+
+  override suspend fun deleteFileFromUri(TARGET_FILE_URI : Uri) : Boolean
+  {
+    val targetFile = DocumentFile.fromSingleUri(CONTEXT, TARGET_FILE_URI)
+    if (targetFile == null || !targetFile.exists() || !targetFile.canWrite())
+    {
+      ForgeLogger.warn("Failed to resolve or delete target save file URI: $TARGET_FILE_URI")
+      return false
+    }
+    val deleted = targetFile.delete()
+    ForgeLogger.info("Deleted file from URI $TARGET_FILE_URI: $deleted")
     return deleted
   }
 }

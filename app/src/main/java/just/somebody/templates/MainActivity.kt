@@ -115,4 +115,16 @@ class MainActivity : ComponentActivity()
       }
     }
   }
+
+  override fun onStop()
+  {
+    super.onStop()
+    App.appModule.gameBoy.pauseEmulator()
+  }
+
+  override fun onRestart()
+  {
+    super.onRestart()
+    App.appModule.gameBoy.resumeEmulator()
+  }
 }

@@ -44,7 +44,7 @@ class EmulatorViewModel : ViewModel()
       {
         currentROM = romBytes
         romReady = true
-        tryStartEmulator()
+        tryStartEmulator(URI)
       }
       else
       {
@@ -54,11 +54,11 @@ class EmulatorViewModel : ViewModel()
     }
   }
 
-  private fun tryStartEmulator()
+  private fun tryStartEmulator(URI : String)
   {
     if (!emulatorStarted && romReady && currentROM != null)
     {
-      gameBoy.loadROM(currentROM!!)
+      gameBoy.loadROM(currentROM!!, URI)
       gameBoy.startEmulator()
       emulatorStarted = true
     }

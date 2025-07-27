@@ -5,6 +5,7 @@
 #include "../include/directMemAccess.h"
 #include "../include/ppu.h"
 #include "../include/apu.h"
+#include "../include/cartridge.h"
 
 /* 
   Emu components:
@@ -31,6 +32,7 @@ void emuCycles(i32 CPU_CYCLES)
       ctx.ticks++;
       timerTick();
       ppuTick();
+      cartridgeTickRTC();
       apuUpdate(1);
     }
     dmaTick();

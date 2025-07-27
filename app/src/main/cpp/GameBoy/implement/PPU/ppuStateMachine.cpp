@@ -18,6 +18,13 @@ static u64 prevFrameTime  = 0;
 static u64 startTimer     = 0;
 static u64 frameCount     = 0;
 
+
+void doubleSpeed()
+{
+  if (targetFPS == 120) targetFPS = 60;
+  if (targetFPS == 60)  targetFPS = 120;
+}
+
 static u64 getTicks()
 {
   struct timespec ts;

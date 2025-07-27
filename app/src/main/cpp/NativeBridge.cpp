@@ -7,19 +7,21 @@
 #include <chrono>
 
 // - - - OpenGL ES Headers - - -
+
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
 
 // - - - Project Specific Headers - - -
+
 #include "defines.h"
 #include "ForgeLibrary/include/asserts.h"
 #include "ForgeLibrary/include/logger.h"
-#include "GameBoyCore.h" // - - - Assumed to contain startEmulator(), stopEmulator()
+#include "GameBoyCore.h"
 #include "GameBoy/include/cpu.h"
 #include "GameBoy/include/emu.h"
 #include "GameBoy/include/apu.h"
 #include "GameBoy/include/cartridge.h"
-#include "GameBoy/include/ppu.h" // - - - Assuming ppuGetContext() and PPUcontext are defined here
+#include "GameBoy/include/ppu.h"
 
 
 #ifdef __cplusplus
@@ -36,6 +38,10 @@ extern "C"
 static pthread_t        emulatorThread;           // - - - main loop
 static pthread_mutex_t  isRunningMutex;           // - - - mutex to protect the running flag
 static bool             isRunning       = false;  // - - - flag indicating whether the thread should continue running
+static pthread_mutex_t  pauseMutex      = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t   pauseCond       = PTHREAD_COND_INITIALIZER;
+static bool             isPaused        = false;
+
 
 
 // - - - Rendering Globals - - -
@@ -47,43 +53,42 @@ static GLuint gbTextureId      = 0; // - - - openGL texture ID for the framebuff
 static GLuint gbProgramObject  = 0; // - - - openGL program ID for rendering
 
 
-// - - - Thread Synchronization for Frame Buffer - - -
-// TODO: Remember to actually find out how to signal from the gameboy that the frame is ready
-
-static pthread_mutex_t frameMutex;
-static pthread_cond_t  frameReadyCv;
-static bool            newFrameAvailable = false;
-
 // - - - JNI Callback to Kotlin UI - - -
 
-static JavaVM* cachedJvm             = nullptr;
+static JavaVM*    cachedJvm             = nullptr;
 static jclass     gameboyClassGlobalRef = nullptr;
 static jmethodID  requestRenderMethodId = nullptr;
 static jmethodID  playAudioMethodId     = nullptr;
-static jmethodID  stopAudioMethodId     = nullptr; // Added for completeness, though not used in this flow yet
+static jmethodID  stopAudioMethodId     = nullptr;
+
+
+// - - - JNI Method IDs for save/load callbacks to Kotlin - - -
+static jmethodID  saveRamToFileMethodId       = nullptr;
+static jmethodID  loadRamFromFileMethodId     = nullptr;
+static jmethodID  getExpectedSaveSizeMethodId = nullptr;
 
 
 // - - - Shader Source - - -
 
 // - - - vertex shader
 const char* gVertexShader =
-    "attribute vec4 a_position;\n"
-    "attribute vec2 a_texCoord;\n"
-    "varying vec2 v_texCoord;\n"
-    "void main() {\n"
-    "  gl_Position = a_position;\n"
-    "  v_texCoord = a_texCoord;\n"
-    "}\n";
+  "attribute vec4 a_position;\n"
+  "attribute vec2 a_texCoord;\n"
+  "varying vec2 v_texCoord;\n"
+  "void main() {\n"
+  "  gl_Position = a_position;\n"
+  "  v_texCoord = a_texCoord;\n"
+  "}\n";
 
 
 // - - - Fragment Shader Source
 const char* gFragmentShader =
-    "precision mediump float;\n"
-    "varying vec2 v_texCoord;\n"
-    "uniform sampler2D s_texture;\n"
-    "void main() {\n"
-    "  gl_FragColor = texture2D(s_texture, v_texCoord);\n"
-    "}\n";
+  "precision mediump float;\n"
+  "varying vec2 v_texCoord;\n"
+  "uniform sampler2D s_texture;\n"
+  "void main() {\n"
+  "  gl_FragColor = texture2D(s_texture, v_texCoord);\n"
+  "}\n";
 
 
 // - - - | HELPER FUNCTIONS | - - -
@@ -169,20 +174,20 @@ GLuint loadShader(GLenum TYPE, const char* SOURCE)
 void renderFrameGl()
 {
   GLfloat vertices[] =
-      {
-          -1.0f,  1.0f, 0.0f, // - - - Top-left
-          -1.0f, -1.0f, 0.0f, // - - - Bottom-left
-          1.0f, -1.0f, 0.0f, // - - - Bottom-right
-          1.0f,  1.0f, 0.0f  // - - - Top-right
-      };
+    {
+      -1.0f,  1.0f, 0.0f, // - - - Top-left
+      -1.0f, -1.0f, 0.0f, // - - - Bottom-left
+       1.0f, -1.0f, 0.0f, // - - - Bottom-right
+       1.0f,  1.0f, 0.0f  // - - - Top-right
+    };
 
   GLfloat texCoords[] =
-      {
-          0.0f, 0.0f, // - - - Top-left of texture
-          0.0f, 1.0f, // - - - Bottom-left of texture
-          1.0f, 1.0f, // - - - Bottom-right of texture
-          1.0f, 0.0f  // - - - Top-right of texture
-      };
+    {
+      0.0f, 0.0f, // - - - Top-left of texture
+      0.0f, 1.0f, // - - - Bottom-left of texture
+      1.0f, 1.0f, // - - - Bottom-right of texture
+      1.0f, 0.0f  // - - - Top-right of texture
+    };
 
   PPUcontext* ppuCTX       = nullptr;
   GLushort    indices[]    = { 0, 1, 2, 0, 2, 3 };
@@ -229,9 +234,9 @@ void renderFrameGl()
   glDisableVertexAttribArray(texCoordLoc);
 }
 
+
 // - - - Sound - - -
-// This function is now responsible for processing GameBoy audio
-// and passing it to Kotlin via JNI.
+
 void playAudio()
 {
   APUcontext* ctx = apuGetContext();
@@ -239,7 +244,7 @@ void playAudio()
   // Check if there are any samples to play.
   // ctx->bufferPtr holds the number of 8-bit bytes (stereo samples) accumulated.
   if (ctx->bufferPtr <= 0) {
-    return; // No samples to play
+      return; // No samples to play
   }
 
   JNIEnv* ENV = getJniEnv(); // Get JNIEnv for this thread
@@ -272,7 +277,32 @@ void playAudio()
   }
 }
 
+
 // - - - | EMULATOR THREAD | - - -
+
+
+// - - - Puase and Play - - -
+
+JNIEXPORT void JNICALL
+Java_just_somebody_templates_domain_GameBoy_nativePauseEmulator(
+  JNIEnv* ENV,
+  jobject THIZ)
+{
+  pthread_mutex_lock(&pauseMutex);
+  isPaused = true;
+  pthread_mutex_unlock(&pauseMutex);
+}
+
+JNIEXPORT void JNICALL
+Java_just_somebody_templates_domain_GameBoy_nativeResumeEmulator(
+  JNIEnv* ENV,
+  jobject THIZ)
+{
+  pthread_mutex_lock(&pauseMutex);
+  isPaused = false;
+  pthread_cond_signal(&pauseCond);
+  pthread_mutex_unlock(&pauseMutex);
+}
 
 
 // - - - Emulator Tick Loop - - -
@@ -281,7 +311,6 @@ void playAudio()
 void* tickLoop(void* ARG)
 {
   u64 lastFrame = 0;
-  // APUcontext* apu_ctx = apuGetContext(); // This is not needed here as apuUpdate handles the audio buffering and calling playAudio
 
   while (true)
   {
@@ -293,14 +322,23 @@ void* tickLoop(void* ARG)
     }
     pthread_mutex_unlock(&isRunningMutex);
 
-    cpuTick(); // cpuTick() will internally call apuUpdate() which then calls playAudio()
+    // - - - Check if paused
+    pthread_mutex_lock(&pauseMutex);
+    while (isPaused)
+    {
+      pthread_cond_wait(&pauseCond, &pauseMutex); // - - - Block here until resumed
+    }
+    pthread_mutex_unlock(&pauseMutex);
 
-    // Only trigger render if a full frame has been generated (e.g. at VBlank)
+    // Emulator logic
+    cpuTick();
+    cartridgeTickRTC();
+
     u64 currentFrame = ppuGetContext()->currentFrame;
     if (lastFrame != currentFrame)
     {
       lastFrame = currentFrame;
-      callJavaRequestRender(); // Let Java decide when to draw
+      callJavaRequestRender();
     }
   }
 
@@ -311,41 +349,81 @@ void* tickLoop(void* ARG)
 // - - - | JNI EXPORTED FUNCTIONS | - - -
 
 
-// - - - Get Audio Buffer - - -
-/*
-// This function is no longer needed as audio data is pushed from C++ to Kotlin.
-JNIEXPORT void JNICALL
-Java_just_somebody_templates_domain_GameBoy_nativeGetAudioBuffer(
-  JNIEnv* ENV,
-  jobject    THIZ,
-  jbyteArray AUDIO_BUFFER)
-{
-  jbyte* BUFFER = ENV->GetByteArrayElements(AUDIO_BUFFER, nullptr);
-  //getAudio(reinterpret_cast<u8*>(BUFFER));
-  ENV->ReleaseByteArrayElements(AUDIO_BUFFER, BUFFER, 0);
-}
-*/
+// - - - Loads the Game Boy ROM into the native core.
 
-// - - - Loads the Game Boy ROM i32o the native core.
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeLoadROM(
-    JNIEnv* ENV,
-    jobject    THIZ,
-    jbyteArray ROM,
-    jint       SIZE)
+  JNIEnv*     ENV,
+  jobject    THIZ,
+  jbyteArray ROM,
+  jint       SIZE)
 {
   jbyte* BUFFER = ENV->GetByteArrayElements(ROM, nullptr);
-  cartridgeLoad(reinterpret_cast<u8*>(BUFFER), SIZE);
+
+  // - - - Define and initialize CartridgeFileIO for Android
+  static CartridgeFileIO androidFileIO =
+    {
+      .saveRamToFile = [](const u8* ram_data, u32 ram_size) -> bool
+        {
+          JNIEnv* env = getJniEnv();
+          if (!env || !gameboyClassGlobalRef || !saveRamToFileMethodId) {
+              FORGE_LOG_ERROR("JNI: Cannot call saveRamToFile: JNIEnv or method ID not cached.");
+              return false;
+          }
+          jbyteArray j_ram_data = env->NewByteArray(ram_size);
+          env->SetByteArrayRegion(j_ram_data, 0, ram_size, (const jbyte*)ram_data);
+
+          // Call Kotlin method without rom_filepath
+          jboolean result = env->CallStaticBooleanMethod(gameboyClassGlobalRef, saveRamToFileMethodId, j_ram_data, ram_size);
+
+          env->DeleteLocalRef(j_ram_data);
+          return (bool)result;
+        },
+      .loadRamFromFile = [](u8* ram_data_buffer, u32 buffer_size) -> bool
+        {
+          JNIEnv* env = getJniEnv();
+          if (!env || !gameboyClassGlobalRef || !loadRamFromFileMethodId)
+          {
+            FORGE_LOG_ERROR("JNI: Cannot call loadRamFromFile: JNIEnv or method ID not cached.");
+            return false;
+          }
+          jbyteArray j_ram_data_buffer = env->NewByteArray(buffer_size); // Create a Java byte array for the data
+
+          // - - - Call Kotlin method
+          jboolean result = env->CallStaticBooleanMethod(gameboyClassGlobalRef, loadRamFromFileMethodId, j_ram_data_buffer, buffer_size);
+
+          if ((bool)result) env->GetByteArrayRegion(j_ram_data_buffer, 0, buffer_size, (jbyte*)ram_data_buffer);
+          else              memset(ram_data_buffer, 0, buffer_size);
+
+          env->DeleteLocalRef(j_ram_data_buffer);
+          return (bool)result;
+        },
+      .getExpectedSaveSize = []() -> u32
+        {
+          JNIEnv* env = getJniEnv();
+          if (!env || !gameboyClassGlobalRef || !getExpectedSaveSizeMethodId)
+          {
+              FORGE_LOG_ERROR("JNI: Cannot call getExpectedSaveSize: JNIEnv or method ID not cached.");
+              return 0;
+          }
+          jint result = env->CallStaticIntMethod(gameboyClassGlobalRef, getExpectedSaveSizeMethodId);
+          return (u32)result;
+        }
+    };
+
+
+  cartridgeLoad(reinterpret_cast<u8*>(BUFFER), SIZE, &androidFileIO);
+
   ENV->ReleaseByteArrayElements(ROM, BUFFER, JNI_ABORT);
 }
 
 // - - - Sets the state of a Game Boy button in the native core.
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeSetButtonState(
-    JNIEnv* ENV,
-    jobject   THIZ,
-    jint      BUTTON,
-    jboolean  PRESSED)
+  JNIEnv* ENV,
+  jobject   THIZ,
+  jint      BUTTON,
+  jboolean  PRESSED)
 {
   setButton(static_cast<Buttons>(BUTTON), static_cast<bool>(PRESSED));
 }
@@ -374,8 +452,8 @@ Java_just_somebody_templates_domain_GameBoy_nativeStartEmulator(
 // - - - Stops the Game Boy emulator thread and releases resources.
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeStopEmulator(
-    JNIEnv* ENV,
-    jobject THIZ)
+  JNIEnv* ENV,
+  jobject THIZ)
 {
   pthread_mutex_lock(&isRunningMutex);
   if (!isRunning)
@@ -449,10 +527,10 @@ Java_just_somebody_templates_domain_GameBoy_nativeOnSurfaceCreated(JNIEnv* ENV, 
 // - - - Updates the OpenGL ES viewport when the rendering surface changes size.
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeOnSurfaceChanged(
-    JNIEnv* ENV,
-    jobject THIZ,
-    jint    WIDTH,
-    jint    HEIGHT)
+  JNIEnv* ENV,
+  jobject THIZ,
+  jint    WIDTH,
+  jint    HEIGHT)
 {
   FORGE_LOG_INFO("nativeOnSurfaceChanged: %d x %d", WIDTH, HEIGHT);
   glViewport(0, 0, WIDTH, HEIGHT);
@@ -528,9 +606,37 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* VM, void* RESERVED)
     // Not a fatal error, but good to log.
   }
 
+  // --- NEW: Get Method IDs for save/load callbacks ---
+  // Signatures adjusted: no romUri string argument
+  saveRamToFileMethodId = ENV->GetStaticMethodID(
+      gameboyClassGlobalRef,
+      "saveRamToFile",
+      "([BI)Z"); // (byte[] ram_data, int ram_size) -> boolean
+  if (!saveRamToFileMethodId) {
+      FORGE_LOG_ERROR("Failed to find method ID for saveRamToFile");
+      return JNI_ERR;
+  }
+
+  loadRamFromFileMethodId = ENV->GetStaticMethodID(
+      gameboyClassGlobalRef,
+      "loadRamFromFile",
+      "([BI)Z"); // (byte[] ram_data_buffer, int buffer_size) -> boolean
+  if (!loadRamFromFileMethodId) {
+      FORGE_LOG_ERROR("Failed to find method ID for loadRamFromFile");
+      return JNI_ERR;
+  }
+
+  getExpectedSaveSizeMethodId = ENV->GetStaticMethodID(
+      gameboyClassGlobalRef,
+      "getExpectedSaveSize",
+      "()I"); // () -> int
+  if (!getExpectedSaveSizeMethodId) {
+      FORGE_LOG_ERROR("Failed to find method ID for getExpectedSaveSize");
+      return JNI_ERR;
+  }
+
+
   // - - - Initialize pthread mutexes and condition variables
-  pthread_mutex_init(&frameMutex, NULL);
-  pthread_cond_init(&frameReadyCv, NULL);
   pthread_mutex_init(&isRunningMutex, NULL);
 
   return JNI_VERSION_1_6;
@@ -582,15 +688,20 @@ JNIEXPORT void JNICALL JNI_OnUnload(JavaVM* VM, void* RESERVED)
   // - - - frameBuffer is managed by stopEmulator(), no need to delete here.
 
   // - - - Destroy pthread mutexes and condition variables
-  pthread_mutex_destroy(&frameMutex);
-  pthread_cond_destroy(&frameReadyCv);
   pthread_mutex_destroy(&isRunningMutex);
 
   // - - - Clear cached JNI references
-  cachedJvm             = nullptr;
-  requestRenderMethodId = nullptr;
-  playAudioMethodId     = nullptr; // Clear new method ID
-  stopAudioMethodId     = nullptr; // Clear new method ID
+  cachedJvm                   = nullptr;
+  requestRenderMethodId       = nullptr;
+  playAudioMethodId           = nullptr;
+  stopAudioMethodId           = nullptr;
+  saveRamToFileMethodId       = nullptr;
+  loadRamFromFileMethodId     = nullptr;
+  getExpectedSaveSizeMethodId = nullptr;
+
+  pthread_mutex_destroy(&pauseMutex);
+  pthread_cond_destroy(&pauseCond);
+
 }
 
 } // extern "C"

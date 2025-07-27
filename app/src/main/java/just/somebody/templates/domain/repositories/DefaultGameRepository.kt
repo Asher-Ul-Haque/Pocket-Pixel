@@ -14,7 +14,6 @@ class DefaultGameRepository(private val DAO : GameDao) : GameRepository
     id              = id,
     title           = title,
     romUri          = romUri,
-    batterySavePath = batterySave,
     lastPlayed      = lastPlayed,
     isFavorite      = isFavorite
   )
@@ -23,7 +22,6 @@ class DefaultGameRepository(private val DAO : GameDao) : GameRepository
     id              = id,
     title           = title,
     romUri          = romUri,
-    batterySave     = batterySavePath,
     lastPlayed      = lastPlayed,
     isFavorite      = isFavorite
   )
@@ -41,7 +39,6 @@ class DefaultGameRepository(private val DAO : GameDao) : GameRepository
       Game(
         title           = name.removeSuffix(".gb"),
         romUri          = file.uri.toString(),
-        batterySavePath = null,
         lastPlayed      = null,
         isFavorite      = false
       )
@@ -121,7 +118,6 @@ class DefaultGameRepository(private val DAO : GameDao) : GameRepository
       Game(
         title           = name.removeSuffix(".gb"),
         romUri          = uri,
-        batterySavePath = null,
         lastPlayed      = null,
         isFavorite      = false
       )

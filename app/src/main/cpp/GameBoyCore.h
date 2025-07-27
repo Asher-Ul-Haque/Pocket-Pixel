@@ -16,7 +16,8 @@ typedef enum
   A,
   B,
   SELECT,
-  START
+  START,
+  DOUBLE_SPEED,
 } Buttons;
 
 FORGE_API void       startEmulator ();
