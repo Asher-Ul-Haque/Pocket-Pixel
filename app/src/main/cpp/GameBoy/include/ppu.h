@@ -124,6 +124,8 @@ FORGE_API u8    ppuOAMread(u16 ADDRESS);
 FORGE_API void  ppuVRAMwrite(u16 ADDRESS, u8 VALUE);
 FORGE_API u8    ppuVRAMread(u16 ADDRESS);
 
+FORGE_API void  doubleSpeed();
+
 // - - - PPU context
 FORGE_API PPUcontext* ppuGetContext();
 

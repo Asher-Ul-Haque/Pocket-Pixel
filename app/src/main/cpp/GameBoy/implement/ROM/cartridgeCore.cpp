@@ -160,7 +160,7 @@ const char* getCartType()
 
 
 // - - - Load unload 
-bool cartridgeLoad(u8* CARTRIDGE, u64 SIZE)
+bool cartridgeLoad(u8* CARTRIDGE, u64 SIZE, CartridgeFileIO* IO)
 {
   // - - - free everything
   cartridgeUnload();
@@ -176,74 +176,74 @@ bool cartridgeLoad(u8* CARTRIDGE, u64 SIZE)
   ctx.romSize     = SIZE;
   ctx.romData     = CARTRIDGE;
   ctx.metadata    = (CartridgeMetadata*)(CARTRIDGE + 0x100);
+  ctx.fileIO      = IO;
 
 
   switch (ctx.metadata->type) 
   {
-    // - - - rom only
+    // - - - ROM Only
     case 0x00: 
       ctx.mapperType = MAPPER_NONE;
       break;
 
-    // - - - MBC1
-    case 0x01: 
-    case 0x02: 
-    case 0x03: 
-      ctx.mapperType                        = MAPPER_MBC1;
-      ctx.mapperState.mbc1.ramEnabled       = false;
-      ctx.mapperState.mbc1.currentRomBank   = 1; 
-      ctx.mapperState.mbc1.currentRamBank   = 0;
-      ctx.mapperState.mbc1.romBankingMode   = true; 
+    // - - - mbc1 
+    case 0x01 ... 0x03: 
+      ctx.mapperType                      = MAPPER_MBC1;
+      ctx.mapperState.mbc1.ramEnabled     = false;
+      ctx.mapperState.mbc1.currentRomBank = 1;
+      ctx.mapperState.mbc1.currentRamBank = 0;
+      ctx.mapperState.mbc1.romBankingMode = true;
+      ctx.hasBattery                      = (ctx.metadata->type == 0x03); 
       break;
 
-    // - - - MBC2 
-    case 0x05:
-    case 0x06:
-      ctx.mapperType                        = MAPPER_MBC2;
-      ctx.mapperState.mbc2.ramEnabled       = false;
-      ctx.mapperState.mbc2.currentRomBank   = 1; 
-      ctx.mapperState.mbc2.internalRam      = (u8*)malloc(256); 
+
+    // - - - mbc2 
+    case 0x05 ... 0x06: 
+      ctx.mapperType                      = MAPPER_MBC2;
+      ctx.mapperState.mbc2.ramEnabled     = false;
+      ctx.mapperState.mbc2.currentRomBank = 1;
+      ctx.mapperState.mbc2.internalRam    = (u8*)malloc(256);
       FORGE_ASSERT_MESSAGE(ctx.mapperState.mbc2.internalRam != NULL, "Failed to allocate internal RAM for MBC2!");
-      memset(ctx.mapperState.mbc2.internalRam, 0, 256); 
+      memset(ctx.mapperState.mbc2.internalRam, 0, 256);
       FORGE_LOG_INFO("Allocated 256 bytes of internal RAM for MBC2.");
+      ctx.hasBattery                      = (ctx.metadata->type == 0x06);
       break;
 
-    // - - - MBC3
-    case 0x0F: 
-    case 0x10: 
-    case 0x11: 
-    case 0x12: 
-    case 0x13:
-      ctx.mapperType                            = MAPPER_MBC3;
-      ctx.mapperState.mbc3.ramEnabled           = false;
-      ctx.mapperState.mbc3.currentRomBank       = 1; 
-      ctx.mapperState.mbc3.currentRamBank       = 0;
-      ctx.mapperState.mbc3.rtcSeconds           = 0;
-      ctx.mapperState.mbc3.rtcMinutes           = 0;
-      ctx.mapperState.mbc3.rtcHours             = 0;
-      ctx.mapperState.mbc3.rtcDayLow            = 0;
-      ctx.mapperState.mbc3.rtcDayHigh           = 0;
-      ctx.mapperState.mbc3.latchedRTCseconds    = 0;
-      ctx.mapperState.mbc3.latchedRTCminutes    = 0;
-      ctx.mapperState.mbc3.latchedRTChours      = 0;
-      ctx.mapperState.mbc3.latchedRTCdayLow     = 0;
-      ctx.mapperState.mbc3.latchedRTCdayHigh    = 0;
-      ctx.mapperState.mbc3.rtcLatched           = false;
-      ctx.mapperState.mbc3.lastRTCsystemTime    = time(NULL); 
+    // - - - mbc3
+    case 0x0F ... 0x13: 
+      ctx.mapperType                          = MAPPER_MBC3;
+      ctx.mapperState.mbc3.ramEnabled         = false;
+      ctx.mapperState.mbc3.currentRomBank     = 1;
+      ctx.mapperState.mbc3.currentRamBank     = 0;
+      ctx.mapperState.mbc3.rtcSeconds         = 0;
+      ctx.mapperState.mbc3.rtcMinutes         = 0;
+      ctx.mapperState.mbc3.rtcHours           = 0;
+      ctx.mapperState.mbc3.rtcDayLow          = 0;
+      ctx.mapperState.mbc3.rtcDayHigh         = 0;
+      ctx.mapperState.mbc3.latchedRTCseconds  = 0;
+      ctx.mapperState.mbc3.latchedRTCminutes  = 0;
+      ctx.mapperState.mbc3.latchedRTChours    = 0;
+      ctx.mapperState.mbc3.latchedRTCdayLow   = 0;
+      ctx.mapperState.mbc3.latchedRTCdayHigh  = 0;
+      ctx.mapperState.mbc3.rtcLatched         = false;
+      ctx.mapperState.mbc3.lastRTCsystemTime  = time(NULL);
+      if (ctx.metadata->type == 0x0F || 
+          ctx.metadata->type == 0x10 || 
+          ctx.metadata->type == 0x13) 
+      { ctx.hasBattery = true; }
       break;
 
-    // - - - MBC5
-    case 0x19:
-    case 0x1A:
-    case 0x1B:
-    case 0x1C:
-    case 0x1D:
-    case 0x1E:
-      ctx.mapperType                        = MAPPER_MBC5;
-      ctx.mapperState.mbc5.ramEnabled       = false;
-      ctx.mapperState.mbc5.currentRomBank   = 1; 
-      ctx.mapperState.mbc5.currentRamBank   = 0;
+    // - - - mbc5
+    case 0x19 ... 0x1E: 
+      ctx.mapperType                      = MAPPER_MBC5;
+      ctx.mapperState.mbc5.ramEnabled     = false;
+      ctx.mapperState.mbc5.currentRomBank = 1;
+      ctx.mapperState.mbc5.currentRamBank = 0;
+      if (ctx.metadata->type == 0x1B ||
+          ctx.metadata->type == 0x1E)
+      { ctx.hasBattery = true;}
       break;
+
 
     default:
       ctx.mapperType = MAPPER_UNKNOWN;
@@ -292,11 +292,42 @@ bool cartridgeLoad(u8* CARTRIDGE, u64 SIZE)
   if (checkSumPassed) { FORGE_LOG_INFO ("Header Checksum : 0x%02X (%s)\n", ctx.metadata->checksum, "PASSED"); }
   else                { FORGE_LOG_ERROR("Header Checksum : 0x%02X (%s)\n", ctx.metadata->checksum, "FAILED"); }
 
+  // - - - attempt to load RAM data if battery backed 
+  if (ctx.hasBattery)
+  {
+    u32 expectedSaveSize = 0;
+    u8* ramToLoadPtr     = NULL;
+
+    if (ctx.externalRamData && ctx.externalRamSize > 0)
+    {
+      expectedSaveSize = ctx.externalRamSize;
+      ramToLoadPtr     = ctx.externalRamData;
+    }
+    else if (ctx.mapperType == MAPPER_MBC2 && ctx.mapperState.mbc2.internalRam)
+    {
+      expectedSaveSize = 256;
+      ramToLoadPtr     = ctx.mapperState.mbc2.internalRam;
+    }
+    else if (ctx.mapperType == MAPPER_MBC3 && ctx.metadata->type == 0x0F)
+    {
+      TODO_COMMENT("MBC3 has no external ram, but has battery backed RTC");
+    }
+
+    if (ramToLoadPtr && expectedSaveSize > 0)
+    {
+      FORGE_LOG_INFO("Attempting to load ram");
+      if (!ctx.fileIO->loadRamFromFile(ramToLoadPtr, expectedSaveSize))
+      { FORGE_LOG_WARNING("failed to load ram, starting with a fresh state"); }
+    }
+  }
+
   return checkSumPassed;
 }
 
+
 void cartridgeUnload()
 {
+  cartridgeFlushRAM();
   if (ctx.externalRamData)
   {
     free(ctx.externalRamData);
@@ -356,72 +387,29 @@ void cartridgeWrite(u16 ADDRESS, u8 VALUE)
 
 // - - - Save and Load - - - 
 
-// - - - save
-u32 cartridgeSaveRAM(u8* BUFFER, u32 BUFFER_SIZE)
+void cartridgeFlushRAM()
 {
-  u8* ramPtr  = NULL;
-  u32 ramSize = 0;
+  if (!ctx.hasBattery || ctx.fileIO == NULL || ctx.fileIO->saveRamToFile == NULL)    return;    
 
-  // - - - determine which ram to save based on MBC type 
+  u8* ramToSavePtr  = NULL;
+  u32 ramToSaveSize = 0;
+
   if (ctx.externalRamData && ctx.externalRamSize > 0)
   {
-    ramPtr  = ctx.externalRamData;
-    ramSize = ctx.externalRamSize;
+    ramToSavePtr  = ctx.externalRamData;
+    ramToSaveSize = ctx.externalRamSize;
   }
   else if (ctx.mapperType == MAPPER_MBC2 && ctx.mapperState.mbc2.internalRam)
   {
-    ramPtr  = ctx.mapperState.mbc2.internalRam;
-    ramSize = 256;
+    ramToSavePtr  = ctx.mapperState.mbc2.internalRam;
+    ramToSaveSize = 256;
   }
-  else 
-  {
-    FORGE_LOG_INFO("No RAM to save for current cartridge type");
-    return 0;
-  }
+  else return;
 
-  if (BUFFER == NULL || BUFFER_SIZE < ramSize)
+  if (ramToSavePtr && ramToSaveSize > 0)
   {
-    FORGE_LOG_ERROR("Provided buffer is NULL or too small to save RAM (needed: %u, got: %u).", ramSize, BUFFER_SIZE);
-    return 0;
+    if (!ctx.fileIO->saveRamToFile(ramToSavePtr, ramToSaveSize)) FORGE_LOG_ERROR("faile to flush RAM for");
   }
-
-  memcpy(BUFFER, ramPtr, ramSize);
-  FORGE_LOG_INFO("Saved %u bytes of RAM", ramSize);
-  return ramSize;
-}
-
-// - - - load 
-bool cartridgeLoadRAM(u8* BUFFER, u32 BUFFER_SIZE)
-{
-  u8* ramPtr            = NULL;
-  u32 expectedRamSize   = 0;
-
-  // - - - determine which RAM to load based on MBC type 
-  if (ctx.externalRamData && ctx.externalRamSize > 0)
-  {
-    ramPtr          = ctx.externalRamData;
-    expectedRamSize = ctx.externalRamSize;
-  }
-  else if (ctx.mapperType == MAPPER_MBC2 && ctx.mapperState.mbc2.internalRam)
-  {
-    ramPtr          = ctx.mapperState.mbc2.internalRam;
-    expectedRamSize = 256;
-  }
-  else 
-  {
-    FORGE_LOG_INFO("No RAM to load for current cartridge type");
-    return false;
-  }
-
-  if (BUFFER == NULL || BUFFER_SIZE != expectedRamSize)
-  {
-    FORGE_LOG_ERROR("Provided buffer is NULL or size mismatch for loading RAM (expected: %u, got: %u)", expectedRamSize, BUFFER_SIZE);
-    return false;
-  }
-
-  memcpy(ramPtr, BUFFER, expectedRamSize);
-  FORGE_LOG_INFO("Loaded %u bytes of RAM", expectedRamSize);
-  return true;
 }
 
 

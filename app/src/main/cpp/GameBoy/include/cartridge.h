@@ -58,7 +58,8 @@ typedef struct
     MBC5State       mbc5;
   } mapperState;
 
-  CartridgeFileIO* fileIO;
+  bool              hasBattery;
+  CartridgeFileIO*  fileIO;
 } CartContext;
 
 FORGE_API CartContext* cartridgeGetContext();
@@ -67,7 +68,7 @@ FORGE_API CartContext* cartridgeGetContext();
 // - - - Cartridge Functions - - -
 
 // - - - load from file
-FORGE_API bool cartridgeLoad(u8* CARTRIDGE, u64 SIZE);
+FORGE_API bool cartridgeLoad(u8* CARTRIDGE, u64 SIZE, CartridgeFileIO* IO);
 
 // - - - read and write from the cartridge
 FORGE_API u8   cartridgeRead(u16 ADDRESS);
