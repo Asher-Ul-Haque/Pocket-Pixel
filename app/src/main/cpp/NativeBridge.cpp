@@ -38,6 +38,10 @@ extern "C"
 static pthread_t        emulatorThread;           // - - - main loop
 static pthread_mutex_t  isRunningMutex;           // - - - mutex to protect the running flag
 static bool             isRunning       = false;  // - - - flag indicating whether the thread should continue running
+static pthread_mutex_t  pauseMutex      = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t   pauseCond       = PTHREAD_COND_INITIALIZER;
+static bool             isPaused        = false;
+
 
 
 // - - - Rendering Globals - - -
@@ -277,13 +281,36 @@ void playAudio()
 // - - - | EMULATOR THREAD | - - -
 
 
+// - - - Puase and Play - - -
+
+JNIEXPORT void JNICALL
+Java_just_somebody_templates_domain_GameBoy_nativePauseEmulator(
+  JNIEnv* ENV,
+  jobject THIZ)
+{
+  pthread_mutex_lock(&pauseMutex);
+  isPaused = true;
+  pthread_mutex_unlock(&pauseMutex);
+}
+
+JNIEXPORT void JNICALL
+Java_just_somebody_templates_domain_GameBoy_nativeResumeEmulator(
+  JNIEnv* ENV,
+  jobject THIZ)
+{
+  pthread_mutex_lock(&pauseMutex);
+  isPaused = false;
+  pthread_cond_signal(&pauseCond);
+  pthread_mutex_unlock(&pauseMutex);
+}
+
+
 // - - - Emulator Tick Loop - - -
 
 // - - - The main emulation loop running on a separate thread.
 void* tickLoop(void* ARG)
 {
   u64 lastFrame = 0;
-  // APUcontext* apu_ctx = apuGetContext(); // This is not needed here as apuUpdate handles the audio buffering and calling playAudio
 
   while (true)
   {
@@ -295,15 +322,23 @@ void* tickLoop(void* ARG)
     }
     pthread_mutex_unlock(&isRunningMutex);
 
-    cpuTick(); // cpuTick() will internally call apuUpdate() which then calls playAudio()
-    cartridgeTickRTC(); // Tick the RTC for MBC3 cartridges
+    // - - - Check if paused
+    pthread_mutex_lock(&pauseMutex);
+    while (isPaused)
+    {
+      pthread_cond_wait(&pauseCond, &pauseMutex); // - - - Block here until resumed
+    }
+    pthread_mutex_unlock(&pauseMutex);
 
-    // Only trigger render if a full frame has been generated (e.g. at VBlank)
+    // Emulator logic
+    cpuTick();
+    cartridgeTickRTC();
+
     u64 currentFrame = ppuGetContext()->currentFrame;
     if (lastFrame != currentFrame)
     {
       lastFrame = currentFrame;
-      callJavaRequestRender(); // Let Java decide when to draw
+      callJavaRequestRender();
     }
   }
 
@@ -656,13 +691,17 @@ JNIEXPORT void JNICALL JNI_OnUnload(JavaVM* VM, void* RESERVED)
   pthread_mutex_destroy(&isRunningMutex);
 
   // - - - Clear cached JNI references
-  cachedJvm             = nullptr;
-  requestRenderMethodId = nullptr;
-  playAudioMethodId     = nullptr;
-  stopAudioMethodId     = nullptr;
-  saveRamToFileMethodId = nullptr; // Clear new method ID
-  loadRamFromFileMethodId = nullptr; // Clear new method ID
-  getExpectedSaveSizeMethodId = nullptr; // Clear new method ID
+  cachedJvm                   = nullptr;
+  requestRenderMethodId       = nullptr;
+  playAudioMethodId           = nullptr;
+  stopAudioMethodId           = nullptr;
+  saveRamToFileMethodId       = nullptr;
+  loadRamFromFileMethodId     = nullptr;
+  getExpectedSaveSizeMethodId = nullptr;
+
+  pthread_mutex_destroy(&pauseMutex);
+  pthread_cond_destroy(&pauseCond);
+
 }
 
 } // extern "C"
