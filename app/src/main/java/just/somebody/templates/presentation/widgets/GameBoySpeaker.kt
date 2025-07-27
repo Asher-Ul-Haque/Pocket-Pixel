@@ -36,12 +36,11 @@ class GameBoySpeaker
 
   fun play(SAMPLE_BUFFER : ByteArray)
   {
-    ForgeLogger.trace("Plauing audio")
     val bytesWritten = audioTrack.write(SAMPLE_BUFFER, 0, SAMPLE_BUFFER.size, AudioTrack.WRITE_NON_BLOCKING)
     if (bytesWritten < 0)
     { ForgeLogger.error("Game boy speaker : error writing audio data. $bytesWritten") }
-    else if (bytesWritten != SAMPLE_BUFFER.size)
-    { ForgeLogger.warn("Game boy speaker : partial write only") }
+    else if (bytesWritten != SAMPLE_BUFFER.size){}
+    //{ ForgeLogger.warn("Game boy speaker : partial write only") }
 
     if (audioTrack.playState != PLAYSTATE_PLAYING)
     {

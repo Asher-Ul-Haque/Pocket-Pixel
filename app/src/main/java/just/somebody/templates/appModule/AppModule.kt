@@ -6,12 +6,10 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.dataStoreFile
 import just.somebody.templates.appModule.network.NetworkService
-import just.somebody.templates.appModule.storage.DefaultExternalStorageManager
 import just.somebody.templates.appModule.storage.dataStore.AppSettings
 import just.somebody.templates.appModule.storage.dataStore.AppSettingsSerializer
 import just.somebody.templates.appModule.storage.dataStore.DataStoreManager
 import just.somebody.templates.appModule.storage.DefaultInternalStorageManager
-import just.somebody.templates.appModule.storage.ExternalStorageManager
 import just.somebody.templates.appModule.storage.InternalStorageManager
 import just.somebody.templates.appModule.storage.database.DatabaseFactory
 import just.somebody.templates.appModule.storage.database.PixelPocketDB
@@ -24,6 +22,8 @@ import just.somebody.templates.presentation.screens.Destination
 import just.somebody.templates.appModule.navigation.Navigator
 import just.somebody.templates.data.BoxArtFetcher
 import just.somebody.templates.data.DefaultBoxArtFetcher
+import just.somebody.templates.appModule.storage.DefaultExternalStorageManager
+import just.somebody.templates.appModule.storage.ExternalStorageManager
 import just.somebody.templates.domain.GameBoy
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -59,7 +59,7 @@ class AppModule(private val APP_CONTEXT : Context) : AppModuleInterface
   override val permissionManager      : PermissionManager       by lazy { DefaultPermissionManager() }
   override val dataStoreManager       : DataStoreManager        by lazy { DataStoreManager(appSettingsDataStore) }
   override val internalStorageManager : InternalStorageManager  by lazy { DefaultInternalStorageManager(APP_CONTEXT) }
-  override val externalStorageManager : ExternalStorageManager  by lazy { DefaultExternalStorageManager(APP_CONTEXT, dataStoreManager) }
+  override val externalStorageManager : ExternalStorageManager by lazy { DefaultExternalStorageManager(APP_CONTEXT, dataStoreManager) }
   override val networkService         : NetworkService          by lazy { NetworkService() }
   override val database               : PixelPocketDB           by lazy { DatabaseFactory(APP_CONTEXT).create()
     .fallbackToDestructiveMigration(true)

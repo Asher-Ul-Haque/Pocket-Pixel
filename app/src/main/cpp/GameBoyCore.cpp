@@ -45,6 +45,6 @@ void setButton(Buttons BUTTON, bool PRESSED)
     case START  : { state->start  = PRESSED; break; } 
     case SELECT : { state->select = PRESSED; break; }
 
-    case DOUBLE_SPEED : { doubleSpeed(); break; }
+    case DOUBLE_SPEED : { if (PRESSED) doubleSpeed(); break; }
   }
 }
