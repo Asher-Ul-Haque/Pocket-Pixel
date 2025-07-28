@@ -26,6 +26,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import just.somebody.templates.App
 import just.somebody.templates.R
 import just.somebody.templates.ui.theme.GameBoyColors
 import just.somebody.templates.ui.theme.PokeFontFamily
@@ -45,14 +46,28 @@ fun NavBar(
   MODIFIER        : Modifier = Modifier
 )
 {
-  Row (
-    modifier            = MODIFIER
-      .fillMaxWidth()
-      .wrapContentHeight()
-      .background(GameBoyColors.MediumGreen),
-    verticalAlignment     = Alignment.CenterVertically,
-    horizontalArrangement = Arrangement.SpaceEvenly
-  ) { NavList(SELECTED_INDEX, ON_NAVIGATE) }
+  if (App.appModule.isLandscape())
+  {
+    Column (
+      modifier            = MODIFIER
+        .fillMaxHeight()
+        .wrapContentWidth()
+        .background(GameBoyColors.MediumGreen),
+      horizontalAlignment =  Alignment.CenterHorizontally,
+      verticalArrangement = Arrangement.SpaceEvenly
+    ) { NavList(SELECTED_INDEX, ON_NAVIGATE) }
+  }
+  else
+  {
+    Row (
+      modifier            = MODIFIER
+        .fillMaxWidth()
+        .wrapContentHeight()
+        .background(GameBoyColors.MediumGreen),
+      verticalAlignment     = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.SpaceEvenly
+    ) { NavList(SELECTED_INDEX, ON_NAVIGATE) }
+  }
 }
 
 @Composable

@@ -72,9 +72,8 @@ void apuUpdate(i32 CYCLES)
     i32 left  = ch1L + ch2L + ch3L + ch4L;
     i32 right = ch1R + ch2R + ch3R + ch4R;
 
-    // Optional: Apply master volume if needed
-    // left  = (left * apuCtx.masterVolumeLeft) >> 3;
-    // right = (right * apuCtx.masterVolumeRight) >> 3;
+    left  = (left * apuCtx.masterVolumeLeft)   >> 3;
+    right = (right * apuCtx.masterVolumeRight) >> 3;
 
     u8 mixedL = (u8)(left  + 128);
     u8 mixedR = (u8)(right + 128);

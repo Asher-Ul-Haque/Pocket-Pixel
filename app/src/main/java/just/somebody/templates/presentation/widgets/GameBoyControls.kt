@@ -29,6 +29,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -43,7 +44,7 @@ import just.somebody.templates.ui.theme.PokeFontFamily
 fun GameBoyControls(GAME_BOY : GameBoy)
 {
   // - - - Stores the last successfully pressed single directional button (UP, DOWN, LEFT, RIGHT)
-  val lastDirection = remember { mutableStateOf<Buttons?>(null) }
+  val lastDirection     = remember { mutableStateOf<Buttons?>(null) }
   // - - - Tracks all directional buttons currently active due to fat-finger logic (e.g., UP and LEFT)
   val activeDpadButtons = remember { mutableStateOf(setOf<Buttons>()) }
 
@@ -115,37 +116,48 @@ fun NormalButton(
   BUTTON    : Buttons,
   GAME_BOY  : GameBoy,
   IS_SQUARE : Boolean   = false,
-  MODIFIER  : Modifier  = Modifier)
+  MODIFIER  : Modifier  = Modifier
+)
 {
+  val isPressed = remember { mutableStateOf(false) }
+
   Button(
-    onClick     =  { /* Handled by pointerInteropFilter */ },
-    modifier    = MODIFIER
-      .width (
-        if (IS_SQUARE) 64.dp
-        else           96.dp)
-      .height(
-        if (IS_SQUARE) 64.dp
-        else           48.dp)
-      .pointerInteropFilter()
-      { motionEvent ->
-        when (motionEvent.action)
+    onClick  = { /* ignored: handled via pointerInput */ },
+    modifier = MODIFIER
+      .width(if (IS_SQUARE) 64.dp else 96.dp)
+      .height(if (IS_SQUARE) 64.dp else 48.dp)
+      .pointerInput(Unit)
+      {
+        awaitPointerEventScope()
         {
-          MotionEvent.ACTION_DOWN   -> GAME_BOY.sendButton(BUTTON, true)
-          MotionEvent.ACTION_UP,
-          MotionEvent.ACTION_CANCEL -> GAME_BOY.sendButton(BUTTON, false)
+          while (true)
+          {
+            val event   = awaitPointerEvent()
+            val pressed = event.changes.any { it.pressed }
+
+            if (pressed && !isPressed.value)
+            {
+              isPressed.value = true
+              GAME_BOY.sendButton(BUTTON, true)
+            }
+
+            if (!pressed && isPressed.value)
+            {
+              isPressed.value = false
+              GAME_BOY.sendButton(BUTTON, false)
+            }
+          }
         }
-        true
       },
-    shape       = RectangleShape,
-    colors      = ButtonColors(
+    shape  = RectangleShape,
+    colors = ButtonColors(
       contentColor            = GameBoyColors.DarkGreen,
-      containerColor          = GameBoyColors.MediumGreen,
+      containerColor          = GameBoyColors.MediumGreen.copy(alpha = if (isPressed.value) 0.6f else 1.0f),
       disabledContentColor    = Color.Gray,
       disabledContainerColor  = Color.Gray
     ),
-    border      = BorderStroke(4.dp, GameBoyColors.Green),
-  )
-  {
+    border = BorderStroke(4.dp, GameBoyColors.Green),
+  ) {
     Text(
       text        = LABEL,
       color       = GameBoyColors.LightGreen,
@@ -175,9 +187,8 @@ fun DirectionButton(
   val isTopRightCorner    = (PRIMARY_BUTTON == Buttons.UP   && SECONDARY_BUTTON == Buttons.RIGHT)
   val isBottomLeftCorner  = (PRIMARY_BUTTON == Buttons.DOWN && SECONDARY_BUTTON == Buttons.LEFT)
   val isBottomRightCorner = (PRIMARY_BUTTON == Buttons.DOWN && SECONDARY_BUTTON == Buttons.RIGHT)
-  val isCenter            = (PRIMARY_BUTTON == null         && SECONDARY_BUTTON == null)
-
   val IS_INVISIBLE_CALCULATED = isTopLeftCorner || isTopRightCorner || isBottomLeftCorner || isBottomRightCorner
+  var isPressed = remember { mutableStateOf(false) }
 
   Box(
     modifier = Modifier
@@ -185,52 +196,47 @@ fun DirectionButton(
       .alpha(
         if (IS_INVISIBLE_CALCULATED) 0f
         else                         1f)
-      .pointerInteropFilter ()
-      { motionEvent ->
-        when (motionEvent.action)
+      .pointerInput(PRIMARY_BUTTON, SECONDARY_BUTTON)
+      {
+        awaitPointerEventScope()
         {
-          MotionEvent.ACTION_DOWN ->
+          isPressed.value = false
+          while (true)
           {
-            // - - - Release any previously active button
-            ACTIVE_DPAD_BUTTONS.value.forEach { button -> GAME_BOY.sendButton(button, false) }
-            ACTIVE_DPAD_BUTTONS.value = emptySet()
+            val event             = awaitPointerEvent()
+            val currentlyPressed  = event.changes.any { it.pressed }
 
-            // - - - Determine which buttons to press based on PRIMARY_BUTTON and SECONDARY_BUTTON
-            val buttonsToPress = mutableSetOf<Buttons>()
-
-            if (PRIMARY_BUTTON != null)
+            if (currentlyPressed && !isPressed.value)
             {
-              buttonsToPress.add(PRIMARY_BUTTON)
-              if (SECONDARY_BUTTON == null) { LAST_DIRECTION.value = PRIMARY_BUTTON }
+              isPressed.value     = true
+              val buttonsToPress  = mutableSetOf<Buttons>()
+
+              if (PRIMARY_BUTTON != null)
+              {
+                buttonsToPress.add(PRIMARY_BUTTON)
+                if (SECONDARY_BUTTON == null) LAST_DIRECTION.value = PRIMARY_BUTTON
+              }
+
+              if (SECONDARY_BUTTON != null) buttonsToPress.add(SECONDARY_BUTTON);
+
+              if (PRIMARY_BUTTON == null && SECONDARY_BUTTON == null)
+              { LAST_DIRECTION.value?.let { buttonsToPress.add(it) } }
+
+              // - - - Send presses
+              buttonsToPress.forEach { GAME_BOY.sendButton(it, true) }
+              ACTIVE_DPAD_BUTTONS.value = buttonsToPress
             }
 
-            if (SECONDARY_BUTTON != null) { buttonsToPress.add(SECONDARY_BUTTON) }
-
-            // - - - Special case for the center button
-            if (PRIMARY_BUTTON == null && SECONDARY_BUTTON == null)
+            if (!currentlyPressed && isPressed.value)
             {
-              LAST_DIRECTION.value?.let { lastDir -> buttonsToPress.add(lastDir) }
+              isPressed.value = false
+              ACTIVE_DPAD_BUTTONS.value.forEach { GAME_BOY.sendButton(it, false) }
+              ACTIVE_DPAD_BUTTONS.value = emptySet()
             }
-
-            // - - - Press the determined buttons and update activeDpadButtons
-            buttonsToPress.forEach { button -> GAME_BOY.sendButton(button, true) }
-            ACTIVE_DPAD_BUTTONS.value = buttonsToPress.toSet()
-            true
           }
-          MotionEvent.ACTION_UP,
-          MotionEvent.ACTION_CANCEL ->
-          {
-            // - - - Release all currently active buttons - - -
-            ACTIVE_DPAD_BUTTONS.value.forEach { button ->
-              GAME_BOY.sendButton(button, false)
-            }
-            ACTIVE_DPAD_BUTTONS.value = emptySet() // - - - Clear the set - - -
-            true
-          }
-          else -> false
         }
       }
-      .background(GameBoyColors.MediumGreen)
+      .background(GameBoyColors.MediumGreen.copy(alpha = if (isPressed.value) 0.6f else 1.0f))
   )
   {
     // - - - Only draw borders if the button is not invisible

@@ -2,6 +2,9 @@ package just.somebody.templates.appModule
 
 
 import android.content.Context
+import android.content.res.Configuration
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.dataStoreFile
@@ -47,6 +50,7 @@ interface AppModuleInterface
   val gameRomsKey            : String
   val boxArtFetcher          : BoxArtFetcher
   val gameBoy                : GameBoy
+  @Composable fun isLandscape() : Boolean
 }
 
 class AppModule(private val APP_CONTEXT : Context) : AppModuleInterface
@@ -76,5 +80,11 @@ class AppModule(private val APP_CONTEXT : Context) : AppModuleInterface
       scope      = CoroutineScope(Dispatchers.IO + SupervisorJob())
     )
     { APP_CONTEXT.dataStoreFile("app-settings.json") }
+  }
+
+  @Composable
+  public override fun isLandscape() : Boolean
+  {
+    return LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
   }
 }

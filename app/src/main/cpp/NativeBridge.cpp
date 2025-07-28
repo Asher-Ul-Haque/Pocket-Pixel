@@ -68,6 +68,14 @@ static jmethodID  loadRamFromFileMethodId     = nullptr;
 static jmethodID  getExpectedSaveSizeMethodId = nullptr;
 
 
+// - - - FPS Control - - -
+
+static const long long TARGET_FPS               = 60;
+static const long long NANOSECONDS_PER_SECOND   = 1000000000LL;
+static const long long TARGET_FRAME_DURATION_NS = NANOSECONDS_PER_SECOND / TARGET_FPS;
+static struct timespec prevFrameTime = {0, 0};
+
+
 // - - - Shader Source - - -
 
 // - - - vertex shader
@@ -189,7 +197,7 @@ void renderFrameGl()
       1.0f, 0.0f  // - - - Top-right of texture
     };
 
-  PPUcontext* ppuCTX       = nullptr;
+  PPUContext* ppuCTX       = nullptr;
   GLushort    indices[]    = { 0, 1, 2, 0, 2, 3 };
   GLint       positionLoc;
   GLint       texCoordLoc;
@@ -330,19 +338,36 @@ void* tickLoop(void* ARG)
     }
     pthread_mutex_unlock(&pauseMutex);
 
-    // Emulator logic
     cpuTick();
-    cartridgeTickRTC();
-
-    u64 currentFrame = ppuGetContext()->currentFrame;
-    if (lastFrame != currentFrame)
-    {
-      lastFrame = currentFrame;
-      callJavaRequestRender();
-    }
   }
 
   return nullptr;
+}
+
+
+void render()
+{
+  struct timespec currentTime;
+  clock_gettime(CLOCK_MONOTONIC, &currentTime);
+
+  long long elapsed_ns = (long long)(currentTime.tv_sec - prevFrameTime.tv_sec) * NANOSECONDS_PER_SECOND +
+                         (currentTime.tv_nsec - prevFrameTime.tv_nsec);
+
+  if (elapsed_ns < TARGET_FRAME_DURATION_NS)
+  {
+    long long sleep_ns = TARGET_FRAME_DURATION_NS - elapsed_ns;
+
+    struct timespec req =
+        {
+            .tv_sec = (time_t)(sleep_ns / NANOSECONDS_PER_SECOND),
+            .tv_nsec = (long)(sleep_ns % NANOSECONDS_PER_SECOND)
+        };
+
+    nanosleep(&req, NULL);
+  }
+
+  callJavaRequestRender();
+  clock_gettime(CLOCK_MONOTONIC, &prevFrameTime);
 }
 
 
@@ -603,25 +628,25 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* VM, void* RESERVED)
   if (!stopAudioMethodId)
   {
     FORGE_LOG_WARNING("Failed to find method ID for nativeStopAudio. This is optional but recommended.");
-    // Not a fatal error, but good to log.
   }
 
-  // --- NEW: Get Method IDs for save/load callbacks ---
-  // Signatures adjusted: no romUri string argument
+  // - - - Get Method IDs for save/load callbacks - - -
   saveRamToFileMethodId = ENV->GetStaticMethodID(
       gameboyClassGlobalRef,
       "saveRamToFile",
       "([BI)Z"); // (byte[] ram_data, int ram_size) -> boolean
-  if (!saveRamToFileMethodId) {
-      FORGE_LOG_ERROR("Failed to find method ID for saveRamToFile");
-      return JNI_ERR;
+  if (!saveRamToFileMethodId)
+  {
+    FORGE_LOG_ERROR("Failed to find method ID for saveRamToFile");
+    return JNI_ERR;
   }
 
   loadRamFromFileMethodId = ENV->GetStaticMethodID(
       gameboyClassGlobalRef,
       "loadRamFromFile",
       "([BI)Z"); // (byte[] ram_data_buffer, int buffer_size) -> boolean
-  if (!loadRamFromFileMethodId) {
+  if (!loadRamFromFileMethodId)
+  {
       FORGE_LOG_ERROR("Failed to find method ID for loadRamFromFile");
       return JNI_ERR;
   }
@@ -630,7 +655,8 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* VM, void* RESERVED)
       gameboyClassGlobalRef,
       "getExpectedSaveSize",
       "()I"); // () -> int
-  if (!getExpectedSaveSizeMethodId) {
+  if (!getExpectedSaveSizeMethodId)
+  {
       FORGE_LOG_ERROR("Failed to find method ID for getExpectedSaveSize");
       return JNI_ERR;
   }
