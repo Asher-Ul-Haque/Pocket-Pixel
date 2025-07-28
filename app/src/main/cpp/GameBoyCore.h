@@ -26,6 +26,7 @@ FORGE_API void       getFrame      (u32* FRAME_BUFFER);
 FORGE_API void       getDebugFrame (u32* DEBUG_BUFFER);
 FORGE_API void       getAudio      (u8*  AUDIO_BUFFER);
 FORGE_API void       playAudio     ();
+FORGE_API void       render();
 FORGE_API void       setButton     (Buttons BUTTON, bool PRESSED);
 
 

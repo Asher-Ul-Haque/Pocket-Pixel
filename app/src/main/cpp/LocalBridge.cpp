@@ -135,47 +135,6 @@ u32 desktopGetExpectedSaveSize() {
 // --- UI, Display, Audio, and Event Handling ---
 
 void playAudio() {
-    static sf::Sound sound;
-    static sf::SoundBuffer buffer;
-    static std::vector<sf::Int16> convertedSamples;
-    static bool initialized = false;
-
-    APUcontext* ctx = apuGetContext();
-    u32 num_8bit_samples = ctx->bufferPtr;
-
-    if (num_8bit_samples == 0) return;
-
-    if (convertedSamples.size() < num_8bit_samples) {
-        convertedSamples.resize(num_8bit_samples);
-    }
-
-    for (u32 i = 0; i < num_8bit_samples; ++i) {
-        convertedSamples[i] = static_cast<sf::Int16>((static_cast<int>(ctx->sampleBuffer[i]) - 128) * 256);
-    }
-
-    u32 num_frames = num_8bit_samples / 2;
-
-    if (!initialized) {
-        if (!buffer.loadFromSamples(convertedSamples.data(), num_frames, 2, 44100)) {
-            FORGE_LOG_ERROR("SFML: Failed to load sound buffer from samples!");
-            return;
-        }
-        sound.setBuffer(buffer);
-        sound.setLoop(false);
-        sound.play();
-        initialized = true;
-    } else {
-        if (sound.getStatus() == sf::Sound::Playing) {
-            sound.stop();
-        }
-
-        if (!buffer.loadFromSamples(convertedSamples.data(), num_frames, 2, 44100)) {
-            FORGE_LOG_ERROR("SFML: Failed to load sound buffer from samples on update!");
-            return;
-        }
-        sound.setBuffer(buffer);
-        sound.play();
-    }
 }
 
 void uiInit() {
@@ -237,11 +196,8 @@ void displayTile(sf::Image& surface, u16 start, u16 tileNum, u32 tileX, u32 tile
     }
 }
 
-void updateWindows(bool force = false) {
-    static int prevFrame = 0;
-    if (prevFrame == ppuGetContext()->currentFrame) return;
-    prevFrame = ppuGetContext()->currentFrame;
-
+void render() 
+{
     for (unsigned y = 0; y < debugImage.getSize().y; ++y) {
         for (unsigned x = 0; x < debugImage.getSize().x; ++x) {
             debugImage.setPixel(x, y, sf::Color(0x11, 0x11, 0x11));
@@ -298,6 +254,7 @@ void updateWindows(bool force = false) {
     }
 
     while (mainWindow.pollEvent(event)) {
+        static int colorScheme = 0;
         if (event.type == sf::Event::Closed) {
             mainWindow.close();
         } else if (event.type == sf::Event::KeyPressed) {
@@ -310,9 +267,11 @@ void updateWindows(bool force = false) {
                 case sf::Keyboard::Left   : setButton(LEFT,   true); break;
                 case sf::Keyboard::Right  : setButton(RIGHT,  true); break;
                 case sf::Keyboard::Up     : setButton(UP,     true); break;
-                case sf::Keyboard::F     : setButton(DOUBLE_SPEED,     true); break;
+                case sf::Keyboard::F      : doubleSpeed(); break;
+                case sf::Keyboard::R      : setColorScheme(colorScheme++); break;
                 default: break;
             }
+
         } else if (event.type == sf::Event::KeyReleased) {
             switch (event.key.code) {
                 case sf::Keyboard::A      : setButton(A,      false); break;
@@ -323,7 +282,6 @@ void updateWindows(bool force = false) {
                 case sf::Keyboard::Left   : setButton(LEFT,   false); break;
                 case sf::Keyboard::Right  : setButton(RIGHT,  false); break;
                 case sf::Keyboard::Up     : setButton(UP,     false); break;
-                case sf::Keyboard::F     : setButton(DOUBLE_SPEED,     false); break;
                 default: break;
             }
         }
@@ -363,8 +321,6 @@ int main(int argc, char* argv[]) {
 
     while (debugWindow.isOpen() && mainWindow.isOpen()) {
         cpuTick();
-        updateWindows();
-        cartridgeTickRTC();
     }
 
     stopEmulator();

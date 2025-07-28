@@ -14,7 +14,6 @@ void stopEmulator()
 {
   FORGE_LOG_INFO("Emulator stopped");
   emuGetContext()->running = false;
-  if (ppuGetContext()->frameBuffer) free(ppuGetContext()->frameBuffer);
   cartridgeUnload();
 }
 
@@ -44,7 +43,5 @@ void setButton(Buttons BUTTON, bool PRESSED)
 
     case START  : { state->start  = PRESSED; break; } 
     case SELECT : { state->select = PRESSED; break; }
-
-    case DOUBLE_SPEED : { if (PRESSED) doubleSpeed(); break; }
   }
 }
