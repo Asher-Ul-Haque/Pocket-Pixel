@@ -43,6 +43,17 @@ void mbc2Write(u16 ADDRESS, u8 VALUE)
     if ((ADDRESS & 0x0100) == 0) 
     {  ctx->mapperState.mbc2.ramEnabled = ((VALUE & 0x0F) == 0x0A); } 
 
+    // - - - ram disable 
+    else if ((VALUE & 0x0F) == 0x00)
+    {
+      if (ctx->mapperState.mbc2.ramEnabled && ctx->hasBattery && ctx->ramDirty)
+      {
+        FORGE_LOG_TRACE("Saving Game : MBC2")
+        cartridgeFlushRAM();
+      }
+      ctx->mapperState.mbc2.ramEnabled = false;
+    }
+
     // - - - rom bank number
     else 
     { 
@@ -66,6 +77,7 @@ void mbc2Write(u16 ADDRESS, u8 VALUE)
       if (ramAddress < 256) 
       { 
         ctx->mapperState.mbc2.internalRam[ramAddress] = VALUE & 0x0F; 
+        ctx->ramDirty = true;
       } 
       else 
       { FORGE_LOG_WARNING("MBC2: Attempted write out of bounds RAM address 0x%04X with value 0x%02X", ADDRESS, VALUE); }

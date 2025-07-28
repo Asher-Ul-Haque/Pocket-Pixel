@@ -41,6 +41,15 @@ void mbc5Write(u16 ADDRESS, u8 VALUE)
   if (BETWEEN(ADDRESS, 0x0000, 0x1FFF))
   {
     ctx->mapperState.mbc5.ramEnabled = ((VALUE & 0x0F) == 0x0A);
+    if ((VALUE & 0x0F) == 0x00)
+    {
+      if (ctx->mapperState.mbc5.ramEnabled && ctx->hasBattery && ctx->ramDirty)
+      {
+        FORGE_LOG_TRACE("saving game : MBC5");
+        cartridgeFlushRAM();
+      }
+      ctx->mapperState.mbc5.ramEnabled = false;
+    }
     return;
   } 
 
@@ -79,7 +88,10 @@ void mbc5Write(u16 ADDRESS, u8 VALUE)
       u32 ramOffset     = (u32)ctx->mapperState.mbc5.currentRamBank * 0x2000; 
       u32 ramAddress    = ramOffset + (ADDRESS - 0xA000);
       if (ramAddress < ctx->externalRamSize) 
-      { ctx->externalRamData[ramAddress] = VALUE; } 
+      { 
+        ctx->externalRamData[ramAddress]  = VALUE; 
+        ctx->ramDirty                     = true;
+      } 
       else 
       { FORGE_LOG_WARNING("MBC5: Attempted write out of bounds RAM address 0x%04X with value 0x%02X", ADDRESS, VALUE); }
     } 

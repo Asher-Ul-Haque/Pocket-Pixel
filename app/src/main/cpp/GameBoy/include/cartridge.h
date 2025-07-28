@@ -59,6 +59,7 @@ typedef struct
   } mapperState;
 
   bool              hasBattery;
+  bool              ramDirty;
   CartridgeFileIO*  fileIO;
 } CartContext;
 
@@ -74,17 +75,14 @@ FORGE_API bool cartridgeLoad(u8* CARTRIDGE, u64 SIZE, CartridgeFileIO* IO);
 FORGE_API u8   cartridgeRead(u16 ADDRESS);
 FORGE_API void cartridgeWrite(u16 ADDRESS, u8 VALUE);
 
-// - - - ram 
-FORGE_API u32  cartridgeSaveRAM(u8* BUFFER, u32 BUFFER_SIZE);
-FORGE_API bool cartridgeLoadRAM(u8* BUFFER, u32 BUFFER_SIZE);
 
 // - - - tick 
 FORGE_API void cartridgeTickRTC();
 
 // - - - Cleanup function (important for freeing allocated RAM)
 FORGE_API void cartridgeUnload();
-
 FORGE_API void cartridgeFlushRAM();
+FORGE_API void cartridgeSaveRAM();
 
 #ifdef __cplusplus
 }

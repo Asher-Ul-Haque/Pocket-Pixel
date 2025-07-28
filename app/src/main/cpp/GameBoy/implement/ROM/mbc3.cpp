@@ -73,6 +73,17 @@ void mbc3Write(u16 ADDRESS, u8 VALUE)
   if (BETWEEN(ADDRESS, 0x0000, 0x1FFF))
   {
     ctx->mapperState.mbc3.ramEnabled = ((VALUE & 0x0F) == 0x0A);
+
+    // - - - ram disable 
+    if ((VALUE & 0x0F) == 0x00)
+    {
+      if (ctx->mapperState.mbc3.ramEnabled && ctx->hasBattery && ctx->ramDirty)
+      {
+        FORGE_LOG_TRACE("Saving Game : MBC3");
+        cartridgeFlushRAM();
+      }
+      ctx->mapperState.mbc3.ramEnabled = false;
+    }
     return;
   }
 
@@ -129,7 +140,10 @@ void mbc3Write(u16 ADDRESS, u8 VALUE)
           u32 ramAddress    = ramOffset + (ADDRESS - 0xA000);
 
           if (ramAddress < ctx->externalRamSize) 
-          { ctx->externalRamData[ramAddress] = VALUE; } 
+          { 
+            ctx->externalRamData[ramAddress]  = VALUE; 
+            ctx->ramDirty                     = true;
+          }
           else 
           { FORGE_LOG_WARNING("MBC3: Attempted write out of bounds RAM address 0x%04X with value 0x%02X", ADDRESS, VALUE); }
         }
@@ -145,6 +159,7 @@ void mbc3Write(u16 ADDRESS, u8 VALUE)
           case 0x0B : { ctx->mapperState.mbc3.rtcDayLow   = VALUE; break; }
           case 0x0C : { ctx->mapperState.mbc3.rtcDayHigh  = VALUE; break; }
         }
+        ctx->ramDirty = true;
       }
     } 
     else 

@@ -24,12 +24,12 @@ const u32 ROM_SIZE_MAP[] =
 // - - - RAM Size: In bytes
 const u32 RAM_SIZE_MAP[] = 
   {
-    0,           // 0x00: No RAM
-    2 * 1024,    // 0x01: 2KB
-    8 * 1024,    // 0x02: 8KB
-    32 * 1024,   // 0x03: 32KB (4 banks of 8KB)
-    128 * 1024,  // 0x04: 128KB (16 banks of 8KB)
-    64 * 1024    // 0x05: 64KB (8 banks of 8KB)
+    0,           
+    2 * 1024,  
+    8 * 1024, 
+    32 * 1024,
+    128 * 1024, 
+    64 * 1024   
   };
 
 
@@ -177,6 +177,7 @@ bool cartridgeLoad(u8* CARTRIDGE, u64 SIZE, CartridgeFileIO* IO)
   ctx.romData     = CARTRIDGE;
   ctx.metadata    = (CartridgeMetadata*)(CARTRIDGE + 0x100);
   ctx.fileIO      = IO;
+  ctx.ramDirty    = false;
 
 
   switch (ctx.metadata->type) 
@@ -327,7 +328,7 @@ bool cartridgeLoad(u8* CARTRIDGE, u64 SIZE, CartridgeFileIO* IO)
 
 void cartridgeUnload()
 {
-  cartridgeFlushRAM();
+  if (ctx.ramDirty) cartridgeFlushRAM();
   if (ctx.externalRamData)
   {
     free(ctx.externalRamData);
@@ -410,6 +411,8 @@ void cartridgeFlushRAM()
   {
     if (!ctx.fileIO->saveRamToFile(ramToSavePtr, ramToSaveSize)) FORGE_LOG_ERROR("faile to flush RAM for");
   }
+
+  ctx.ramDirty = false;
 }
 
 
