@@ -63,29 +63,20 @@ fun GameBoyControls(GAME_BOY : GameBoy)
       {
         Row(horizontalArrangement = Arrangement.Center)
         {
-          // - - - Top-Left Corner
           DirectionButton(Buttons.UP, Buttons.LEFT, GAME_BOY, lastDirection, activeDpadButtons)
-          // - - - Top Edge
           DirectionButton(Buttons.UP, null, GAME_BOY, lastDirection, activeDpadButtons, SHOW_TOP_BORDER = true, SHOW_RIGHT_BORDER = true, SHOW_LEFT_BORDER = true)
-          // - - - Top-Right Corner
           DirectionButton(Buttons.UP, Buttons.RIGHT, GAME_BOY, lastDirection, activeDpadButtons)
         }
         Row(horizontalArrangement = Arrangement.Center)
         {
-          // - - - Left Edge
           DirectionButton(Buttons.LEFT,  null, GAME_BOY, lastDirection, activeDpadButtons, SHOW_LEFT_BORDER = true, SHOW_TOP_BORDER = true, SHOW_BOTTOM_BORDER = true)
-          // - - - Center
           DirectionButton(null, null, GAME_BOY, lastDirection, activeDpadButtons)
-          // - - - Right Edge
           DirectionButton(Buttons.RIGHT, null, GAME_BOY, lastDirection, activeDpadButtons, SHOW_TOP_BORDER = true, SHOW_RIGHT_BORDER = true, SHOW_BOTTOM_BORDER = true)
         }
         Row(horizontalArrangement = Arrangement.Center)
         {
-          // - - - Bottom-Left Corner
           DirectionButton(Buttons.DOWN, Buttons.LEFT, GAME_BOY, lastDirection, activeDpadButtons)
-          // - - - Bottom Edge
           DirectionButton(Buttons.DOWN, null, GAME_BOY, lastDirection, activeDpadButtons, SHOW_BOTTOM_BORDER = true, SHOW_RIGHT_BORDER = true, SHOW_LEFT_BORDER = true)
-          // - - - Bottom-Right Corner
           DirectionButton(Buttons.DOWN, Buttons.RIGHT, GAME_BOY, lastDirection, activeDpadButtons)
         }
       }

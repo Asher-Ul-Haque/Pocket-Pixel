@@ -33,6 +33,7 @@ class GameBoy
   {
     this.currentRomUri = ROM_URI
     updateStaticRomUri(ROM_URI)
+    App.appModule.linkCable.onByteReceived = { byte -> nativeRecieveByte(byte.toByte()) }
     nativeLoadROM(ROM, ROM.size)
   }
 
@@ -40,9 +41,6 @@ class GameBoy
   fun stopEmulator()    { nativeStopEmulator() }
   fun resumeEmulator()  { nativeResumeEmulator() }
   fun pauseEmulator()   { nativePauseEmulator() }
-
-
-
 
   // - - - Input
   fun sendButton(
@@ -65,6 +63,7 @@ class GameBoy
   external fun nativeOnSurfaceCreated()
   external fun nativeOnSurfaceChanged(width: Int, height: Int)
   external fun nativeOnDrawFrame()
+  external fun nativeRecieveByte(BYTE : Byte)
 
   // - - - Static method for C++ to call back to request a render
   companion object
@@ -76,25 +75,21 @@ class GameBoy
     private var glSurfaceViewInstance: android.opengl.GLSurfaceView? = null
     private val speaker = GameBoySpeaker()
 
-    // --- ExternalStorageManager instance for file operations ---
-
-
-    // This will hold the URI of the currently loaded ROM, accessible by static JNI callbacks.
-    // It's crucial that this is updated by the GameBoy instance when loadROM is called.
     @Volatile // Ensure visibility across threads
     private var staticCurrentRomUri: String? = null
-
 
     @JvmStatic
     fun setGLSurfaceView(view: android.opengl.GLSurfaceView)
     { glSurfaceViewInstance = view }
 
-
-
-    // --- Function to update the static ROM URI from a GameBoy instance ---
-    // This is called by the GameBoy instance's loadROM method
     @JvmStatic
-    internal fun updateStaticRomUri(romUri: String?) {
+    fun sendByte(BYTE: Byte)
+    { App.appModule.linkCable.sendByte(BYTE.toInt())}
+
+    // - - - Function to update the static ROM URI from a GameBoy instance
+    @JvmStatic
+    internal fun updateStaticRomUri(romUri: String?)
+    {
       staticCurrentRomUri = romUri
       ForgeLogger.info("Static current ROM URI updated to: $romUri")
     }
@@ -188,7 +183,6 @@ class GameBoy
         return@withContext resolveSaveFileInParent(romParentDirectory, romDocumentFile)
       }
     }
-
 
     private suspend fun resolveSaveFileInParent(ROM_PARENT_DIRECTORY: DocumentFile, ROM_DOCUMENT_FILE: DocumentFile): Uri?
     {

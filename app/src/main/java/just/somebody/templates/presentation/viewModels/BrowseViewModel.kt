@@ -49,8 +49,9 @@ class BrowseViewModel : ViewModel()
         {
           1    -> Destination.Favorites
           2    -> Destination.Search
-          3    -> Destination.Server
-          4    -> Destination.Settings
+          3    -> Destination.LinkCable
+          4    -> Destination.Server
+          5    -> Destination.Settings
           else -> Destination.Home
         }
       App.appModule.navigator.replace(destination)
@@ -93,7 +94,8 @@ class BrowseViewModel : ViewModel()
     {
       1    -> R.string.FAV
       2    -> R.string.SEARCH
-      3    -> R.string.SERVER
+      3    -> R.string.LINK_CABLE
+      4    -> R.string.SERVER
       else -> R.string.HOME
     }
   }

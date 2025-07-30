@@ -64,6 +64,10 @@ dependencies {
   implementation(libs.androidx.material3)
   implementation(libs.androidx.lifecycle.viewmodel.compose)
   implementation(libs.androidx.datastore)
+  implementation("io.socket:socket.io-client:2.1.0") {
+    exclude(group = "org.json", module = "json") // prevent version conflicts
+  }
+
 
   implementation(libs.kotlinx.serialization.json)
   implementation(libs.kotlinx.collections.immutable)

@@ -48,10 +48,10 @@ fun HomeScreen(
   val pickDirectory  = storageManager.DirectoryPickerLauncher("GAME_BOY_ROMS")
   { uri ->
     if (uri != null) VIEW_MODEL.detectAndInsertRoms()
-    else             scope.launch()
-    {
-      SnackbarController.sendEvent(SnackbarEvent(message = "No directory picked"))
-    }
+    else scope.launch()
+      {
+        SnackbarController.sendEvent(SnackbarEvent(message = "No directory picked"))
+      }
   }
 
   Box(modifier = MODIFIFER

@@ -8,6 +8,7 @@ sealed interface Destination
 {
   @Serializable data object Home                        : Destination
   @Serializable data object Favorites                   : Destination
+  @Serializable data object LinkCable                   : Destination
   @Serializable data object Server                      : Destination
   @Serializable data object Search                      : Destination
   @Serializable data object Settings                    : Destination

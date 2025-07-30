@@ -96,6 +96,12 @@ private fun NavList(
     ),
 
     NavItem(
+      stringResource(R.string.LINK_CABLE),
+      R.drawable.power,
+      R.drawable.power
+    ),
+
+    NavItem(
       stringResource(R.string.SERVER),
       R.drawable.downasaur,
       R.drawable.downasaur

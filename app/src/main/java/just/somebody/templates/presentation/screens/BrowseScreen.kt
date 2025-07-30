@@ -41,6 +41,7 @@ import just.somebody.templates.presentation.effects.ObserveAsEvents
 import just.somebody.templates.presentation.viewModels.BrowseViewModel
 import just.somebody.templates.presentation.viewModels.EmulatorViewModel
 import just.somebody.templates.presentation.viewModels.GamesViewModel
+import just.somebody.templates.presentation.viewModels.LinkCableViewModel
 import just.somebody.templates.presentation.viewModels.SettingsViewModel
 import just.somebody.templates.presentation.viewModels.viewModelFactory
 import just.somebody.templates.presentation.widgets.CustomText
@@ -73,6 +74,9 @@ fun BrowseScreen(
   val emulatorViewModel =
     viewModel<EmulatorViewModel>(factory = viewModelFactory()
     { EmulatorViewModel() })
+  val linkCableViewModel =
+    viewModel<LinkCableViewModel>(factory = viewModelFactory()
+    { LinkCableViewModel() })
 
   Scaffold (
     topBar    =
@@ -203,6 +207,11 @@ fun BrowseScreen(
       {
         LaunchedEffect(Unit) { VIEW_MODEL.showBars(true) }
         ServerScreen(Modifier.fillMaxSize())
+      }
+      composable<Destination.LinkCable>
+      {
+        LaunchedEffect(Unit) { VIEW_MODEL.showBars(true) }
+        LinkCableScreen(linkCableViewModel, Modifier.fillMaxSize())
       }
       composable<Destination.Emulator>
       {

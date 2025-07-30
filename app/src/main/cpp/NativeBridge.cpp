@@ -22,6 +22,7 @@
 #include "GameBoy/include/apu.h"
 #include "GameBoy/include/cartridge.h"
 #include "GameBoy/include/ppu.h"
+#include "GameBoy/include/serial.h"
 
 
 #ifdef __cplusplus
@@ -60,6 +61,7 @@ static jclass     gameboyClassGlobalRef = nullptr;
 static jmethodID  requestRenderMethodId = nullptr;
 static jmethodID  playAudioMethodId     = nullptr;
 static jmethodID  stopAudioMethodId     = nullptr;
+static jmethodID  sendByteMethodId      = nullptr;
 
 
 // - - - JNI Method IDs for save/load callbacks to Kotlin - - -
@@ -282,6 +284,15 @@ void playAudio()
   else
   {
     FORGE_LOG_ERROR("Cannot call Java nativePlayAudio: JNIEnv or class/method ID not cached.");
+  }
+}
+
+void sendSerialByte(u8 BYTE)
+{
+  JNIEnv* ENV = getJniEnv();
+  if (ENV && gameboyClassGlobalRef && sendByteMethodId)
+  {
+    ENV->CallStaticVoidMethod(gameboyClassGlobalRef, sendByteMethodId, BYTE);
   }
 }
 
@@ -609,6 +620,18 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* VM, void* RESERVED)
     return JNI_ERR;
   }
 
+  // - - - Get the method ID for sendingBytes
+  sendByteMethodId = ENV->GetStaticMethodID(
+      gameboyClassGlobalRef,
+      "sendByte",
+      "(B)V"
+  );
+  if (!sendByteMethodId)
+  {
+    FORGE_LOG_ERROR("Failed to find method ID for sendByte");
+    return JNI_ERR;
+  }
+
   // - - - Get the method ID for audio playing
   playAudioMethodId = ENV->GetStaticMethodID(
       gameboyClassGlobalRef,
@@ -724,14 +747,23 @@ JNIEXPORT void JNICALL JNI_OnUnload(JavaVM* VM, void* RESERVED)
   saveRamToFileMethodId       = nullptr;
   loadRamFromFileMethodId     = nullptr;
   getExpectedSaveSizeMethodId = nullptr;
+  sendByteMethodId            = nullptr;
 
   pthread_mutex_destroy(&pauseMutex);
   pthread_cond_destroy(&pauseCond);
 
 }
 
+JNIEXPORT void JNICALL
+Java_just_somebody_templates_domain_GameBoy_nativeRecieveByte(
+    JNIEnv* ENV,
+    jobject THIS,
+    jbyte BYTE)
+{ serialReceiveNetworkByte((u8)BYTE); }
+
 } // extern "C"
 
 #ifdef __cplusplus
 #endif
 #endif // __ANDROID__
+

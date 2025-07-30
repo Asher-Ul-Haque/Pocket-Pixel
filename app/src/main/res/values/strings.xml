@@ -4,6 +4,7 @@
     <string name = "FAV">          Favorites                   </string>
     <string name = "SEARCH">       Search                      </string>
     <string name = "SERVER">       Server                      </string>
+    <string name = "LINK_CABLE">   Link                        </string>
     <string name = "HOW_TO">       How do I use Pixel Pocket   </string>
     <string name = "NOT_WORKING">  Why is your app not working </string>
     <string name = "LEGAL">        Is this app legal           </string>

@@ -4,7 +4,6 @@
 #include "../../include/instruction.h"
 #include "../../include/timer.h"
 #include "../../include/emu.h"
-#include "../../include/debugger.h"
 
 CPUcontext ctx = {0};
 
