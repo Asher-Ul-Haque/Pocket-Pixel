@@ -292,7 +292,8 @@ void sendSerialByte(u8 BYTE)
   JNIEnv* ENV = getJniEnv();
   if (ENV && gameboyClassGlobalRef && sendByteMethodId)
   {
-    ENV->CallStaticVoidMethod(gameboyClassGlobalRef, sendByteMethodId, BYTE);
+    jbyte signedByte = static_cast<jbyte>(BYTE);  // Fix: Safe cast to signed
+    ENV->CallStaticVoidMethod(gameboyClassGlobalRef, sendByteMethodId, signedByte);
   }
 }
 

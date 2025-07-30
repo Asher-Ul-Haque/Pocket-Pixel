@@ -1,78 +1,95 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Socket.IO Link Test</title>
-    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <title>Link Cable Debug</title>
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 </head>
 <body>
-<h1>Link Cable Test</h1>
-<div>
+  <h1>Link Cable Debug UI</h1>
+
+  <div>
     <button onclick="createSession()">Create Session</button>
     <input type="text" id="sessionIdInput" placeholder="Session ID">
     <button onclick="joinSession()">Join Session</button>
-</div>
-<div>
+  </div>
+
+  <div>
     <input type="number" id="byteInput" min="0" max="255">
     <button onclick="sendByte()">Send Byte</button>
-</div>
-<p id="status"></p>
-<p>Received Bytes:</p>
-<ul id="receivedData"></ul>
+  </div>
 
-<script>
-    const socket = io('http://localhost:5000');
+  <p id="status"></p>
+  <ul id="receivedData"></ul>
+
+  <script>
+    const socket = io(location.origin, { transports: ['websocket'] });
     let currentSessionId = null;
 
     socket.on('connect', () => {
-      console.log('Connected:', socket.id);
+      console.log(`[CONNECT] Connected to server as ${socket.id}`);
+    });
+
+    socket.on('connect_error', err => {
+      console.error(`[CONNECT ERROR]`, err.message);
+      document.getElementById('status').innerText = 'Connection failed';
     });
 
     socket.on('session_created', data => {
       currentSessionId = data.sessionId;
-      document.getElementById('status').innerText = `Session created: ${data.sessionId}`;
+      console.log(`[SESSION CREATED] ID: ${data.sessionId}`);
+      document.getElementById('status').innerText = `Created session: ${data.sessionId}`;
     });
 
     socket.on('session_joined', data => {
       currentSessionId = data.sessionId;
+      console.log(`[SESSION JOINED] ID: ${data.sessionId}`);
       document.getElementById('status').innerText = `Joined session: ${data.sessionId}`;
     });
 
     socket.on('session_error', data => {
+      console.warn(`[SESSION ERROR] ${data.message}`);
       document.getElementById('status').innerText = `Error: ${data.message}`;
     });
 
     socket.on('partner_connected', data => {
-      document.getElementById('status').innerText = `Partner connected in session ${data.sessionId}`;
+      console.log(`[PARTNER CONNECTED] Session: ${data.sessionId}`);
+      document.getElementById('status').innerText = `Partner connected: ${data.sessionId}`;
     });
 
     socket.on('partner_disconnected', () => {
+      console.warn(`[PARTNER DISCONNECTED]`);
       document.getElementById('status').innerText = `Partner disconnected`;
     });
 
     socket.on('receive_link_data', data => {
-      const list = document.getElementById('receivedData');
-      const item = document.createElement('li');
-      item.innerText = `Received byte: ${data.byte}`;
-      list.appendChild(item);
+      console.log(`[RECEIVED BYTE]`, data.byte);
+      const li = document.createElement('li');
+      li.textContent = `Received byte: ${data.byte}`;
+      document.getElementById('receivedData').appendChild(li);
     });
 
     function createSession() {
+      console.log(`[EMIT] create_session`);
       socket.emit('create_session');
     }
 
     function joinSession() {
-      const sessionId = document.getElementById('sessionIdInput').value;
-      if (sessionId) {
-        socket.emit('join_session', { sessionId });
+      const id = document.getElementById('sessionIdInput').value.trim();
+      console.log(`[EMIT] join_session with ID: ${id}`);
+      if (id) {
+        socket.emit('join_session', { sessionId: id });
       }
     }
 
     function sendByte() {
-      const byteValue = parseInt(document.getElementById('byteInput').value);
-      if (!isNaN(byteValue) && byteValue >= 0 && byteValue <= 255 && currentSessionId) {
-        socket.emit('send_link_data', { sessionId: currentSessionId, byte: byteValue });
+      const byte = parseInt(document.getElementById('byteInput').value);
+      if (!isNaN(byte) && byte >= 0 && byte <= 255 && currentSessionId) {
+        console.log(`[EMIT] send_link_data: byte=${byte}, session=${currentSessionId}`);
+        socket.emit('send_link_data', { sessionId: currentSessionId, byte });
+      } else {
+        console.warn(`[INVALID BYTE] Not sent`);
       }
     }
-</script>
+  </script>
 </body>
 </html>

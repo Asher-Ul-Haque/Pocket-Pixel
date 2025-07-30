@@ -5,7 +5,7 @@ import org.json.JSONObject
 import java.net.URISyntaxException
 
 class LinkCable {
-  private val baseUrl       = "http://192.168.1.11:5000/"
+  private val baseUrl       = "http://192.168.43.201:5000/"
   private var socket        : Socket? = null
   var onSessionCreated      : ((String) -> Unit)? = null
   var onSessionJoined       : ((String) -> Unit)? = null

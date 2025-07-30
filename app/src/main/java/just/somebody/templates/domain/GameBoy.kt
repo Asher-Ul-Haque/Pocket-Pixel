@@ -84,7 +84,10 @@ class GameBoy
 
     @JvmStatic
     fun sendByte(BYTE: Byte)
-    { App.appModule.linkCable.sendByte(BYTE.toInt())}
+    {
+      val unsigned: Int = BYTE.toInt() and 0xFF
+      App.appModule.linkCable.sendByte(unsigned)
+    }
 
     // - - - Function to update the static ROM URI from a GameBoy instance
     @JvmStatic
