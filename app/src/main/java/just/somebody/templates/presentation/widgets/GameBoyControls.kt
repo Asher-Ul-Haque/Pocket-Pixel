@@ -4,6 +4,7 @@ import android.view.MotionEvent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,9 +19,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -31,18 +39,27 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.pointerInteropFilter
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import just.somebody.templates.App
+import just.somebody.templates.R
+import just.somebody.templates.appModule.storage.dataStore.AppSettings
 import just.somebody.templates.domain.Buttons
 import just.somebody.templates.domain.GameBoy
+import just.somebody.templates.presentation.viewModels.EmulatorViewModel
 import just.somebody.templates.ui.theme.GameBoyColors
 import just.somebody.templates.ui.theme.PokeFontFamily
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GameBoyControls(GAME_BOY : GameBoy)
+fun GameBoyControls(
+  GAME_BOY   : GameBoy,
+  VIEW_MODEL : EmulatorViewModel)
 {
+  val settings          = VIEW_MODEL.settings.collectAsState()
+  val showBottomSheet   = remember { mutableStateOf(false) }
   // - - - Stores the last successfully pressed single directional button (UP, DOWN, LEFT, RIGHT)
   val lastDirection     = remember { mutableStateOf<Buttons?>(null) }
   // - - - Tracks all directional buttons currently active due to fat-finger logic (e.g., UP and LEFT)
@@ -50,8 +67,10 @@ fun GameBoyControls(GAME_BOY : GameBoy)
 
   Column(
     horizontalAlignment = Alignment.CenterHorizontally,
-    verticalArrangement = Arrangement.SpaceBetween,
-    modifier            = Modifier.fillMaxSize().padding(top = 16.dp, bottom = 16.dp)
+    modifier            = Modifier
+      .fillMaxSize()
+      .background(GameBoyColors.DarkGreen)
+      .padding(top = 16.dp, bottom = 16.dp)
   )
   {
     Row (horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically)
@@ -88,6 +107,8 @@ fun GameBoyControls(GAME_BOY : GameBoy)
       }
     }
 
+    Spacer(modifier = Modifier.padding(24.dp))
+
     Row(
       modifier                = Modifier.fillMaxWidth(),
       horizontalArrangement   = Arrangement.Center,
@@ -96,6 +117,79 @@ fun GameBoyControls(GAME_BOY : GameBoy)
       NormalButton("Select", Buttons.SELECT, GAME_BOY)
       Spacer(Modifier.padding(16.dp))
       NormalButton("Start", Buttons.START, GAME_BOY)
+    }
+
+    Spacer(modifier = Modifier.padding(8.dp))
+    Icon(
+      painter             = painterResource(R.drawable.settings),
+      contentDescription  = null,
+      tint                = GameBoyColors.MediumGreen,
+      modifier            = Modifier
+        .size(24.dp)
+        .clickable { showBottomSheet.value = true }
+    )
+
+
+    if (showBottomSheet.value)
+    {
+      GAME_BOY.pauseEmulator()
+      ModalBottomSheet(
+        onDismissRequest = { showBottomSheet.value = false; GAME_BOY.resumeEmulator(); },
+        containerColor   = GameBoyColors.DarkGreen)
+      {
+        Column(
+          modifier            = Modifier.padding(16.dp),
+          verticalArrangement = Arrangement.Top,
+          horizontalAlignment = Alignment.CenterHorizontally
+        )
+        {
+          CustomText(
+            TEXT = "Game Settings",
+            FONT_SIZE = 36)
+          Spacer(modifier = Modifier.padding(8.dp))
+
+          val colors = SliderDefaults.colors(
+            thumbColor         = GameBoyColors.Green,
+            activeTrackColor   = GameBoyColors.Green,
+            inactiveTrackColor = GameBoyColors.MediumGreen)
+
+          CustomText("Master Volume")
+          Slider(
+            value         = settings.value.channelVolume[0],
+            onValueChange = { VIEW_MODEL.setVolume(it, 0) },
+            colors        = colors
+            )
+
+          CustomText("Pulse Channel 1 Volume")
+          Slider(
+            value         = settings.value.channelVolume[1],
+            onValueChange = { VIEW_MODEL.setVolume(it, 1) },
+            colors        = colors
+          )
+
+          CustomText("Pulse Channel 2 Volume")
+          Slider(
+            value         = settings.value.channelVolume[2],
+            onValueChange = { VIEW_MODEL.setVolume(it, 2) },
+            colors        = colors
+          )
+
+          CustomText("Wave Channel Volume")
+          Slider(
+            value         = settings.value.channelVolume[3],
+            onValueChange = { VIEW_MODEL.setVolume(it, 3) },
+            colors        = colors
+          )
+
+          CustomText("Noise Channel Volume")
+          Slider(
+            value         = settings.value.channelVolume[4],
+            onValueChange = { VIEW_MODEL.setVolume(it, 4) },
+            colors        = colors
+          )
+
+        }
+      }
     }
   }
 }
@@ -165,7 +259,6 @@ fun DirectionButton(
   GAME_BOY           : GameBoy,
   LAST_DIRECTION     : MutableState<Buttons?>,     // - - - Shared state for last single direction
   ACTIVE_DPAD_BUTTONS: MutableState<Set<Buttons>>, // - - - Shared state for currently active buttons
-  IS_INVISIBLE       : Boolean = true,
   SHOW_LEFT_BORDER   : Boolean = false,
   SHOW_TOP_BORDER    : Boolean = false,
   SHOW_RIGHT_BORDER  : Boolean = false,

@@ -31,7 +31,9 @@ class GameBoySpeaker
       .setBufferSizeInBytes(AudioTrack.getMinBufferSize(sampleRate, channelMask, encoding))
       .setTransferMode(AudioTrack.MODE_STREAM)
       .build().apply ()
-      { if (playState != PLAYSTATE_PLAYING) play() }
+      {
+        if (playState != PLAYSTATE_PLAYING) play()
+      }
   }
 
   fun play(SAMPLE_BUFFER : ByteArray)

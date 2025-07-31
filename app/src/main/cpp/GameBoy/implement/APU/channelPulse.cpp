@@ -92,7 +92,11 @@ static void channelPulseHandleTrigger(ChannelPulse* CHANNEL)
   CHANNEL->sweepCounter     = CHANNEL->sweepTime;
 
   CHANNEL->counter             = (2048 - CHANNEL->frequency) * 4;
-  CHANNEL->wavePatternPosition = 0;
+  if (CHANNEL->trigger)
+  {
+    CHANNEL->trigger = false;
+    if (!CHANNEL->isEnabled) CHANNEL->wavePatternPosition = 0;
+  }
 
   if (CHANNEL->sweepShift > 0)
   {

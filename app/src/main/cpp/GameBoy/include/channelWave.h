@@ -35,6 +35,7 @@ typedef struct
 } ChannelWave;
 
 FORGE_API void channelWaveInit(ChannelWave* CHANNEL);
+FORGE_API void channelWaveSetVolume(f32 VOLUME);
 FORGE_API void channelWaveSetNR30(ChannelWave* CHANNEL, u8 VALUE);
 FORGE_API void channelWaveSetNR31(ChannelWave* CHANNEL, u8 VALUE);
 FORGE_API void channelWaveSetNR32(ChannelWave* CHANNEL, u8 VALUE);

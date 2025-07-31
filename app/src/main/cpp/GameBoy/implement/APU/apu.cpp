@@ -6,7 +6,7 @@ static APUcontext apuCtx;
 APUcontext* apuGetContext()
 { return &apuCtx; }
 
-void apuInit()
+void apuInit(f32* VOLUMES)
 {
   memset(&apuCtx, 0, sizeof(apuCtx));
 
@@ -14,11 +14,17 @@ void apuInit()
   apuCtx.sampleCounter          = 0;
   apuCtx.frameSequencerCounter  = 0;
   apuCtx.frameSequencerStep     = 0;
+  for (int i = 0; i < 5; ++i) apuCtx.volumes[i] = VOLUMES[i];
 
   channelPulseInit(&apuCtx.channel1);
   channelPulseInit(&apuCtx.channel2);
   channelWaveInit (&apuCtx.channel3);
   channelNoiseInit(&apuCtx.channel4);
+}
+
+void apuSetVolume(f32* VOLUMES)
+{
+  for (int i = 0; i < 5; ++i) apuCtx.volumes[i] = VOLUMES[i];
 }
 
 void apuUpdate(i32 CYCLES)
@@ -60,14 +66,14 @@ void apuUpdate(i32 CYCLES)
     apuCtx.sampleCounter += 95;
     if (!apuCtx.isEnabled) return;
 
-    i32 ch1L = apuCtx.channel1Left  ? apuCtx.channel1.sample : 0;
-    i32 ch1R = apuCtx.channel1Right ? apuCtx.channel1.sample : 0;
-    i32 ch2L = apuCtx.channel2Left  ? apuCtx.channel2.sample : 0;
-    i32 ch2R = apuCtx.channel2Right ? apuCtx.channel2.sample : 0;
-    i32 ch3L = apuCtx.channel3Left  ? apuCtx.channel3.sample : 0;
-    i32 ch3R = apuCtx.channel3Right ? apuCtx.channel3.sample : 0;
-    i32 ch4L = apuCtx.channel4Left  ? apuCtx.channel4.sample : 0;
-    i32 ch4R = apuCtx.channel4Right ? apuCtx.channel4.sample : 0;
+    i32 ch1L = apuCtx.channel1Left  ? apuCtx.channel1.sample * apuCtx.volumes[1] : 0;
+    i32 ch1R = apuCtx.channel1Right ? apuCtx.channel1.sample * apuCtx.volumes[1] : 0;
+    i32 ch2L = apuCtx.channel2Left  ? apuCtx.channel2.sample * apuCtx.volumes[2] : 0;
+    i32 ch2R = apuCtx.channel2Right ? apuCtx.channel2.sample * apuCtx.volumes[2] : 0;
+    i32 ch3L = apuCtx.channel3Left  ? apuCtx.channel3.sample * apuCtx.volumes[3] : 0;
+    i32 ch3R = apuCtx.channel3Right ? apuCtx.channel3.sample * apuCtx.volumes[3] : 0;
+    i32 ch4L = apuCtx.channel4Left  ? apuCtx.channel4.sample * apuCtx.volumes[4] : 0;
+    i32 ch4R = apuCtx.channel4Right ? apuCtx.channel4.sample * apuCtx.volumes[4]: 0;
 
     i32 left  = ch1L + ch2L + ch3L + ch4L;
     i32 right = ch1R + ch2R + ch3R + ch4R;
@@ -75,11 +81,20 @@ void apuUpdate(i32 CYCLES)
     left  = (left * apuCtx.masterVolumeLeft)   >> 3;
     right = (right * apuCtx.masterVolumeRight) >> 3;
 
+    left  = (i32)(left  * apuCtx.volumes[0]); 
+    right = (i32)(right * apuCtx.volumes[0]);
+
+    left  = left < -128 ? -128 : (left > 127 ? 127 : left);
+    right = right < -128 ? -128 : (right > 127 ? 127 : right);
+
     u8 mixedL = (u8)(left  + 128);
     u8 mixedR = (u8)(right + 128);
 
-    apuCtx.sampleBuffer[apuCtx.bufferPtr++] = mixedL;
-    apuCtx.sampleBuffer[apuCtx.bufferPtr++] = mixedR;
+    if (apuCtx.bufferPtr + 2 <= APU_BUFFER_SIZE) 
+    {
+      apuCtx.sampleBuffer[apuCtx.bufferPtr++] = mixedL;
+      apuCtx.sampleBuffer[apuCtx.bufferPtr++] = mixedR;
+    }
 
     if (apuCtx.bufferPtr >= APU_BUFFER_SIZE)
     {
@@ -155,7 +170,7 @@ void apuWrite(u16 ADDRESS, u8 VALUE)
         bool was          = apuCtx.isEnabled;
         apuCtx.isEnabled  = (VALUE & 0x80) != 0;
 
-        if (!apuCtx.isEnabled && was) apuInit();
+        if (!apuCtx.isEnabled && was) apuInit(apuCtx.volumes);
 
         apuCtx.NR52 = (apuCtx.NR52 & 0x0F) | 0x70;
         break;

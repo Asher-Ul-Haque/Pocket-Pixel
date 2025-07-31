@@ -469,7 +469,8 @@ Java_just_somebody_templates_domain_GameBoy_nativeSetButtonState(
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeStartEmulator(
     JNIEnv* ENV,
-    jobject THIZ)
+    jobject THIZ,
+    jfloatArray VOLUMES)
 {
   pthread_mutex_lock(&isRunningMutex);
   if (isRunning)
@@ -481,7 +482,12 @@ Java_just_somebody_templates_domain_GameBoy_nativeStartEmulator(
   pthread_mutex_unlock(&isRunningMutex);
 
   // - - - Initialize and allocate frameBuffer within the emulator core
-  startEmulator();
+  if (VOLUMES == nullptr || ENV->GetArrayLength(VOLUMES) != 5) return;
+
+  jfloat nativeVolumes[5];
+  ENV->GetFloatArrayRegion(VOLUMES, 0, 5, nativeVolumes);
+
+  startEmulator(nativeVolumes);
   // - - - Create the emulator tick loop thread
   pthread_create(&emulatorThread, NULL, tickLoop, NULL);
 }
@@ -762,9 +768,20 @@ Java_just_somebody_templates_domain_GameBoy_nativeRecieveByte(
     jbyte BYTE)
 { serialReceiveNetworkByte((u8)BYTE); }
 
-} // extern "C"
+JNIEXPORT void JNICALL
+Java_just_somebody_templates_domain_GameBoy_nativeSetVolumes(
+  JNIEnv* ENV,
+  jobject THIS,
+  jfloatArray VOLUMES)
+{
+  if (VOLUMES == nullptr || ENV->GetArrayLength(VOLUMES) != 5) return;
+
+  jfloat nativeVolumes[5];
+  ENV->GetFloatArrayRegion(VOLUMES, 0, 5, nativeVolumes);
+
+  apuSetVolume(nativeVolumes);}
+}
 
 #ifdef __cplusplus
 #endif
 #endif // __ANDROID__
-

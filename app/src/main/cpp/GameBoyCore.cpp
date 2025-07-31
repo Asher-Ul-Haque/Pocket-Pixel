@@ -17,7 +17,7 @@ void stopEmulator()
   cartridgeUnload();
 }
 
-void startEmulator()
+void startEmulator(f32* VOLUMES)
 {
   FORGE_LOG_INFO("Emulator started");
   emuGetContext()->running = true;
@@ -25,7 +25,7 @@ void startEmulator()
   timerInit();
   cpuInit();
   ppuInit();
-  apuInit();
+  apuInit(VOLUMES);
 }
 
 void setButton(Buttons BUTTON, bool PRESSED) 

@@ -4,11 +4,17 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import just.somebody.templates.App
+import just.somebody.templates.appModule.ForgeLogger
+import just.somebody.templates.appModule.storage.dataStore.AppSettings
 import just.somebody.templates.domain.GameBoy
 import just.somebody.templates.presentation.effects.SnackbarController
 import just.somebody.templates.presentation.effects.SnackbarEvent
 import just.somebody.templates.presentation.screens.Destination
+import kotlinx.collections.immutable.PersistentList
+import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 class EmulatorViewModel : ViewModel()
@@ -17,7 +23,13 @@ class EmulatorViewModel : ViewModel()
   private var currentROM      : ByteArray?  = null
   private var romReady        : Boolean     = false
   private var emulatorStarted : Boolean     = false
+  private val _settings       : MutableStateFlow<AppSettings> = MutableStateFlow<AppSettings>(AppSettings())
+  public  val settings        : MutableStateFlow<AppSettings> = _settings
 
+  init
+  {
+    viewModelScope.launch { _settings.value = App.appModule.dataStoreManager.getSettings() }
+  }
 
   fun stopEmulator()
   {
@@ -59,8 +71,27 @@ class EmulatorViewModel : ViewModel()
     if (!emulatorStarted && romReady && currentROM != null)
     {
       gameBoy.loadROM(currentROM!!, URI)
-      gameBoy.startEmulator()
+      gameBoy.startEmulator(_settings.value.channelVolume.toFloatArray())
       emulatorStarted = true
+    }
+  }
+
+  fun setVolume(VOLUME : Float, INDEX : Int)
+  {
+    ForgeLogger.trace("Updating volume")
+    viewModelScope.launch()
+    {
+      val currentSettings = App.appModule.dataStoreManager.getSettings()
+
+      val newVolumes = currentSettings.channelVolume.toMutableList().apply()
+      { this[INDEX % 5] = Math.max(0f, Math.min(1f, VOLUME)) }
+
+      val updatedSettings = currentSettings.copy(channelVolume = newVolumes)
+
+      App.appModule.dataStoreManager.updateSettings(updatedSettings)
+      _settings.value = updatedSettings
+
+      App.appModule.gameBoy.setVolumes(_settings.value.channelVolume.toFloatArray())
     }
   }
 }

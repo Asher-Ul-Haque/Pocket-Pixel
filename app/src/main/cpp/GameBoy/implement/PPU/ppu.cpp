@@ -332,10 +332,10 @@ void ppuTick()
 
         if (ctx->ly == SCREEN_HEIGHT) 
         { 
-        ppuUpdateStatMode(MODE_VBLANK);
-        cpuRequestInterrupt(IT_VBLANK);
-        if (BIT(ctx->stat, 4)) cpuRequestInterrupt(IT_LCD_STAT);
-        render();
+          ppuUpdateStatMode(MODE_VBLANK);
+          cpuRequestInterrupt(IT_VBLANK);
+          if (BIT(ctx->stat, 4)) cpuRequestInterrupt(IT_LCD_STAT);
+          render();
         } 
         else ppuUpdateStatMode(MODE_OAM);
       }

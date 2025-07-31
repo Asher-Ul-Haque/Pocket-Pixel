@@ -68,16 +68,21 @@ void channelWaveTickSampleGenerator(ChannelWave* CHANNEL, i32 CYCLES)
     if (CHANNEL->isEnabled)
     {
       u8 shift = 0;
-      switch (CHANNEL->volume)
+      if (CHANNEL->volume == 0)   CHANNEL->sample = 0;
+      else 
       {
-        case 0 : { shift = 4; break; }
-        case 1 : { shift = 0; break; }
-        case 2 : { shift = 1; break; }
-        case 3 : { shift = 2; break; }
-      }
+        switch (CHANNEL->volume)
+        {
+          case 0 : { shift = 4; break; }
+          case 1 : { shift = 0; break; }
+          case 2 : { shift = 1; break; }
+          case 3 : { shift = 2; break; }
+        }
 
-      CHANNEL->sample = wave >> shift;
+        CHANNEL->sample = (wave >> shift);
+      }
     }
     else CHANNEL->sample = 0;
   }
 }
+

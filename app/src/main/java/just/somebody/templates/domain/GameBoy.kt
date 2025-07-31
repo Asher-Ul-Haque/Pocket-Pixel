@@ -37,27 +37,27 @@ class GameBoy
     nativeLoadROM(ROM, ROM.size)
   }
 
-  fun startEmulator()   { nativeStartEmulator() }
+  fun startEmulator(VOLUMES : FloatArray )   { nativeStartEmulator(VOLUMES) }
   fun stopEmulator()    { nativeStopEmulator() }
   fun resumeEmulator()  { nativeResumeEmulator() }
   fun pauseEmulator()   { nativePauseEmulator() }
+  fun setVolumes(VOLUMES: FloatArray) { nativeSetVolumes(VOLUMES); }
 
   // - - - Input
   fun sendButton(
     BUTTON: Buttons,
     IS_PRESSED: Boolean
-  ) {
-    nativeSetButtonState(BUTTON.ordinal, IS_PRESSED)
-  }
+  ) { nativeSetButtonState(BUTTON.ordinal, IS_PRESSED) }
 
   // - - - Native Bindings for Emulator Core (existing) - - -
 
   private external fun nativeLoadROM(ROM: ByteArray, SIZE: Int)
   private external fun nativeSetButtonState(BUTTON: Int, PRESSED: Boolean)
-  private external fun nativeStartEmulator()
+  private external fun nativeStartEmulator(VOLUMES : FloatArray)
   private external fun nativeStopEmulator()
   private external fun nativePauseEmulator()
   private external fun nativeResumeEmulator()
+  private external fun nativeSetVolumes(VOLUMES: FloatArray)
 
   // - - - Native Bindings for OpenGL ES Rendering (existing)
   external fun nativeOnSurfaceCreated()

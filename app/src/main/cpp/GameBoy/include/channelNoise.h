@@ -33,7 +33,7 @@ typedef struct
   bool trigger;
   bool lengthEnable;
 
-  i8 sample;
+  i8  sample;
 } ChannelNoise;
 
 FORGE_API void channelNoiseInit(ChannelNoise* CHANNEL);

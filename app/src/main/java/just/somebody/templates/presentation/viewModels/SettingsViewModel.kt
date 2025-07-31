@@ -45,6 +45,7 @@ class SettingsViewModel(
       DATASTORE.updateSettings(AppSettings())
       REPO.factoryReset()
       App.appModule.boxArtFetcher.deleteCache()
+      App.appModule.dataStoreManager.clearSettings()
     }
   }
 }

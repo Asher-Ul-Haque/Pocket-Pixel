@@ -1,25 +1,21 @@
 package just.somebody.templates.presentation.screens
 
-import android.view.SurfaceHolder
-import android.view.SurfaceView
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import just.somebody.templates.App
-import just.somebody.templates.domain.GameBoy
 import just.somebody.templates.presentation.viewModels.EmulatorViewModel
 import just.somebody.templates.presentation.widgets.GameBoyControls
 import just.somebody.templates.presentation.widgets.GameBoyFrame
-import just.somebody.templates.ui.theme.GameBoyColors
 
 @Composable
 fun EmulatorScreen(
@@ -38,9 +34,9 @@ fun EmulatorScreen(
   Column(
     modifier            = MODIFIER
       .fillMaxSize()
-      .background(GameBoyColors.DarkGreen)
+      .background(Color.Black)
       .padding(top = 48.dp),
-    verticalArrangement = Arrangement.Top,
+    verticalArrangement = Arrangement.Bottom,
     horizontalAlignment = Alignment.CenterHorizontally
   )
   {
@@ -48,18 +44,18 @@ fun EmulatorScreen(
 
     AndroidView(
       modifier  = Modifier
-        .fillMaxWidth(1f)
+        .fillMaxWidth()
         .aspectRatio(gameBoyAspectRatio),
       factory   =
         { context ->
           val gameBoySurfaceView = GameBoyFrame(context)
           gameBoySurfaceView
         },
-      update    = { view -> }
+      update    = { }
     )
 
-    Spacer(modifier = Modifier.height(24.dp))
+    Spacer(modifier = Modifier.height(48.dp))
 
-    GameBoyControls(App.appModule.gameBoy)
+    GameBoyControls(App.appModule.gameBoy, VIEW_MODEL)
   }
 }

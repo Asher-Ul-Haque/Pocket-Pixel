@@ -119,7 +119,6 @@ fun BrowseScreen(
       {
         NavBar(
           MODIFIER       = Modifier
-            .padding(bottom = 4.dp)
             .fillMaxWidth(),
           SELECTED_INDEX = state.selectedIndex,
           ON_NAVIGATE    = { VIEW_MODEL.onNavigate(it)

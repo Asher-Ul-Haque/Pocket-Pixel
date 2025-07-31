@@ -35,6 +35,8 @@ typedef struct APUcontext
   i32 masterVolumeLeft;
   i32 masterVolumeRight;
 
+  f32 volumes[5];
+
   bool channel1Left;
   bool channel1Right;
   bool channel2Left;
@@ -54,7 +56,8 @@ typedef struct APUcontext
 
 // - - - APU Public API Functions - - - 
 FORGE_API APUcontext*   apuGetContext();
-FORGE_API void          apuInit();
+FORGE_API void          apuInit(f32* VOLUMES);
+FORGE_API void          apuSetVolume(f32* VOLUMES);
 FORGE_API void          apuUpdate(i32 CYCLES); 
 FORGE_API void          apuWrite(u16 ADDRESS, u8 VALUE);
 FORGE_API u8            apuRead(u16 ADDRESS); 
