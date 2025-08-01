@@ -1,0 +1,14 @@
+name: Keep Render App Awake
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'  # every 15 minutes
+  workflow_dispatch:        # allow manual trigger from GitHub UI
+
+jobs:
+  keep-awake:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Curl your Flask app
+        run: |
+          curl --silent --show-error --fail https://pocket-pixel-link-cable-club.onrender.com/ || echo "Link Cable not reachable"
