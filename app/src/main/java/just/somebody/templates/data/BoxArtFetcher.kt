@@ -31,32 +31,38 @@ class DefaultBoxArtFetcher(
   private val NETWORK: NetworkService,
 ) : BoxArtFetcher
 {
-  private val BASE_URL         : String         = "https://thumbnails.libretro.com/Nintendo%20-%20Game%20Boy/Named_Boxarts/"
-  private val mappingCacheFile : String         = "boxart_url_cache.json"
-  private var boxArtListCache  : List<String>?  = null
+  private val BASE_URLS: List<String> = listOf(
+    "https://thumbnails.libretro.com/Nintendo%20-%20Game%20Boy/Named_Boxarts/",
+    "https://thumbnails.libretro.com/Nintendo%20-%20Game%20Boy%20Color/Named_Boxarts/"
+  )
 
-  private suspend fun listAvailableBoxArtFiles(): List<String>
+  private val mappingCacheFile    : String                  = "boxart_url_cache.json"
+  private var boxArtListsCache    : MutableMap<String, List<String>> = mutableMapOf()
+
+  private suspend fun listAvailableBoxArtFilesForUrl(baseUrl: String): List<String>
   {
-    boxArtListCache?.let { return it }
+    // - - - Return from cache if the list for this URL is already available
+    boxArtListsCache[baseUrl]?.let { return it }
 
-    val isConnected = App.appModule.hardwareManager.isConnectedToInternet.first()
+    val isConnected  = App.appModule.hardwareManager.isConnectedToInternet.first()
     if (isConnected != NetworkStatus.Available) return emptyList()
 
-    val result = NETWORK.get<String>(BASE_URL)
+    val result  = NETWORK.get<String>(baseUrl)
     val boxArts = when (result)
     {
       is NetworkResult.Success ->
-        {
-          Regex("""href="([^"]+\.png)"""")
-            .findAll(result.data)
-            .map { it.groupValues[1] }
-            .distinct()
-            .toList()
-        }
+      {
+        Regex("""href="([^"]+\.png)"""")
+          .findAll(result.data)
+          .map { it.groupValues[1] }
+          .distinct()
+          .toList()
+      }
       else -> emptyList()
     }
 
-    boxArtListCache = boxArts
+    // - - - Store the fetched list in the cache
+    boxArtListsCache[baseUrl] = boxArts
     return boxArts
   }
 
@@ -74,7 +80,8 @@ class DefaultBoxArtFetcher(
         MapSerializer(String.serializer(), String.serializer().nullable),
         json
       ).toMutableMap()
-   }
+    }
+
 
   private suspend fun saveCache(DATA_CACHE: Map<String, String?>) =
     withContext(Dispatchers.IO)
@@ -132,78 +139,95 @@ class DefaultBoxArtFetcher(
   ): String? =
     withContext(Dispatchers.Default)
     {
-      val normalizedTarget = normalize(TARGET)
+      val normalizedTarget    = normalize(TARGET)
+      var bestMatch: String?  = null
+      var bestScore           = THRESHOLD
+
       for (candidate in CANDIDATES)
       {
         val normalizedCandidate = normalize(candidate)
         val sim                 = similarity(normalizedCandidate, normalizedTarget)
-        if (sim >= THRESHOLD)
+
+        if (sim >= bestScore)
         {
-          ForgeLogger.info("Fuzzy match: $candidate with score $sim")
-          return@withContext candidate
+          bestMatch = candidate
+          bestScore = sim
         }
       }
-      return@withContext null
+
+      bestMatch?.let { ForgeLogger.info("Best fuzzy match: $it with score $bestScore") }
+      return@withContext bestMatch
     }
+
 
   override fun fetchBoxArt(GAME_NAME: String): Flow<String?> =
     flow()
     {
       ForgeLogger.info("Fetching box art for: $GAME_NAME")
 
+      // - - - Load the cache once at the start
       val cacheJson       = loadCache()
-      val cachedFileName  = cacheJson[GAME_NAME]
+      val cachedUrl       = cacheJson[GAME_NAME]
 
-      if (cachedFileName == "")
+      // - - - Check if a result is already in the cache
+      if (cachedUrl == "")
       {
         ForgeLogger.info("Previously not found (negative cache): $GAME_NAME")
         emit(null)
         return@flow
       }
 
-      if (!cachedFileName.isNullOrBlank() && cachedFileName.endsWith(".png"))
+      if (!cachedUrl.isNullOrBlank())
       {
-        val url = BASE_URL + cachedFileName
-        ForgeLogger.info("Found in cache: $url")
-        emit(url)
+        ForgeLogger.info("Found in cache: $cachedUrl")
+        emit(cachedUrl)
         return@flow
       }
 
       ForgeLogger.info("Cache miss for: $GAME_NAME")
-      val possibleExactName = stripExtension(GAME_NAME) + ".png"
-      val exactUrl          = BASE_URL + urlEncode(possibleExactName)
 
-      ForgeLogger.info("Checking exact match URL: $exactUrl")
-      val boxArtFiles = listAvailableBoxArtFiles()
-
-      // - - - Binary search assumes list is sorted — which RetroArch guarantees
-      val index = boxArtFiles.binarySearch(possibleExactName)
-      if (index >= 0)
+      // - - - Loop through all the defined base URLs
+      for (baseUrl in BASE_URLS)
       {
-        ForgeLogger.info("Exact match found via binary search: $possibleExactName")
-        cacheJson[GAME_NAME] = possibleExactName
-        saveCache(cacheJson)
-        emit(BASE_URL + possibleExactName)
-        return@flow
-      }
+        ForgeLogger.info("Checking for box art in: $baseUrl")
+        val possibleExactName = stripExtension(GAME_NAME) + ".png"
 
-      ForgeLogger.info("Starting fuzzy search for: $GAME_NAME")
-      val candidates = boxArtFiles.map { stripExtension(it) }
+        val boxArtFiles = listAvailableBoxArtFilesForUrl(baseUrl)
 
-      val closest = findClosest(stripExtension(GAME_NAME), candidates, 0.65)
-      if (!closest.isNullOrBlank())
-      {
-        val closestFileName = boxArtFiles.firstOrNull { stripExtension(it) == closest }
-        if (!closestFileName.isNullOrBlank())
+        // - - - Check for exact match first
+        val index = boxArtFiles.binarySearch(possibleExactName)
+        if (index >= 0)
         {
-          ForgeLogger.info("Fuzzy match found: $closestFileName")
-          cacheJson[GAME_NAME] = closestFileName
+          val foundFileName = boxArtFiles[index]
+          val foundUrl = baseUrl + foundFileName
+          ForgeLogger.info("Exact match found via binary search: $foundUrl")
+          cacheJson[GAME_NAME] = foundUrl
           saveCache(cacheJson)
-          emit(BASE_URL + closestFileName)
+          emit(foundUrl)
           return@flow
+        }
+
+        // - - - If no exact match, try fuzzy search
+        ForgeLogger.info("Starting fuzzy search for: $GAME_NAME in $baseUrl")
+        val candidates = boxArtFiles.map { stripExtension(it) }
+
+        val closest = findClosest(stripExtension(GAME_NAME), candidates, 0.65)
+        if (!closest.isNullOrBlank())
+        {
+          val closestFileName = boxArtFiles.firstOrNull { stripExtension(it) == closest }
+          if (!closestFileName.isNullOrBlank())
+          {
+            val foundUrl = baseUrl + closestFileName
+            ForgeLogger.info("Fuzzy match found: $foundUrl")
+            cacheJson[GAME_NAME] = foundUrl
+            saveCache(cacheJson)
+            emit(foundUrl)
+            return@flow
+          }
         }
       }
 
+      // - - - If the loop finishes without finding a box art, mark it as not found in the cache
       ForgeLogger.info("No box art found for: $GAME_NAME")
       cacheJson[GAME_NAME] = ""
       saveCache(cacheJson)

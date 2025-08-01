@@ -219,7 +219,8 @@ fun BrowseScreen(
         EmulatorScreen(
           MODIFIER   = Modifier.fillMaxSize(),
           URI        = args.URI,
-          VIEW_MODEL = emulatorViewModel)
+          VIEW_MODEL = emulatorViewModel,
+          LINK_CABLE = linkCableViewModel)
       }
     }
 

@@ -125,7 +125,6 @@ fun HomeScreen(
             VIEW_MODEL.markAsPlayed(game)
             VIEW_MODEL.selectGame(null)
           },
-        ON_RESTART   = { VIEW_MODEL.selectGame(null) },
         ON_FAVORITE  =
           {
             VIEW_MODEL.toggleFavorite(game)

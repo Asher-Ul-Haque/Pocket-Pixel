@@ -202,7 +202,7 @@ class GameBoy
       }
 
       val romFileName   = ROM_DOCUMENT_FILE.name ?: "unknown_rom.gb"
-      val saveFileName = romFileName.replace(".gb", ".sav", ignoreCase = true)
+      val saveFileName  = romFileName.replace(Regex("\\.gbc?$", RegexOption.IGNORE_CASE), ".sav")
 
       var saveFile = savesDirectory.findFile(saveFileName)
       if (saveFile == null)

@@ -26,23 +26,30 @@ class DefaultGameRepository(private val DAO : GameDao) : GameRepository
     isFavorite      = isFavorite
   )
 
-  override suspend fun insertGames(KEY : String)
+  override suspend fun insertGames(KEY: String)
   {
-    val storeManager = App.appModule.externalStorageManager
-    val docFiles =
-      storeManager.listFiles(KEY)
-        .filter { file -> file.name?.endsWith(".gb", true) == true}
+    val storeManager  = App.appModule.externalStorageManager
+    val docFiles      = storeManager
+      .listFiles(KEY)
+      .filter ()
+      { file ->
+        val name = file.name ?: return@filter false
+        name.endsWith(".gb", ignoreCase = true) || name.endsWith(".gbc", ignoreCase = true)
+      }
+
     val games = docFiles.mapNotNull()
     { file ->
       val name = file.name ?: return@mapNotNull null
       ForgeLogger.trace("Detected file : $name")
+      val cleanName = name.replace(Regex("\\.gbc?$", RegexOption.IGNORE_CASE), "")
       Game(
-        title           = name.removeSuffix(".gb"),
-        romUri          = file.uri.toString(),
-        lastPlayed      = null,
-        isFavorite      = false
+        title      = cleanName,
+        romUri     = file.uri.toString(),
+        lastPlayed = null,
+        isFavorite = false
       )
     }
+
     DAO.insertGames(games.map { it.toEntity() })
   }
 
@@ -107,8 +114,9 @@ class DefaultGameRepository(private val DAO : GameDao) : GameRepository
     }
 
     // - - - Step 1: Scan external storage for all .gb files
-    val docFiles = storeManager.listFiles(KEY, EXTENSION = "gb", RECURSIVE = true)
-
+    val gbFiles  = storeManager.listFiles(KEY, EXTENSION = "gb", RECURSIVE = true)
+    val gbcFiles = storeManager.listFiles(KEY, EXTENSION = "gbc", RECURSIVE = true)
+    val docFiles = gbFiles + gbcFiles
     // - - - Step 2: Convert to Game domain objects
     val scannedGames = docFiles.mapNotNull()
     { file ->
@@ -116,7 +124,7 @@ class DefaultGameRepository(private val DAO : GameDao) : GameRepository
       val uri  = file.uri.toString()
 
       Game(
-        title           = name.removeSuffix(".gb"),
+        title           = name.replace(Regex("\\.gbc?$", RegexOption.IGNORE_CASE), ""),
         romUri          = uri,
         lastPlayed      = null,
         isFavorite      = false

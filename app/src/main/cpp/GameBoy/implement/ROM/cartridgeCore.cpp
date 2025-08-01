@@ -419,6 +419,7 @@ void cartridgeFlushRAM()
 // - - - tick 
 void cartridgeTickRTC()
 {
+  if (ctx.ramDirty) cartridgeFlushRAM();
   if (ctx.mapperType != MAPPER_MBC3) return;
 
   // - - - do not update RTC if it's halted (bit 6 of DH is set)

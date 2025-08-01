@@ -10,15 +10,15 @@ class LinkCable
   private val baseUrl         = "https://pocket-pixel-link-cable-club.onrender.com/"
   private var socket: Socket? = null
 
-  // -- State --
+  // - - - State
   var currentSessionId : String?  = null
     private set
   var connected        : Boolean  = false
     private set
-  val sentBytes                   = mutableListOf<Int>()
-  val receivedBytes               = mutableListOf<Int>()
+  var sentByte     : Int = 0
+  var receivedByte : Int = 0
 
-  // -- Callbacks --
+  // - - - Callbacks
   var onSessionCreated      : ((String) -> Unit)? = null
   var onSessionJoined       : ((String) -> Unit)? = null
   var onPartnerConnected    : (() -> Unit)?       = null
@@ -100,7 +100,7 @@ class LinkCable
           val byte = (args.getOrNull(0) as? JSONObject)?.optInt("byte", -1) ?: -1
           if (byte in 0..255)
           {
-            receivedBytes.add(byte)
+            receivedByte = byte
             ForgeLogger.trace("Received byte: $byte")
             onByteReceived?.invoke(byte)
           }
@@ -109,7 +109,6 @@ class LinkCable
 
       ForgeLogger.info("Connecting to $baseUrl")
       socket?.connect()
-
     }
     catch (e: URISyntaxException)
     {
@@ -130,25 +129,25 @@ class LinkCable
     socket?.emit("create_session")
   }
 
-  fun joinSession(sessionId: String)
+  fun joinSession(SESSION_ID : String)
   {
     ifNotConnected { return }
-    val payload = JSONObject().put("sessionId", sessionId)
+    val payload = JSONObject().put("sessionId", SESSION_ID)
     socket?.emit("join_session", payload)
-    currentSessionId = sessionId
+    currentSessionId = SESSION_ID
   }
 
-  fun sendByte(byte: Int)
+  fun sendByte(BYTE : Int)
   {
     ifNotConnected { return }
     val sessionId = currentSessionId ?: return ForgeLogger.error("No session to send byte")
 
     val payload = JSONObject()
       .put("sessionId", sessionId)
-      .put("byte", byte)
+      .put("byte", BYTE)
 
-    ForgeLogger.trace("Sending byte: $byte to $sessionId")
-    sentBytes.add(byte)
+    ForgeLogger.trace("Sending byte: $BYTE to $sessionId")
+    sentByte = BYTE
     socket?.emit("send_link_data", payload)
   }
 
@@ -163,12 +162,12 @@ class LinkCable
   }
 
   // - - - Helpers
-  private inline fun ifNotConnected(action: () -> Unit)
+  private inline fun ifNotConnected(ACTION : () -> Unit)
   {
     if (!connected || socket == null || !socket!!.connected())
     {
       ForgeLogger.error("Socket not connected")
-      action()
+      ACTION()
     }
   }
 }

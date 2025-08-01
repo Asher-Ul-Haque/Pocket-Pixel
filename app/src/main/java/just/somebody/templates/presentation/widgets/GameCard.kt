@@ -224,7 +224,6 @@ fun GameActionBottomSheet(
   GAME        : Game,
   ON_DISMISS  : () -> Unit,
   ON_PLAY     : () -> Unit,
-  ON_RESTART  : () -> Unit,
   ON_FAVORITE : () -> Unit,
 )
 {
@@ -243,11 +242,6 @@ fun GameActionBottomSheet(
         ON_CLICK = ON_PLAY,
         MODIFIER = Modifier.fillMaxWidth())
       { CustomText("Play") }
-
-      CustomButton(
-        ON_CLICK = ON_RESTART,
-        MODIFIER = Modifier.fillMaxWidth())
-      { CustomText("Restart") }
 
       CustomButton(
         ON_CLICK = ON_FAVORITE,

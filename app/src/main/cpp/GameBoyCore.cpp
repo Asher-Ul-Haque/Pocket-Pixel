@@ -7,6 +7,7 @@
 #include "GameBoy/include/timer.h"
 #include "GameBoy/include/emu.h"
 #include "GameBoy/include/gamepad.h"
+#include "GameBoy/include/serial.h"
 
 u64 frameCount = 0;
 
@@ -25,6 +26,7 @@ void startEmulator(f32* VOLUMES)
   timerInit();
   cpuInit();
   ppuInit();
+  serialInit();
   apuInit(VOLUMES);
 }
 

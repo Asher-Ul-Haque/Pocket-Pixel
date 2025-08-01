@@ -29,11 +29,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
@@ -47,7 +50,9 @@ import just.somebody.templates.R
 import just.somebody.templates.appModule.storage.dataStore.AppSettings
 import just.somebody.templates.domain.Buttons
 import just.somebody.templates.domain.GameBoy
+import just.somebody.templates.presentation.screens.LinkCableScreen
 import just.somebody.templates.presentation.viewModels.EmulatorViewModel
+import just.somebody.templates.presentation.viewModels.LinkCableViewModel
 import just.somebody.templates.ui.theme.GameBoyColors
 import just.somebody.templates.ui.theme.PokeFontFamily
 
@@ -56,7 +61,8 @@ import just.somebody.templates.ui.theme.PokeFontFamily
 @Composable
 fun GameBoyControls(
   GAME_BOY   : GameBoy,
-  VIEW_MODEL : EmulatorViewModel)
+  VIEW_MODEL : EmulatorViewModel,
+  LINK_CABLE : LinkCableViewModel)
 {
   val settings          = VIEW_MODEL.settings.collectAsState()
   val showBottomSheet   = remember { mutableStateOf(false) }
@@ -130,6 +136,7 @@ fun GameBoyControls(
     )
 
 
+    var showAudioSettings by remember { mutableStateOf(false) }
     if (showBottomSheet.value)
     {
       GAME_BOY.pauseEmulator()
@@ -148,45 +155,78 @@ fun GameBoyControls(
             FONT_SIZE = 36)
           Spacer(modifier = Modifier.padding(8.dp))
 
-          val colors = SliderDefaults.colors(
-            thumbColor         = GameBoyColors.Green,
-            activeTrackColor   = GameBoyColors.Green,
-            inactiveTrackColor = GameBoyColors.MediumGreen)
+          Row (
+            modifier              = Modifier
+              .fillMaxWidth()
+              .shadow(
+                elevation    = 4.dp,
+                shape        = RectangleShape,
+                ambientColor = Color.Black,
+                spotColor    = Color.Black
+              )
+              .padding(bottom = 4.dp),
+            horizontalArrangement = Arrangement.Start,
+            verticalAlignment     = Alignment.CenterVertically
+          )
+          {
+            CustomButton(
+              ON_CLICK = { showAudioSettings = false},
+              MODIFIER = Modifier.fillMaxWidth(0.5f))
+            { CustomText("Link Cable Settings") }
 
-          CustomText("Master Volume")
-          Slider(
-            value         = settings.value.channelVolume[0],
-            onValueChange = { VIEW_MODEL.setVolume(it, 0) },
-            colors        = colors
+            CustomButton(
+              ON_CLICK = { showAudioSettings = true},
+              MODIFIER = Modifier.fillMaxWidth(1f))
+            { CustomText("Audio Settings") }
+          }
+
+          if (showAudioSettings)
+          {
+
+            val colors = SliderDefaults.colors(
+              thumbColor = GameBoyColors.Green,
+              activeTrackColor = GameBoyColors.Green,
+              inactiveTrackColor = GameBoyColors.MediumGreen)
+
+            CustomText("Master Volume")
+            Slider(
+              value         = settings.value.channelVolume[0],
+              onValueChange = { VIEW_MODEL.setVolume(it, 0) },
+              colors        = colors
             )
 
-          CustomText("Pulse Channel 1 Volume")
-          Slider(
-            value         = settings.value.channelVolume[1],
-            onValueChange = { VIEW_MODEL.setVolume(it, 1) },
-            colors        = colors
-          )
+            CustomText("Pulse Channel 1 Volume")
+            Slider(
+              value         = settings.value.channelVolume[1],
+              onValueChange = { VIEW_MODEL.setVolume(it, 1) },
+              colors        = colors
+            )
 
-          CustomText("Pulse Channel 2 Volume")
-          Slider(
-            value         = settings.value.channelVolume[2],
-            onValueChange = { VIEW_MODEL.setVolume(it, 2) },
-            colors        = colors
-          )
+            CustomText("Pulse Channel 2 Volume")
+            Slider(
+              value         = settings.value.channelVolume[2],
+              onValueChange = { VIEW_MODEL.setVolume(it, 2) },
+              colors        = colors
+            )
 
-          CustomText("Wave Channel Volume")
-          Slider(
-            value         = settings.value.channelVolume[3],
-            onValueChange = { VIEW_MODEL.setVolume(it, 3) },
-            colors        = colors
-          )
+            CustomText("Wave Channel Volume")
+            Slider(
+              value         = settings.value.channelVolume[3],
+              onValueChange = { VIEW_MODEL.setVolume(it, 3) },
+              colors        = colors
+            )
 
-          CustomText("Noise Channel Volume")
-          Slider(
-            value         = settings.value.channelVolume[4],
-            onValueChange = { VIEW_MODEL.setVolume(it, 4) },
-            colors        = colors
-          )
+            CustomText("Noise Channel Volume")
+            Slider(
+              value         = settings.value.channelVolume[4],
+              onValueChange = { VIEW_MODEL.setVolume(it, 4) },
+              colors        = colors
+            )
+          }
+          else
+          {
+            LinkCableScreen(LINK_CABLE, Modifier.fillMaxWidth())
+          }
 
         }
       }

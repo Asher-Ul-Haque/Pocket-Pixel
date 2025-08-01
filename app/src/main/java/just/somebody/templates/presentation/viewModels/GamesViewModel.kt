@@ -14,6 +14,8 @@ import just.somebody.templates.domain.models.Game
 import just.somebody.templates.domain.repositories.GameRepository
 import just.somebody.templates.presentation.screens.Destination
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,6 +36,7 @@ class GamesViewModel(private val REPO : GameRepository) : ViewModel()
 
   private val _selectedGame : MutableStateFlow<Game?> = MutableStateFlow<Game?>(null)
   public  val selectedGame  : StateFlow<Game?>        = _selectedGame
+  private var networkStatus : NetworkStatus           = NetworkStatus.Unavailable
 
   val favoriteGames : StateFlow<List<Game>> =
     REPO
@@ -63,6 +66,7 @@ class GamesViewModel(private val REPO : GameRepository) : ViewModel()
 
   private val _searchQuery : MutableStateFlow<String> = MutableStateFlow("")
   public  val searchQuery  : StateFlow<String>        = _searchQuery
+  @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
   val searchResults: StateFlow<List<Game>> =
     _searchQuery
       .debounce(300)
@@ -121,7 +125,7 @@ class GamesViewModel(private val REPO : GameRepository) : ViewModel()
 
   fun getBoxArtFlow(title: String): Flow<String?>
   {
-    if (!_boxArtMap.value.containsKey(title)) fetchBoxArt(title)
+    if (!_boxArtMap.value.containsKey(title) && networkStatus == NetworkStatus.Available) fetchBoxArt(title)
     return boxArtMap.map { it[title] }
   }
 
@@ -137,9 +141,9 @@ class GamesViewModel(private val REPO : GameRepository) : ViewModel()
     viewModelScope.launch ()
     {
       App.appModule.hardwareManager.isConnectedToInternet
-        .distinctUntilChanged()
         .collect ()
         { status ->
+          networkStatus = status
           if (status is NetworkStatus.Available) retryMissingBoxArts()
         }
     }
