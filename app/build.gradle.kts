@@ -54,7 +54,6 @@ android {
 dependencies {
 
   implementation(libs.androidx.core.ktx)
-  implementation("com.google.oboe:oboe:1.5.0")
   implementation(libs.androidx.lifecycle.runtime.ktx)
   implementation(libs.androidx.activity.compose)
   implementation(platform(libs.androidx.compose.bom))

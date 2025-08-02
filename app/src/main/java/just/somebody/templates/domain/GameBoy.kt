@@ -64,6 +64,7 @@ class GameBoy
   external fun nativeOnSurfaceChanged(width: Int, height: Int)
   external fun nativeOnDrawFrame()
   external fun nativeRecieveByte(BYTE : Byte)
+  external fun nativeFlushSave();
 
   // - - - Static method for C++ to call back to request a render
   companion object

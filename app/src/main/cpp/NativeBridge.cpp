@@ -303,6 +303,11 @@ void sendSerialByte(u8 BYTE)
 
 // - - - Puase and Play - - -
 
+void pauseEmulator()
+{
+
+}
+
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativePauseEmulator(
   JNIEnv* ENV,
@@ -311,6 +316,12 @@ Java_just_somebody_templates_domain_GameBoy_nativePauseEmulator(
   pthread_mutex_lock(&pauseMutex);
   isPaused = true;
   pthread_mutex_unlock(&pauseMutex);
+}
+
+
+void resumeEmulator()
+{
+
 }
 
 JNIEXPORT void JNICALL
@@ -463,6 +474,12 @@ Java_just_somebody_templates_domain_GameBoy_nativeSetButtonState(
   jboolean  PRESSED)
 {
   setButton(static_cast<Buttons>(BUTTON), static_cast<bool>(PRESSED));
+}
+
+JNIEXPORT void JNICALL
+Java_just_somebody_templates_domain_GameBoy_nativeFlushSave(JNIEnv* ENV)
+{
+  if (isRunning) cartridgeFlushRAM();
 }
 
 // - - - Starts the Game Boy emulator thread.

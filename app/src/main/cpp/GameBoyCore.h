@@ -29,6 +29,8 @@ FORGE_API void       playAudio     ();
 FORGE_API void       render();
 FORGE_API void       sendSerialByte(u8 BYTE);
 FORGE_API void       setButton     (Buttons BUTTON, bool PRESSED);
+FORGE_API void       pauseEmulator();
+FORGE_API void       resumeEmulator();
 
 
 #ifdef __cplusplus

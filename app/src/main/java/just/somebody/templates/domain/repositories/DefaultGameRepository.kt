@@ -117,6 +117,7 @@ class DefaultGameRepository(private val DAO : GameDao) : GameRepository
     val gbFiles  = storeManager.listFiles(KEY, EXTENSION = "gb", RECURSIVE = true)
     val gbcFiles = storeManager.listFiles(KEY, EXTENSION = "gbc", RECURSIVE = true)
     val docFiles = gbFiles + gbcFiles
+
     // - - - Step 2: Convert to Game domain objects
     val scannedGames = docFiles.mapNotNull()
     { file ->

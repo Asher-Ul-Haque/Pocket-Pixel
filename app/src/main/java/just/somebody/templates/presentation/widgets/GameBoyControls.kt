@@ -180,9 +180,10 @@ fun GameBoyControls(
             { CustomText("Audio Settings") }
           }
 
+          Spacer(modifier = Modifier.padding(8.dp))
+
           if (showAudioSettings)
           {
-
             val colors = SliderDefaults.colors(
               thumbColor = GameBoyColors.Green,
               activeTrackColor = GameBoyColors.Green,
@@ -225,9 +226,16 @@ fun GameBoyControls(
           }
           else
           {
-            LinkCableScreen(LINK_CABLE, Modifier.fillMaxWidth())
+            Column (
+              modifier = Modifier.fillMaxSize(),
+              horizontalAlignment = Alignment.CenterHorizontally
+            )
+            {
+              CustomButton(ON_CLICK = { GAME_BOY.nativeFlushSave() })
+              { CustomText("Flush Save File Now") }
+              LinkCableScreen(LINK_CABLE, Modifier.fillMaxSize())
+            }
           }
-
         }
       }
     }

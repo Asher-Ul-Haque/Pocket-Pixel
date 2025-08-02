@@ -82,7 +82,6 @@ FORGE_API void cartridgeTickRTC();
 // - - - Cleanup function (important for freeing allocated RAM)
 FORGE_API void cartridgeUnload();
 FORGE_API void cartridgeFlushRAM();
-FORGE_API void cartridgeSaveRAM();
 
 #ifdef __cplusplus
 }

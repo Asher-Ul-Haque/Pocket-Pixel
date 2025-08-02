@@ -1,4 +1,5 @@
 #include "../../include/cartridge.h"
+#include "../../../GameBoyCore.h"
 #include <cstring>
 #include <ctime>
 
@@ -390,6 +391,7 @@ void cartridgeWrite(u16 ADDRESS, u8 VALUE)
 
 void cartridgeFlushRAM()
 {
+  if (!ctx.ramDirty) return;
   if (!ctx.hasBattery || ctx.fileIO == NULL || ctx.fileIO->saveRamToFile == NULL)    return;    
 
   u8* ramToSavePtr  = NULL;
@@ -419,7 +421,12 @@ void cartridgeFlushRAM()
 // - - - tick 
 void cartridgeTickRTC()
 {
-  if (ctx.ramDirty) cartridgeFlushRAM();
+  if (ctx.ramDirty)
+  {
+    pauseEmulator();
+    //cartridgeFlushRAM();
+    resumeEmulator();
+  }
   if (ctx.mapperType != MAPPER_MBC3) return;
 
   // - - - do not update RTC if it's halted (bit 6 of DH is set)
