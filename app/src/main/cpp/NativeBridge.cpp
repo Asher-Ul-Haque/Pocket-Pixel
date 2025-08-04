@@ -799,6 +799,17 @@ Java_just_somebody_templates_domain_GameBoy_nativeSetVolumes(
   apuSetVolume(nativeVolumes);}
 }
 
+JNIEXPORT void JNICALL
+Java_just_somebody_templates_domain_GameBoy_nativeChangePallete
+(
+  JNIEnv* ENV,
+  jobject THIS,
+  jint INDEX)
+{
+  setColorScheme(INDEX);
+}
+
 #ifdef __cplusplus
 #endif
 #endif // __ANDROID__
+

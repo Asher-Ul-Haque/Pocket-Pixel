@@ -12,6 +12,8 @@ import kotlinx.coroutines.runBlocking // For synchronous file loading
 import kotlinx.coroutines.withContext
 import androidx.documentfile.provider.DocumentFile // Needed for DocumentFile operations
 import just.somebody.templates.appModule.storage.ExternalStorageManager
+import just.somebody.templates.presentation.effects.SnackbarController
+import just.somebody.templates.presentation.effects.SnackbarEvent
 
 enum class Buttons {
   UP,
@@ -42,6 +44,8 @@ class GameBoy
   fun resumeEmulator()  { nativeResumeEmulator() }
   fun pauseEmulator()   { nativePauseEmulator() }
   fun setVolumes(VOLUMES: FloatArray) { nativeSetVolumes(VOLUMES); }
+  fun flushSave() { nativeFlushSave() }
+  fun setPalette(INDEX : Int) { nativeChangePallete(INDEX) }
 
   // - - - Input
   fun sendButton(
@@ -59,12 +63,14 @@ class GameBoy
   private external fun nativeResumeEmulator()
   private external fun nativeSetVolumes(VOLUMES: FloatArray)
 
+  private external fun nativeRecieveByte(BYTE : Byte)
+  private external fun nativeFlushSave();
+  private external fun nativeChangePallete(INDEX : Int)
+
   // - - - Native Bindings for OpenGL ES Rendering (existing)
   external fun nativeOnSurfaceCreated()
   external fun nativeOnSurfaceChanged(width: Int, height: Int)
   external fun nativeOnDrawFrame()
-  external fun nativeRecieveByte(BYTE : Byte)
-  external fun nativeFlushSave();
 
   // - - - Static method for C++ to call back to request a render
   companion object
@@ -237,10 +243,22 @@ class GameBoy
         if (saveFileUri != null)
         {
           val success = App.appModule.externalStorageManager.saveFileFromUri(saveFileUri, RAM_DATA)
-          if (success)  ForgeLogger.info("Kotlin: Successfully saved RAM to $saveFileUri.")
-          else          ForgeLogger.error("Kotlin: Failed to save RAM to $saveFileUri.")
+          if (success)
+          {
+            ForgeLogger.info("Kotlin: Successfully saved RAM to $saveFileUri.")
+            SnackbarController.sendEvent(SnackbarEvent("Successful saved game"))
+          }
+          else
+          {
+            ForgeLogger.error("Kotlin: Failed to save RAM to $saveFileUri.")
+            SnackbarController.sendEvent(SnackbarEvent("Failed to save game : write error"))
+          }
         }
-        else ForgeLogger.error("Kotlin: Could not resolve save file URI. Save failed.")
+        else
+        {
+          ForgeLogger.error("Kotlin: Could not resolve save file URI. Save failed.")
+          SnackbarController.sendEvent(SnackbarEvent("Successful saved game : couldnt resolve save file"))
+        }
       }
       return true
     }

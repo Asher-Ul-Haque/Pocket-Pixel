@@ -10,26 +10,47 @@ android {
   namespace = "just.somebody.templates"
   compileSdk = 35
 
+  signingConfigs {
+    create("release") {
+      storeFile = file(properties["RELEASE_STORE_FILE"] as String)
+      storePassword = properties["RELEASE_STORE_PASSWORD"] as String
+      keyAlias = properties["RELEASE_KEY_ALIAS"] as String
+      keyPassword = properties["RELEASE_KEY_PASSWORD"] as String
+    }
+  }
+
+
+
   defaultConfig {
     applicationId = "just.somebody.templates"
     minSdk = 24
     targetSdk = 35
     versionCode = 1
     versionName = "1.0"
-
+    androidResources {
+      localeFilters.add("en") // Keep only English
+    }
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     externalNativeBuild {
       cmake {
-        cppFlags += "";
-        arguments("-DANDROID_STL=c++_shared")
+        cppFlags += "-O3"
+        arguments += listOf(
+          "-DANDROID_STL=c++_shared",
+          "-DCMAKE_BUILD_TYPE=Release"
+        )
       }
     }
   }
 
   buildTypes {
     release {
-      isMinifyEnabled = false
-      proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+      signingConfig = signingConfigs.getByName("release")
+      isMinifyEnabled = true
+      isShrinkResources = true
+      proguardFiles(
+        getDefaultProguardFile("proguard-android-optimize.txt"),
+        "proguard-rules.pro"
+      )
     }
   }
   compileOptions {

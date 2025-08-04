@@ -120,7 +120,6 @@ class MainActivity : ComponentActivity()
   {
     super.onStop()
     App.appModule.gameBoy.pauseEmulator()
-    App.appModule.gameBoy.nativeFlushSave()
   }
 
   override fun onRestart()
@@ -133,6 +132,6 @@ class MainActivity : ComponentActivity()
   {
     super.onDestroy()
     App.appModule.gameBoy.stopEmulator()
-    App.appModule.gameBoy.nativeFlushSave()
+    App.appModule.gameBoy.flushSave()
   }
 }

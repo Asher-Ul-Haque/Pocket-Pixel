@@ -31,7 +31,7 @@ void apuUpdate(i32 CYCLES)
 {
   apuCtx.sampleCounter          -= CYCLES;
   apuCtx.frameSequencerCounter  -= CYCLES;
-  
+
   channelPulseTickSampleGenerator(&apuCtx.channel1, CYCLES);
   channelPulseTickSampleGenerator(&apuCtx.channel2, CYCLES);
   channelWaveTickSampleGenerator (&apuCtx.channel3, CYCLES);
@@ -81,7 +81,7 @@ void apuUpdate(i32 CYCLES)
     left  = (left * apuCtx.masterVolumeLeft)   >> 3;
     right = (right * apuCtx.masterVolumeRight) >> 3;
 
-    left  = (i32)(left  * apuCtx.volumes[0]); 
+    left  = (i32)(left  * apuCtx.volumes[0]);
     right = (i32)(right * apuCtx.volumes[0]);
 
     left  = left < -128 ? -128 : (left > 127 ? 127 : left);
@@ -90,7 +90,7 @@ void apuUpdate(i32 CYCLES)
     u8 mixedL = (u8)(left  + 128);
     u8 mixedR = (u8)(right + 128);
 
-    if (apuCtx.bufferPtr + 2 <= APU_BUFFER_SIZE) 
+    if (apuCtx.bufferPtr + 2 <= APU_BUFFER_SIZE)
     {
       apuCtx.sampleBuffer[apuCtx.bufferPtr++] = mixedL;
       apuCtx.sampleBuffer[apuCtx.bufferPtr++] = mixedR;
@@ -98,7 +98,7 @@ void apuUpdate(i32 CYCLES)
 
     if (apuCtx.bufferPtr >= APU_BUFFER_SIZE)
     {
-      playAudio(); 
+      playAudio();
       apuCtx.bufferPtr = 0;
     }
   }
@@ -111,70 +111,70 @@ void apuWrite(u16 ADDRESS, u8 VALUE)
 
   switch (ADDRESS)
   {
-    // - - - Channel 1 
+    // - - - Channel 1
     case 0x10 : { channelPulseSweep(&apuCtx.channel1, VALUE);                       break; }
     case 0x11 : { channelPulseSetNRx1LengthTimerDutyCycle(&apuCtx.channel1, VALUE); break; }
     case 0x12 : { channelPulseSetNRx2EnvelopeVolume(&apuCtx.channel1, VALUE);       break; }
     case 0x13 : { channelPulseSetNRx3PeriodLow(&apuCtx.channel1, VALUE);            break; }
     case 0x14 : { channelPulseSetNRx4PeriodHiControl(&apuCtx.channel1, VALUE);      break; }
-    
-    // - - - Channel 2
+
+      // - - - Channel 2
     case 0x16 : { channelPulseSetNRx1LengthTimerDutyCycle(&apuCtx.channel2, VALUE); break; }
     case 0x17 : { channelPulseSetNRx2EnvelopeVolume(&apuCtx.channel2, VALUE);       break; }
     case 0x18 : { channelPulseSetNRx3PeriodLow(&apuCtx.channel2, VALUE);            break; }
     case 0x19 : { channelPulseSetNRx4PeriodHiControl(&apuCtx.channel2, VALUE);      break; }
 
-    // - - - Channel 3 
+      // - - - Channel 3
     case 0x1A : { channelWaveSetNR30(&apuCtx.channel3, VALUE); break;}
     case 0x1B : { channelWaveSetNR31(&apuCtx.channel3, VALUE); break;}
     case 0x1C : { channelWaveSetNR32(&apuCtx.channel3, VALUE); break;}
     case 0x1D : { channelWaveSetNRX3(&apuCtx.channel3, VALUE); break;}
     case 0x1E : { channelWaveSetNRX4(&apuCtx.channel3, VALUE); break;}
     case 0x30 ... 0x3F :
-      { 
-        apuCtx.channel3.wavePatternRAM[ADDRESS - 0x30] = VALUE; 
-        break;
-      }
+    {
+      apuCtx.channel3.wavePatternRAM[ADDRESS - 0x30] = VALUE;
+      break;
+    }
 
-    // - - - Channel 4 
+      // - - - Channel 4
     case 0x20 : { channelNoiseSetNR41(&apuCtx.channel4, VALUE); break; }
     case 0x21 : { channelNoiseSetNR42(&apuCtx.channel4, VALUE); break; }
     case 0x22 : { channelNoiseSetNR43(&apuCtx.channel4, VALUE); break; }
     case 0x23 : { channelNoiseSetNR44(&apuCtx.channel4, VALUE); break; }
 
-    // - - - Master 
-    case 0x24 : 
-      {
-        apuCtx.NR50                 = VALUE;
-        apuCtx.vinRight             = (VALUE >> 3) & 1;
-        apuCtx.vinLeft              = (VALUE >> 7) & 1;
-        apuCtx.masterVolumeRight    = VALUE & 7;
-        apuCtx.masterVolumeLeft     = (VALUE >> 4) & 7;
-        break;
-      }
+      // - - - Master
+    case 0x24 :
+    {
+      apuCtx.NR50                 = VALUE;
+      apuCtx.vinRight             = (VALUE >> 3) & 1;
+      apuCtx.vinLeft              = (VALUE >> 7) & 1;
+      apuCtx.masterVolumeRight    = VALUE & 7;
+      apuCtx.masterVolumeLeft     = (VALUE >> 4) & 7;
+      break;
+    }
     case 0x25 :
-      {
-        apuCtx.NR51           = VALUE;
-        apuCtx.channel1Right  = (VALUE >> 0) & 1;
-        apuCtx.channel2Right  = (VALUE >> 1) & 1;
-        apuCtx.channel3Right  = (VALUE >> 2) & 1;
-        apuCtx.channel4Right  = (VALUE >> 3) & 1;
-        apuCtx.channel1Left   = (VALUE >> 4) & 1;
-        apuCtx.channel2Left   = (VALUE >> 5) & 1;
-        apuCtx.channel3Left   = (VALUE >> 6) & 1;
-        apuCtx.channel4Left   = (VALUE >> 7) & 1;
-        break;
-      }
-    case 0x26 : 
-      {
-        bool was          = apuCtx.isEnabled;
-        apuCtx.isEnabled  = (VALUE & 0x80) != 0;
+    {
+      apuCtx.NR51           = VALUE;
+      apuCtx.channel1Right  = (VALUE >> 0) & 1;
+      apuCtx.channel2Right  = (VALUE >> 1) & 1;
+      apuCtx.channel3Right  = (VALUE >> 2) & 1;
+      apuCtx.channel4Right  = (VALUE >> 3) & 1;
+      apuCtx.channel1Left   = (VALUE >> 4) & 1;
+      apuCtx.channel2Left   = (VALUE >> 5) & 1;
+      apuCtx.channel3Left   = (VALUE >> 6) & 1;
+      apuCtx.channel4Left   = (VALUE >> 7) & 1;
+      break;
+    }
+    case 0x26 :
+    {
+      bool was          = apuCtx.isEnabled;
+      apuCtx.isEnabled  = (VALUE & 0x80) != 0;
 
-        if (!apuCtx.isEnabled && was) apuInit(apuCtx.volumes);
+      if (!apuCtx.isEnabled && was) apuInit(apuCtx.volumes);
 
-        apuCtx.NR52 = (apuCtx.NR52 & 0x0F) | 0x70;
-        break;
-      }
+      apuCtx.NR52 = (apuCtx.NR52 & 0x0F) | 0x70;
+      break;
+    }
     default : break;
   }
 }
@@ -191,13 +191,13 @@ u8 apuRead(u16 ADDRESS)
     case 0x13 : return 0xFF;
     case 0x14 : return apuCtx.channel1.NRX4;
 
-    // - - - channel 2
+      // - - - channel 2
     case 0x16 : return apuCtx.channel2.NRX1;
     case 0x17 : return apuCtx.channel2.NRX2;
     case 0x18 : return 0xFF;
     case 0x19 : return apuCtx.channel2.NRX4;
 
-    // - - - channel 3 (Wave)
+      // - - - channel 3 (Wave)
     case 0x1A : return apuCtx.channel3.NR30;
     case 0x1B : return apuCtx.channel3.NR31;
     case 0x1C : return apuCtx.channel3.NR32;
@@ -206,19 +206,19 @@ u8 apuRead(u16 ADDRESS)
     case 0x30 ... 0x3F:
       return apuCtx.channel3.wavePatternRAM[ADDRESS - 0x30];
 
-    // - - - master 
+      // - - - master
     case 0x24 : return apuCtx.NR50;
     case 0x25 : return apuCtx.NR51;
     case 0x26:
-      {
-        u8 status = 0;
-        if (apuCtx.channel1.isEnabled) status |= 0x01;
-        if (apuCtx.channel2.isEnabled) status |= 0x02;
-        if (apuCtx.channel3.isEnabled) status |= 0x04;
-        if (apuCtx.channel4.isEnabled) status |= 0x08;
+    {
+      u8 status = 0;
+      if (apuCtx.channel1.isEnabled) status |= 0x01;
+      if (apuCtx.channel2.isEnabled) status |= 0x02;
+      if (apuCtx.channel3.isEnabled) status |= 0x04;
+      if (apuCtx.channel4.isEnabled) status |= 0x08;
 
-        return (apuCtx.isEnabled ? 0x80 : 0x00) | 0x70 | (status & 0x0F);
-      }
+      return (apuCtx.isEnabled ? 0x80 : 0x00) | 0x70 | (status & 0x0F);
+    }
 
     default : return 0xFF;
   }

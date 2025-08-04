@@ -43,7 +43,7 @@ void channelPulseInit(ChannelPulse* CHANNEL)
 
 void channelPulseSweep(ChannelPulse* CHANNEL, u8 VALUE)
 {
-  CHANNEL->NR10       = (VALUE & 0x7F) | 0x80; 
+  CHANNEL->NR10       = (VALUE & 0x7F) | 0x80;
   CHANNEL->sweepTime  = (VALUE >> 4) & 0x7;
   CHANNEL->sweepStep  = (VALUE >> 3) & 0x1;
   CHANNEL->sweepShift = VALUE & 0x7;
@@ -108,7 +108,7 @@ static void channelPulseHandleTrigger(ChannelPulse* CHANNEL)
 void channelPulseTickLength(ChannelPulse* CHANNEL)
 {
   if (CHANNEL->length > 0) CHANNEL->length--;
-  if (CHANNEL->length == 0 && CHANNEL->lengthEnable) 
+  if (CHANNEL->length == 0 && CHANNEL->lengthEnable)
   { CHANNEL->isEnabled = false; }
 }
 

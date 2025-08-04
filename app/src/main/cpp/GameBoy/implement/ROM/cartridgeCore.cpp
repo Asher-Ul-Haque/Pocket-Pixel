@@ -9,7 +9,7 @@ CartContext* cartridgeGetContext()
 { return &ctx; }
 
 // - - - rom SIXE : 32 KB * (1 << N)
-const u32 ROM_SIZE_MAP[] = 
+const u32 ROM_SIZE_MAP[] =
   {
     32 * 1024,   // - - - 0x00: 32KB    (no banking)
     64 * 1024,   // - - - 0x01: 64KB    (4 banks)
@@ -23,19 +23,19 @@ const u32 ROM_SIZE_MAP[] =
   };
 
 // - - - RAM Size: In bytes
-const u32 RAM_SIZE_MAP[] = 
+const u32 RAM_SIZE_MAP[] =
   {
-    0,           
-    2 * 1024,  
-    8 * 1024, 
+    0,
+    2 * 1024,
+    8 * 1024,
     32 * 1024,
-    128 * 1024, 
-    64 * 1024   
+    128 * 1024,
+    64 * 1024
   };
 
 
 // - - - lookup tables
-static const char* ROM_TYPES[] = 
+static const char* ROM_TYPES[] =
 {
   "ROM ONLY",
   "MBC1",
@@ -74,7 +74,7 @@ static const char* ROM_TYPES[] =
   "MBC7+SENSOR+RUMBLE+RAM+BATTERY",
 };
 
-static const char* LICENSE_CODE[0xA5] = 
+static const char* LICENSE_CODE[0xA5] =
 {
   [0x00] = "None",
   [0x01] = "Nintendo R&D1",
@@ -139,14 +139,24 @@ static const char* LICENSE_CODE[0xA5] =
   [0xA4] = "Konami (Yu-Gi-Oh!)"
 };
 
+typedef struct MBC3SaveData
+{
+  u8 externalRamData[0];
+  u8 rtcSeconds;
+  u8 rtcMinutes;
+  u8 rtcHours;
+  u8 rtcDayLow;
+  u8 rtcDayHigh;
+} MBC3SaveData;
 
-// - - - | Functions | - - - 
+
+// - - - | Functions | - - -
 
 
-// - - - lookups - - - 
+// - - - lookups - - -
 
 
-// - - - license 
+// - - - license
 const char* getCartLicensee()
 {
   if (ctx.metadata->newLicenseCode <= 0xA4) return LICENSE_CODE[ctx.metadata->licenseCode];
@@ -160,7 +170,7 @@ const char* getCartType()
 }
 
 
-// - - - Load unload 
+// - - - Load unload
 bool cartridgeLoad(u8* CARTRIDGE, u64 SIZE, CartridgeFileIO* IO)
 {
   // - - - free everything
@@ -181,26 +191,26 @@ bool cartridgeLoad(u8* CARTRIDGE, u64 SIZE, CartridgeFileIO* IO)
   ctx.ramDirty    = false;
 
 
-  switch (ctx.metadata->type) 
+  switch (ctx.metadata->type)
   {
     // - - - ROM Only
-    case 0x00: 
+    case 0x00:
       ctx.mapperType = MAPPER_NONE;
       break;
 
-    // - - - mbc1 
-    case 0x01 ... 0x03: 
+    // - - - mbc1
+    case 0x01 ... 0x03:
       ctx.mapperType                      = MAPPER_MBC1;
       ctx.mapperState.mbc1.ramEnabled     = false;
       ctx.mapperState.mbc1.currentRomBank = 1;
       ctx.mapperState.mbc1.currentRamBank = 0;
       ctx.mapperState.mbc1.romBankingMode = true;
-      ctx.hasBattery                      = (ctx.metadata->type == 0x03); 
+      ctx.hasBattery                      = (ctx.metadata->type == 0x03);
       break;
 
 
-    // - - - mbc2 
-    case 0x05 ... 0x06: 
+    // - - - mbc2
+    case 0x05 ... 0x06:
       ctx.mapperType                      = MAPPER_MBC2;
       ctx.mapperState.mbc2.ramEnabled     = false;
       ctx.mapperState.mbc2.currentRomBank = 1;
@@ -212,7 +222,7 @@ bool cartridgeLoad(u8* CARTRIDGE, u64 SIZE, CartridgeFileIO* IO)
       break;
 
     // - - - mbc3
-    case 0x0F ... 0x13: 
+    case 0x0F ... 0x13:
       ctx.mapperType                          = MAPPER_MBC3;
       ctx.mapperState.mbc3.ramEnabled         = false;
       ctx.mapperState.mbc3.currentRomBank     = 1;
@@ -229,14 +239,14 @@ bool cartridgeLoad(u8* CARTRIDGE, u64 SIZE, CartridgeFileIO* IO)
       ctx.mapperState.mbc3.latchedRTCdayHigh  = 0;
       ctx.mapperState.mbc3.rtcLatched         = false;
       ctx.mapperState.mbc3.lastRTCsystemTime  = time(NULL);
-      if (ctx.metadata->type == 0x0F || 
-          ctx.metadata->type == 0x10 || 
-          ctx.metadata->type == 0x13) 
+      if (ctx.metadata->type == 0x0F ||
+          ctx.metadata->type == 0x10 ||
+          ctx.metadata->type == 0x13)
       { ctx.hasBattery = true; }
       break;
 
     // - - - mbc5
-    case 0x19 ... 0x1E: 
+    case 0x19 ... 0x1E:
       ctx.mapperType                      = MAPPER_MBC5;
       ctx.mapperState.mbc5.ramEnabled     = false;
       ctx.mapperState.mbc5.currentRomBank = 1;
@@ -259,7 +269,7 @@ bool cartridgeLoad(u8* CARTRIDGE, u64 SIZE, CartridgeFileIO* IO)
     ctx.externalRamSize = RAM_SIZE_MAP[ctx.metadata->ramSize];
     if (ctx.externalRamSize > 0)
     {
-      // - - - MBC2 has internal ram 
+      // - - - MBC2 has internal ram
       if (ctx.mapperType != MAPPER_MBC2)
       {
         ctx.externalRamData= (u8*) malloc(ctx.externalRamSize);
@@ -270,7 +280,7 @@ bool cartridgeLoad(u8* CARTRIDGE, u64 SIZE, CartridgeFileIO* IO)
       else FORGE_LOG_INFO("MBC2 cartridge. EXternal ram size 0x%02X ignore, using internal RAM", ctx.metadata->ramSize);
     }
   }
-  else 
+  else
   {
     FORGE_LOG_WARNING("Unkown RAM size code 0x%02X. ASSUMING no extneral ram");
     ctx.externalRamSize = 0;
@@ -294,35 +304,71 @@ bool cartridgeLoad(u8* CARTRIDGE, u64 SIZE, CartridgeFileIO* IO)
   if (checkSumPassed) { FORGE_LOG_INFO ("Header Checksum : 0x%02X (%s)\n", ctx.metadata->checksum, "PASSED"); }
   else                { FORGE_LOG_ERROR("Header Checksum : 0x%02X (%s)\n", ctx.metadata->checksum, "FAILED"); }
 
-  // - - - attempt to load RAM data if battery backed 
+  // - - - attempt to load RAM data if battery backed
   if (ctx.hasBattery)
   {
     u32 expectedSaveSize = 0;
     u8* ramToLoadPtr     = NULL;
 
-    if (ctx.externalRamData && ctx.externalRamSize > 0)
+    // - - - MBC3
+    if (ctx.mapperType == MAPPER_MBC3)
+    {
+      expectedSaveSize = ctx.externalRamSize + sizeof(MBC3SaveData);
+      ramToLoadPtr     = (u8*)malloc(expectedSaveSize);
+      FORGE_ASSERT_MESSAGE(ramToLoadPtr, "Failed to allocate memory for loading MBC3 save data!");
+
+      if (ctx.fileIO->loadRamFromFile(ramToLoadPtr, expectedSaveSize))
+      {
+        FORGE_LOG_INFO("Loaded MBC3 RAM and RTC data from file.");
+
+        // - - - Copy the loaded RAM data back to the external RAM pointer
+        if (ctx.externalRamData && ctx.externalRamSize > 0)
+        {
+          memcpy(ctx.externalRamData, ramToLoadPtr, ctx.externalRamSize);
+        }
+
+        // - - - Copy the loaded RTC data back to the MBC3 state
+        MBC3SaveData* saveData = (MBC3SaveData*)(ramToLoadPtr + ctx.externalRamSize);
+        ctx.mapperState.mbc3.rtcSeconds = saveData->rtcSeconds;
+        ctx.mapperState.mbc3.rtcMinutes = saveData->rtcMinutes;
+        ctx.mapperState.mbc3.rtcHours   = saveData->rtcHours;
+        ctx.mapperState.mbc3.rtcDayLow  = saveData->rtcDayLow;
+        ctx.mapperState.mbc3.rtcDayHigh = saveData->rtcDayHigh;
+      }
+      else
+      {
+        FORGE_LOG_WARNING("Failed to load MBC3 RAM and RTC, starting with a fresh state.");
+        memset(ramToLoadPtr, 0, expectedSaveSize);
+      }
+      free(ramToLoadPtr);
+    }
+
+    // - - - MBC1 and MBC5
+    else if (ctx.externalRamData && ctx.externalRamSize > 0)
     {
       expectedSaveSize = ctx.externalRamSize;
       ramToLoadPtr     = ctx.externalRamData;
+
+      FORGE_LOG_INFO("Attempting to load external RAM");
+      if (!ctx.fileIO->loadRamFromFile(ramToLoadPtr, expectedSaveSize))
+      {
+        FORGE_LOG_WARNING("Failed to load RAM, starting with a fresh state.");
+      }
     }
+
+    // - - - MBC2
     else if (ctx.mapperType == MAPPER_MBC2 && ctx.mapperState.mbc2.internalRam)
     {
       expectedSaveSize = 256;
       ramToLoadPtr     = ctx.mapperState.mbc2.internalRam;
-    }
-    else if (ctx.mapperType == MAPPER_MBC3 && ctx.metadata->type == 0x0F)
-    {
-      TODO_COMMENT("MBC3 has no external ram, but has battery backed RTC");
-    }
 
-    if (ramToLoadPtr && expectedSaveSize > 0)
-    {
-      FORGE_LOG_INFO("Attempting to load ram");
+      FORGE_LOG_INFO("Attempting to load internal MBC2 RAM");
       if (!ctx.fileIO->loadRamFromFile(ramToLoadPtr, expectedSaveSize))
-      { FORGE_LOG_WARNING("failed to load ram, starting with a fresh state"); }
+      {
+        FORGE_LOG_WARNING("Failed to load MBC2 RAM, starting with a fresh state.");
+      }
     }
   }
-
   return checkSumPassed;
 }
 
@@ -352,9 +398,9 @@ void cartridgeUnload()
 }
 
 
-// - - - Reading and Writing - - - 
+// - - - Reading and Writing - - -
 
-// - - - read 
+// - - - read
 u8 cartridgeRead(u16 ADDRESS)
 {
   switch (ctx.mapperType)
@@ -370,7 +416,7 @@ u8 cartridgeRead(u16 ADDRESS)
   }
 }
 
-// - - - write 
+// - - - write
 void cartridgeWrite(u16 ADDRESS, u8 VALUE)
 {
   switch (ctx.mapperType)
@@ -380,45 +426,82 @@ void cartridgeWrite(u16 ADDRESS, u8 VALUE)
     case MAPPER_MBC2 : { mbc2Write(ADDRESS, VALUE); break; }
     case MAPPER_MBC3 : { mbc3Write(ADDRESS, VALUE); break; }
     case MAPPER_MBC5 : { mbc5Write(ADDRESS, VALUE); break; }
-    default : 
+    default :
       FORGE_LOG_FATAL("Attempted to write to unkown mapper type at address : 0x%04X with value 0x%02X", ADDRESS, VALUE);
       break;
   }
 }
 
 
-// - - - Save and Load - - - 
+// - - - Save and Load - - -
 
 void cartridgeFlushRAM()
 {
   if (!ctx.ramDirty) return;
-  if (!ctx.hasBattery || ctx.fileIO == NULL || ctx.fileIO->saveRamToFile == NULL)    return;    
+  if (!ctx.hasBattery || ctx.fileIO == NULL || ctx.fileIO->saveRamToFile == NULL)    return;
 
-  u8* ramToSavePtr  = NULL;
-  u32 ramToSaveSize = 0;
-
-  if (ctx.externalRamData && ctx.externalRamSize > 0)
+  // - - - Handle MBC3 saving separately
+  if (ctx.mapperType == MAPPER_MBC3)
   {
-    ramToSavePtr  = ctx.externalRamData;
-    ramToSaveSize = ctx.externalRamSize;
+    u32 totalSaveSize  = ctx.externalRamSize + sizeof(MBC3SaveData);
+    u8* saveDataBuffer = (u8*)malloc(totalSaveSize);
+    FORGE_ASSERT_MESSAGE(saveDataBuffer, "Failed to allocate buffer for MBC3 save data!");
+
+    // - - - Copy RAM data if it exists
+    if (ctx.externalRamData && ctx.externalRamSize > 0)
+    {
+      memcpy(saveDataBuffer, ctx.externalRamData, ctx.externalRamSize);
+    }
+
+    // - - - Copy RTC data to the end of the buffer
+    MBC3SaveData* saveData = (MBC3SaveData*)(saveDataBuffer + ctx.externalRamSize);
+    saveData->rtcSeconds = ctx.mapperState.mbc3.rtcSeconds;
+    saveData->rtcMinutes = ctx.mapperState.mbc3.rtcMinutes;
+    saveData->rtcHours   = ctx.mapperState.mbc3.rtcHours;
+    saveData->rtcDayLow  = ctx.mapperState.mbc3.rtcDayLow;
+    saveData->rtcDayHigh = ctx.mapperState.mbc3.rtcDayHigh;
+
+    if (!ctx.fileIO->saveRamToFile(saveDataBuffer, totalSaveSize))
+    {
+      FORGE_LOG_ERROR("Failed to flush MBC3 RAM and RTC data to file.");
+    }
+    else
+    {
+      FORGE_LOG_INFO("Successfully flushed MBC3 RAM and RTC data to file.");
+    }
+    free(saveDataBuffer);
   }
-  else if (ctx.mapperType == MAPPER_MBC2 && ctx.mapperState.mbc2.internalRam)
-  {
-    ramToSavePtr  = ctx.mapperState.mbc2.internalRam;
-    ramToSaveSize = 256;
-  }
-  else return;
 
-  if (ramToSavePtr && ramToSaveSize > 0)
+  // - - - Handle other mappers
+  else
   {
-    if (!ctx.fileIO->saveRamToFile(ramToSavePtr, ramToSaveSize)) FORGE_LOG_ERROR("faile to flush RAM for");
+    u8* ramToSavePtr  = NULL;
+    u32 ramToSaveSize = 0;
+
+    if (ctx.externalRamData && ctx.externalRamSize > 0)
+    {
+      ramToSavePtr  = ctx.externalRamData;
+      ramToSaveSize = ctx.externalRamSize;
+    }
+    else if (ctx.mapperType == MAPPER_MBC2 && ctx.mapperState.mbc2.internalRam)
+    {
+      ramToSavePtr  = ctx.mapperState.mbc2.internalRam;
+      ramToSaveSize = 256;
+    }
+    else return;
+
+    if (ramToSavePtr && ramToSaveSize > 0)
+    {
+      if (!ctx.fileIO->saveRamToFile(ramToSavePtr, ramToSaveSize)) FORGE_LOG_ERROR("failed to flush RAM for")
+      else FORGE_LOG_INFO("Successfully flushed RAM for other mapper type.");
+    }
   }
 
   ctx.ramDirty = false;
 }
 
 
-// - - - tick 
+// - - - tick
 void cartridgeTickRTC()
 {
   if (ctx.ramDirty)
@@ -439,7 +522,7 @@ void cartridgeTickRTC()
 
   ctx.mapperState.mbc3.rtcSeconds += elapsedSeconds;
 
-  // - - - propagate carries for seconds, minutes, hours 
+  // - - - propagate carries for seconds, minutes, hours
   if (ctx.mapperState.mbc3.rtcSeconds >= 60)
   {
     ctx.mapperState.mbc3.rtcMinutes += (ctx.mapperState.mbc3.rtcSeconds / 60);
@@ -465,7 +548,7 @@ void cartridgeTickRTC()
       currentDayCounter %= 512;
     }
     ctx.mapperState.mbc3.rtcDayLow  = (u8)(currentDayCounter & 0xFF);
-    ctx.mapperState.mbc3.rtcDayHigh = (ctx.mapperState.mbc3.rtcDayHigh & 0xFC) | ((currentDayCounter >> 8) & 0x01); 
+    ctx.mapperState.mbc3.rtcDayHigh = (ctx.mapperState.mbc3.rtcDayHigh & 0xFC) | ((currentDayCounter >> 8) & 0x01);
   }
 
   ctx.mapperState.mbc3.lastRTCsystemTime = currentSystemTime;

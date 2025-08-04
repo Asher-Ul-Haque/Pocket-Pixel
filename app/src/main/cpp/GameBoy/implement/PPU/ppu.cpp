@@ -11,9 +11,18 @@ static u8           OAM[0xA0];
 static u8           colorSchemeIndex = 0;
 
 const u32*  getColorScheme          ()          { return colorSchemes[colorSchemeIndex]; }
-void        setColorScheme          (u8 INDEX)  { colorSchemeIndex = INDEX % 8; }
 PPUContext* ppuGetContext           ()          { return &ctx; }
 i32         ppuGetCpuSpeedMultiplier()          { return speedMultiplier; }
+
+
+void setColorScheme(u8 INDEX)  
+{ 
+  colorSchemeIndex = INDEX % 8; 
+  ppuCachePalette(ctx.backgroundPalette,   getColorScheme(), ctx.bgp);
+  ppuCachePalette(ctx.objectPalette0,      getColorScheme(), ctx.obp0);
+  ppuCachePalette(ctx.objectPalette1,      getColorScheme(), ctx.obp1);
+
+}
 
 
 // - - - Read and Write - - -
@@ -296,6 +305,9 @@ void ppuTick()
   PPUContext* ctx = ppuGetContext();
 
   if (!ctx->isEnabled) return; 
+  static int index = 0;
+  setColorScheme(index++);
+
 
   ctx->scanlineCounter ++;
 

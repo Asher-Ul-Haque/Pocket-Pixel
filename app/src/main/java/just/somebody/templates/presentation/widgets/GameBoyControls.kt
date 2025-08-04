@@ -64,7 +64,6 @@ fun GameBoyControls(
   VIEW_MODEL : EmulatorViewModel,
   LINK_CABLE : LinkCableViewModel)
 {
-  val settings          = VIEW_MODEL.settings.collectAsState()
   val showBottomSheet   = remember { mutableStateOf(false) }
   // - - - Stores the last successfully pressed single directional button (UP, DOWN, LEFT, RIGHT)
   val lastDirection     = remember { mutableStateOf<Buttons?>(null) }
@@ -136,108 +135,9 @@ fun GameBoyControls(
     )
 
 
-    var showAudioSettings by remember { mutableStateOf(false) }
     if (showBottomSheet.value)
     {
-      GAME_BOY.pauseEmulator()
-      ModalBottomSheet(
-        onDismissRequest = { showBottomSheet.value = false; GAME_BOY.resumeEmulator(); },
-        containerColor   = GameBoyColors.DarkGreen)
-      {
-        Column(
-          modifier            = Modifier.padding(16.dp),
-          verticalArrangement = Arrangement.Top,
-          horizontalAlignment = Alignment.CenterHorizontally
-        )
-        {
-          CustomText(
-            TEXT = "Game Settings",
-            FONT_SIZE = 36)
-          Spacer(modifier = Modifier.padding(8.dp))
-
-          Row (
-            modifier              = Modifier
-              .fillMaxWidth()
-              .shadow(
-                elevation    = 4.dp,
-                shape        = RectangleShape,
-                ambientColor = Color.Black,
-                spotColor    = Color.Black
-              )
-              .padding(bottom = 4.dp),
-            horizontalArrangement = Arrangement.Start,
-            verticalAlignment     = Alignment.CenterVertically
-          )
-          {
-            CustomButton(
-              ON_CLICK = { showAudioSettings = false},
-              MODIFIER = Modifier.fillMaxWidth(0.5f))
-            { CustomText("Link Cable Settings") }
-
-            CustomButton(
-              ON_CLICK = { showAudioSettings = true},
-              MODIFIER = Modifier.fillMaxWidth(1f))
-            { CustomText("Audio Settings") }
-          }
-
-          Spacer(modifier = Modifier.padding(8.dp))
-
-          if (showAudioSettings)
-          {
-            val colors = SliderDefaults.colors(
-              thumbColor = GameBoyColors.Green,
-              activeTrackColor = GameBoyColors.Green,
-              inactiveTrackColor = GameBoyColors.MediumGreen)
-
-            CustomText("Master Volume")
-            Slider(
-              value         = settings.value.channelVolume[0],
-              onValueChange = { VIEW_MODEL.setVolume(it, 0) },
-              colors        = colors
-            )
-
-            CustomText("Pulse Channel 1 Volume")
-            Slider(
-              value         = settings.value.channelVolume[1],
-              onValueChange = { VIEW_MODEL.setVolume(it, 1) },
-              colors        = colors
-            )
-
-            CustomText("Pulse Channel 2 Volume")
-            Slider(
-              value         = settings.value.channelVolume[2],
-              onValueChange = { VIEW_MODEL.setVolume(it, 2) },
-              colors        = colors
-            )
-
-            CustomText("Wave Channel Volume")
-            Slider(
-              value         = settings.value.channelVolume[3],
-              onValueChange = { VIEW_MODEL.setVolume(it, 3) },
-              colors        = colors
-            )
-
-            CustomText("Noise Channel Volume")
-            Slider(
-              value         = settings.value.channelVolume[4],
-              onValueChange = { VIEW_MODEL.setVolume(it, 4) },
-              colors        = colors
-            )
-          }
-          else
-          {
-            Column (
-              modifier = Modifier.fillMaxSize(),
-              horizontalAlignment = Alignment.CenterHorizontally
-            )
-            {
-              CustomButton(ON_CLICK = { GAME_BOY.nativeFlushSave() })
-              { CustomText("Flush Save File Now") }
-              LinkCableScreen(LINK_CABLE, Modifier.fillMaxSize())
-            }
-          }
-        }
-      }
+      SettingsPanel(Modifier, GAME_BOY, VIEW_MODEL, LINK_CABLE) { showBottomSheet.value = false; }
     }
   }
 }

@@ -69,7 +69,7 @@ void channelWaveTickSampleGenerator(ChannelWave* CHANNEL, i32 CYCLES)
     {
       u8 shift = 0;
       if (CHANNEL->volume == 0)   CHANNEL->sample = 0;
-      else 
+      else
       {
         switch (CHANNEL->volume)
         {
@@ -85,4 +85,3 @@ void channelWaveTickSampleGenerator(ChannelWave* CHANNEL, i32 CYCLES)
     else CHANNEL->sample = 0;
   }
 }
-

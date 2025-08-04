@@ -44,8 +44,9 @@ import androidx.compose.ui.text.buildAnnotatedString
 
 @Composable
 fun LinkCableScreen(
-  VIEW_MODEL: LinkCableViewModel,
-  MODIFIER: Modifier = Modifier
+  VIEW_MODEL  : LinkCableViewModel,
+  MODIFIER    : Modifier = Modifier,
+  SHOW_IMAGES : Boolean = true
 ) {
   val isNetworkAvailable  = VIEW_MODEL.isNetworkAvailable.collectAsState()
   val sessionID           = VIEW_MODEL.sessionID.collectAsState()
@@ -78,15 +79,18 @@ fun LinkCableScreen(
 
 
     // - - - Show the appropriate image
-    Image(
-      painter =
+    if (SHOW_IMAGES)
+    {
+      Image(
+        painter =
         if (isNetworkAvailable.value != NetworkStatus.Available)  painterResource(R.drawable.no_internet)
         else                                                      painterResource(R.drawable.linked_boys),
-      modifier =
+        modifier =
         if (isNetworkAvailable.value == NetworkStatus.Available)  Modifier.fillMaxWidth()
         else                                                      Modifier.fillMaxSize(0.3f),
-      contentDescription = null
-    )
+        contentDescription = null
+      )
+    }
 
     Spacer(modifier = Modifier.size(16.dp))
 
@@ -149,6 +153,17 @@ fun LinkCableScreen(
             { CustomText("Disconnect") }
           }
         }
+      }
+    }
+    else
+    {
+      if (isNetworkAvailable.value != NetworkStatus.Available)
+      {
+        CustomText("Not connected to the internet")
+      }
+      else
+      {
+        CustomText("Connecting to Link Cable Club")
       }
     }
   }

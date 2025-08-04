@@ -12,12 +12,25 @@ file(GLOB_RECURSE PROJECT_SOURCES
         "${CMAKE_SOURCE_DIR}/NativeBridge.cpp"
 )
 
-# Default Android build
+# Add native shared library
 add_library(${CMAKE_PROJECT_NAME} SHARED ${PROJECT_SOURCES})
 
-# Link Android libraries
+# Link necessary Android libraries
 target_link_libraries(${CMAKE_PROJECT_NAME}
         android
         GLESv2
         log
 )
+
+# Define compile-time flags to disable logs
+target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
+        LOG_WARNING_ENABLED=0
+        LOG_INFO_ENABLED=0
+        LOG_DEBUG_ENABLED=0
+        LOG_TRACE_ENABLED=0
+)
+
+# Apply aggressive optimization and size reduction flags
+set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3 -flto -fdata-sections -ffunction-sections")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -flto -fdata-sections -ffunction-sections")
+set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -Wl,--gc-sections")
