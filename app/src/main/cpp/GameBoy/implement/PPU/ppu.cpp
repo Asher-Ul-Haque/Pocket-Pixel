@@ -306,7 +306,6 @@ void ppuTick()
 
   if (!ctx->isEnabled) return; 
   static int index = 0;
-  setColorScheme(index++);
 
 
   ctx->scanlineCounter ++;
@@ -348,7 +347,7 @@ void ppuTick()
           cpuRequestInterrupt(IT_VBLANK);
           if (BIT(ctx->stat, 4)) cpuRequestInterrupt(IT_LCD_STAT);
           render();
-        } 
+        }
         else ppuUpdateStatMode(MODE_OAM);
       }
       break;

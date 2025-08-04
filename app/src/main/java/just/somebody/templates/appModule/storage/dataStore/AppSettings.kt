@@ -7,9 +7,10 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class AppSettings
 (
-  val otherThings   : PersistentList<Int>    = persistentListOf(),
-  val externalUris  : Map<String, String>    = emptyMap(),
-  val channelVolume : List<Float>  = persistentListOf(0.75f, 0.6f, 0.6f, 0.6f, 0.6f),
+  val otherThings   : PersistentList<Int>     = persistentListOf(),
+  val externalUris  : Map<String, String>     = emptyMap(),
+  val channelVolume : List<Float>             = persistentListOf(0.75f, 0.6f, 0.6f, 0.6f, 0.6f),
+  val paletteIndex  : Int                     = 0
     /*
       index 0 - master volume
       1 - 4 : channel volume

@@ -70,6 +70,7 @@ class EmulatorViewModel : ViewModel()
   {
     if (!emulatorStarted && romReady && currentROM != null)
     {
+      gameBoy.setPalette(_settings.value.paletteIndex)
       gameBoy.loadROM(currentROM!!, URI)
       gameBoy.startEmulator(_settings.value.channelVolume.toFloatArray())
       emulatorStarted = true
@@ -78,7 +79,6 @@ class EmulatorViewModel : ViewModel()
 
   fun setVolume(VOLUME : Float, INDEX : Int)
   {
-    ForgeLogger.trace("Updating volume")
     viewModelScope.launch()
     {
       val currentSettings = App.appModule.dataStoreManager.getSettings()
@@ -92,6 +92,20 @@ class EmulatorViewModel : ViewModel()
       _settings.value = updatedSettings
 
       App.appModule.gameBoy.setVolumes(_settings.value.channelVolume.toFloatArray())
+    }
+  }
+
+  fun setPaletteIndex(INDEX : Int)
+  {
+    viewModelScope.launch()
+    {
+      val currentSettings = App.appModule.dataStoreManager.getSettings()
+      val updatedSettings = currentSettings.copy(paletteIndex = INDEX % 8)
+
+      App.appModule.dataStoreManager.updateSettings(updatedSettings)
+      _settings.value = updatedSettings
+
+      App.appModule.gameBoy.setPalette(INDEX % 8)
     }
   }
 }

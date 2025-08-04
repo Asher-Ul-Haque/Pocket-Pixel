@@ -14,6 +14,7 @@ import androidx.documentfile.provider.DocumentFile // Needed for DocumentFile op
 import just.somebody.templates.appModule.storage.ExternalStorageManager
 import just.somebody.templates.presentation.effects.SnackbarController
 import just.somebody.templates.presentation.effects.SnackbarEvent
+import kotlinx.coroutines.coroutineScope
 
 enum class Buttons {
   UP,
@@ -28,7 +29,6 @@ enum class Buttons {
 
 class GameBoy
 {
-
   private var currentRomUri: String? = null
 
   fun loadROM(ROM: ByteArray, ROM_URI: String)
@@ -71,6 +71,34 @@ class GameBoy
   external fun nativeOnSurfaceCreated()
   external fun nativeOnSurfaceChanged(width: Int, height: Int)
   external fun nativeOnDrawFrame()
+
+  fun deleteRamFile()
+  {
+    runBlocking(Dispatchers.IO)
+    {
+      val uri = getGameSaveFileUri()
+      if (uri == null)
+      {
+        SnackbarController.sendEvent(SnackbarEvent("There is no save file to delete"))
+        return@runBlocking
+      }
+      if (App.appModule.externalStorageManager.deleteFileFromUri(uri))
+      {
+        SnackbarController.sendEvent(SnackbarEvent("Deleted save file"))
+      }
+      else
+      {
+        SnackbarController.sendEvent(SnackbarEvent("Failed to delete save file"))
+      }
+    }
+  }
+
+  fun deleteRamFile(ROM_URI : String)
+  {
+    this.currentRomUri = ROM_URI
+    updateStaticRomUri(ROM_URI)
+    deleteRamFile()
+  }
 
   // - - - Static method for C++ to call back to request a render
   companion object
@@ -275,7 +303,8 @@ class GameBoy
 
       ForgeLogger.info("Kotlin: Attempting to load RAM (expected size: $BUFFER_SIZE)")
 
-      return runBlocking(Dispatchers.IO) {
+      return runBlocking(Dispatchers.IO)
+      {
         val saveFileUri = getGameSaveFileUri()
         if (saveFileUri != null)
         {

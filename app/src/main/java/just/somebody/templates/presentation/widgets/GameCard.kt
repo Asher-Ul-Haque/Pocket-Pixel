@@ -75,9 +75,6 @@ fun GameCard(
   val titleFont =
     if (BIG)  24
     else      18
-  val publisherFont =
-    if (BIG)  16
-    else      14
 
   Card(
     shape     = RectangleShape,
@@ -249,6 +246,13 @@ fun GameActionBottomSheet(
       { CustomText(
         if (!GAME.isFavorite) "Favorite"
         else                  "Remove Favorite")
+      }
+
+      CustomButton(
+        ON_CLICK  = { App.appModule.gameBoy.deleteRamFile(GAME.romUri) },
+        MODIFIER  = Modifier.fillMaxWidth(),
+        COLOR     = GameBoyColors.Error)
+      { CustomText(TEXT = "Delete Save File", )
       }
     }
   }
