@@ -12,6 +12,7 @@ linkCableClub/*.pyc
 
 # Local configuration file (sdk path, etc)
 local.properties
+gralde.properties
 
 # Log/OS Files
 *.log
