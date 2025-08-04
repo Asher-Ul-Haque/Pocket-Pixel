@@ -8,7 +8,7 @@ import just.somebody.templates.appModule.ForgeLogger
 
 class GameBoySpeaker
 {
-  private val sampleRate  = 44100
+  private val sampleRate  = 44150
   private val channelMask = AudioFormat.CHANNEL_OUT_STEREO
   private val encoding    = AudioFormat.ENCODING_PCM_8BIT
 

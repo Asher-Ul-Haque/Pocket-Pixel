@@ -76,8 +76,8 @@ bool cpuTick()
       ctx.regs.l);
 
 
-    debuggerUpdate();
-    debuggerPrint();
+    //debuggerUpdate();
+    //debuggerPrint();
     #endif
     
     if (ctx.currentInstruction == NULL) 

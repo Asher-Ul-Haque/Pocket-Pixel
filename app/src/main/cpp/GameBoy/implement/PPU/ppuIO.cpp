@@ -6,8 +6,18 @@
 
 u8   ppuVRAMread (u16 ADDRESS)             { return ppuGetContext()->VRAM[ADDRESS & 0x1FFF]; }
 u8   ppuOAMread  (u16 ADDRESS)             { return ppuGetContext()->OAM[ADDRESS & 0xFF]; }
-void ppuVRAMwrite(u16 ADDRESS, u8 VALUE)   { ppuGetContext()->VRAM[ADDRESS & 0x1FFF] = VALUE; }
-void ppuOAMwrite (u16 ADDRESS, u8 VALUE)   { ppuGetContext()->OAM[ADDRESS & 0xFF]    = VALUE; }
+void ppuVRAMwrite(u16 ADDRESS, u8 VALUE)
+{
+  auto mode = (PPUMode)(ppuGetContext()->stat & 0x3);
+  if (mode == MODE_OAM || mode == MODE_VRAM) return;
+  ppuGetContext()->VRAM[ADDRESS & 0x1FFF] = VALUE;
+}
+void ppuOAMwrite (u16 ADDRESS, u8 VALUE)
+{
+  auto mode = (PPUMode)(ppuGetContext()->stat & 0x3);
+  if (mode == MODE_OAM || mode == MODE_VRAM) return;
+  ppuGetContext()->OAM[ADDRESS & 0xFF]    = VALUE;
+}
 
 
 // - - - Register Access - - -

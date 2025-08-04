@@ -36,7 +36,11 @@ android {
         cppFlags += "-O3"
         arguments += listOf(
           "-DANDROID_STL=c++_shared",
-          "-DCMAKE_BUILD_TYPE=Release"
+          "-DCMAKE_BUILD_TYPE=Release",
+          "-DLOG_WARNING_ENABLED=0",
+          "-DLOG_INFO_ENABLED=0",
+          "-DLOG_DEBUG_ENABLED=0",
+          "-DLOG_TRACE_ENABLED=0",
         )
       }
     }

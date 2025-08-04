@@ -274,7 +274,7 @@ class GameBoy
           if (success)
           {
             ForgeLogger.info("Kotlin: Successfully saved RAM to $saveFileUri.")
-            SnackbarController.sendEvent(SnackbarEvent("Successful saved game"))
+            SnackbarController.sendEvent(SnackbarEvent("Successfully saved game"))
           }
           else
           {
@@ -285,7 +285,7 @@ class GameBoy
         else
         {
           ForgeLogger.error("Kotlin: Could not resolve save file URI. Save failed.")
-          SnackbarController.sendEvent(SnackbarEvent("Successful saved game : couldnt resolve save file"))
+          SnackbarController.sendEvent(SnackbarEvent("Failed to save game : couldn't resolve save file"))
         }
       }
       return true
@@ -315,6 +315,7 @@ class GameBoy
             {
               loadedData.copyInto(RAM_DATA_BUFFER)
               ForgeLogger.info("Kotlin: Successfully loaded ${loadedData.size} bytes from $saveFileUri.")
+              SnackbarController.sendEvent(SnackbarEvent("Loaded Game Save"))
               true
             }
             else

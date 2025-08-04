@@ -1,28 +1,24 @@
 #pragma once
-#include "../../defines.h" // For u8, u16, u32, i32, FORGE_API, BIT, BIT_SET, BIT_CLEAR
-#include "../../ForgeLibrary/include/logger.h" // For FORGE_LOG_ERROR, etc.
-#include "../../ForgeLibrary/include/asserts.h" // For FORGE_ASSERT_MESSAGE
+#include "../../defines.h" // u8, u16, u32, i32, BIT, etc.
+#include "../../ForgeLibrary/include/logger.h"
+#include "../../ForgeLibrary/include/asserts.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-// - - - Constatns - - - 
-
+// - - - Constants - - -
 static const i32 SCREEN_WIDTH         = 160;
 static const i32 SCREEN_HEIGHT        = 144;
-static const i32 SCREEN_VBLANK_HEIGHT = 153; // - - - LY goes up to 153 (0-153 = 154 lines total)
+static const i32 SCREEN_VBLANK_HEIGHT = 153;
 
-static const i32 OAM_CYCLES          = 80;
-static const i32 VRAM_CYCLES         = 172;
-static const i32 HBLANK_CYCLES       = 204;
-static const i32 SCANLINE_CYCLES     = 456; // - - - OAM + VRAM + HBLANK = 80 + 172 + 204 = 456
+static const i32 OAM_CYCLES      = 80;
+static const i32 VRAM_CYCLES     = 172;
+static const i32 HBLANK_CYCLES   = 204;
+static const i32 SCANLINE_CYCLES = 456;
 
-
-// - - - Enums and Structs - - -
-
-// - - - PPU Modes
-typedef enum 
+// - - - PPU Modes - - -
+typedef enum
 {
   MODE_HBLANK = 0,
   MODE_VBLANK = 1,
@@ -30,49 +26,53 @@ typedef enum
   MODE_VRAM   = 3
 } PPUMode;
 
-// - - - Global PPU Context Structure This struct holds all the PPU's internal state, registers, and buffers.
-typedef struct 
+// - - - Global framebuffer pointer used by renderer
+// - - - PPU Context - - -
+typedef struct
 {
-  // - - - PPU Registers (from FF40-FF4B)
-  u8 lcdc; // - - - FF40 - LCDC - LCD Control
-  u8 stat; // - - - FF41 - STAT - LCDC Status
-  u8 scy;  // - - - FF42 - SCY - Scroll Y
-  u8 scx;  // - - - FF43 - SCX - Scroll X
-  u8 ly;   // - - - FF44 - LY - LCDC Y-Coordinate (Read-only for CPU, writing resets to 0)
-  u8 lyc;  // - - - FF45 - LYC - LY Compare
-  u8 bgp;  // - - - FF47 - BGP - BG Palette Data
-  u8 obp0; // - - - FF48 - OBP0 - Object Palette 0 Data
-  u8 obp1; // - - - FF49 - OBP1 - Object Palette 1 Data
-  u8 wy;   // - - - FF4A - WY - Window Y Position
-  u8 wx;   // - - - FF4B - WX - Window X Position minus 7 (adjusted in rendering)
+  // - - - Registers
+  u8 lcdc;
+  u8 stat;
+  u8 scy;
+  u8 scx;
+  u8 ly;
+  u8 lyc;
+  u8 bgp;
+  u8 obp0;
+  u8 obp1;
+  u8 wy;
+  u8 wx;
 
-  // - - - Internal PPU State Counters
-  i32 scanlineCounter;    // - - - Accumulates cycles for current mode
-  u8  windowInternalLine; // - - - Internal Y-coordinate for the window layer (0-143)
+  // - - - Latched scroll values for tear-free rendering
+  u8 scrollX_latched;
+  u8 scrollY_latched;
 
-  // - - - Framebuffer
-  u32 frameBuffer[SCREEN_WIDTH * SCREEN_HEIGHT]; 
+  // - - - Internal state
+  i32 scanlineCounter;
+  u8  windowInternalLine;
 
-  // - - - Cached Palettes (ARGB format)
+  // - - - Framebuffers (double buffering)
+  u32 frameBufferFront[SCREEN_WIDTH * SCREEN_HEIGHT];
+  u32 frameBufferBack[SCREEN_WIDTH * SCREEN_HEIGHT];
+  u32* frameBuffer;
+
+  // - - - Cached palettes
   u32 backgroundPalette[4];
   u32 objectPalette0[4];
   u32 objectPalette1[4];
 
-  // - - - LCDC derived state
-  bool isEnabled; 
+  bool isEnabled;
 
-  // - - - Sprite Ordering Buffer 
-  i32 orderBuffer[40 + 1]; 
+  // - - - Sprite ordering
+  i32 orderBuffer[40 + 1];
 
-  // - - - memory
-  u8 VRAM[0x2000]; 
-  u8 OAM[0xA0];    
+  // - - - VRAM / OAM
+  u8 VRAM[0x2000];
+  u8 OAM[0xA0];
+
 } PPUContext;
 
-
-
-// - - - FUNCTIONS - - -
-
+// - - - Public API - - -
 FORGE_API PPUContext* ppuGetContext();
 FORGE_API int         ppuGetCpuSpeedMultiplier();
 FORGE_API void        ppuInit();
@@ -85,18 +85,16 @@ FORGE_API u8          ppuOAMread(u16 ADDRESS);
 FORGE_API void        ppuOAMwrite(u16 ADDRESS, u8 VALUE);
 FORGE_API void        ppuTick();
 
-FORGE_API void ppuCachePalette(u32* CACHED_PALLETE, const u32* COLORS_SOURCE, u8 PALLETE_BYTE);
-FORGE_API void ppuHandleCoincidenceFlag();
-FORGE_API void ppuUpdateStatMode(PPUMode MODE);
-FORGE_API void ppuDrawScanLine();
-FORGE_API void ppuRenderBG();
-FORGE_API void ppuRenderSpritesBuffer();
-
+FORGE_API void        ppuCachePalette(u32* CACHED_PALLETE, const u32* COLORS_SOURCE, u8 PALLETE_BYTE);
+FORGE_API void        ppuHandleCoincidenceFlag();
+FORGE_API void        ppuUpdateStatMode(PPUMode MODE);
+FORGE_API void        ppuDrawScanLine();
+FORGE_API void        ppuRenderBG();
+FORGE_API void        ppuRenderSpritesBuffer();
 
 FORGE_API void        setColorScheme(u8 INDEX);
 FORGE_API const u32*  getColorScheme();
 FORGE_API void        ppuCachePalette(u32* CACHED_PALLETE, const u32* COLORS_SOURCE, u8 PALLETE);
-
 
 #ifdef __cplusplus
 }
