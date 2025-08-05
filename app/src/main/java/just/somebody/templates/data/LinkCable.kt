@@ -137,7 +137,7 @@ class LinkCable
     currentSessionId = SESSION_ID
   }
 
-  fun sendByte(BYTE : Int)
+  fun sendByte(BYTE : Int, SC : Int)
   {
     ifNotConnected { return }
     val sessionId = currentSessionId ?: return ForgeLogger.error("No session to send byte")
@@ -145,6 +145,7 @@ class LinkCable
     val payload = JSONObject()
       .put("sessionId", sessionId)
       .put("byte", BYTE)
+      .put("sc", SC)
 
     ForgeLogger.trace("Sending byte: $BYTE to $sessionId")
     sentByte = BYTE
