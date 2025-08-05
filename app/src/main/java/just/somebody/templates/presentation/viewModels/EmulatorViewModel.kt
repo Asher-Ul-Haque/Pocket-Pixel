@@ -71,6 +71,7 @@ class EmulatorViewModel : ViewModel()
     if (!emulatorStarted && romReady && currentROM != null)
     {
       gameBoy.setPalette(_settings.value.paletteIndex)
+      gameBoy.setShader(_settings.value.shaderIndex)
       gameBoy.loadROM(currentROM!!, URI)
       gameBoy.startEmulator(_settings.value.channelVolume.toFloatArray())
       emulatorStarted = true
@@ -106,6 +107,20 @@ class EmulatorViewModel : ViewModel()
       _settings.value = updatedSettings
 
       App.appModule.gameBoy.setPalette(INDEX % 8)
+    }
+  }
+
+  fun setShaderIndex(INDEX : Int)
+  {
+    viewModelScope.launch()
+    {
+      val currentSettings = App.appModule.dataStoreManager.getSettings()
+      val updatedSettings = currentSettings.copy(shaderIndex = INDEX % 5)
+
+      App.appModule.dataStoreManager.updateSettings(updatedSettings)
+      _settings.value = updatedSettings
+
+      App.appModule.gameBoy.setShader(INDEX % 5)
     }
   }
 }

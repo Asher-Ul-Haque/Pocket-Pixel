@@ -305,7 +305,7 @@ static void procLD(CPUcontext* CTX)
 
     cpuSetFlags(CTX, 0, 0, hflag, cflag);
     cpuSetRegister (CTX->currentInstruction->reg1, 
-    cpuReadRegister(CTX->currentInstruction->reg2) + (char)CTX->readData);
+    cpuReadRegister(CTX->currentInstruction->reg2) + (i8)CTX->readData);
 
     return;
   }
@@ -516,7 +516,7 @@ static void procADD(CPUcontext* CTX)
   if (is16bit) emuCycles(1);
 
   if (CTX->currentInstruction->reg1 == RT_SP) 
-  { val = cpuReadRegister(CTX->currentInstruction->reg1) + (char)CTX->readData; }
+  { val = cpuReadRegister(CTX->currentInstruction->reg1) + (i8)CTX->readData; }
 
   i32 z = (val & 0xFF) == 0;
   i32 h = (cpuReadRegister(CTX->currentInstruction->reg1) & 0xF) + (CTX->readData & 0xF) >= 0x10;

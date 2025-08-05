@@ -86,8 +86,10 @@ fun SettingsPanel(
         { vol, ch -> EMULATOR.setVolume(vol, ch) }
 
         2 -> VisualSettingsSection(
-          SELECTED_INDEX = settings.paletteIndex,
-          ON_COLOR_SELECTED = { EMULATOR.setPaletteIndex(it) }
+          PALETTE_INDEX = settings.paletteIndex,
+          SHADER_INDEX  = settings.shaderIndex,
+          ON_PALETTE_SELECT = { EMULATOR.setPaletteIndex(it) },
+          ON_SHADER_SELECT  = { EMULATOR.setShaderIndex(it) }
         )
 
         3 -> SaveSettingsSection(
@@ -171,53 +173,109 @@ private fun AudioSettingsSection(
 
 @Composable
 fun VisualSettingsSection(
-  SELECTED_INDEX : Int,
-  ON_COLOR_SELECTED: (Int) -> Unit
+  PALETTE_INDEX     : Int,
+  ON_PALETTE_SELECT : (Int) -> Unit,
+  SHADER_INDEX      : Int,
+  ON_SHADER_SELECT  : (Int) -> Unit
 )
 {
-  val options = listOf("Default", "DMG", "Pocket", "Purple", "Sepia", "Blue", "Teal", "Peach")
-  var expanded by remember { mutableStateOf(false) }
+  val palettes = listOf("Default", "Authentic", "Pocket", "Purple", "Sepia", "Blue", "Teal", "Peach")
+  val shaders  = listOf("Default", "CRT", "Chromatic Aberration", "Bad Signal", "Ghosting")
+  var paletteExpanded by remember { mutableStateOf(false) }
+  var shadersExpanded by remember { mutableStateOf(false) }
 
-  Box(
-    modifier = Modifier
-      .fillMaxWidth()
-      .padding(vertical = 8.dp)
-      .shadow(2.dp)
-      .background(GameBoyColors.MediumGreen)
-      .clickable { expanded = true }
-      .padding(horizontal = 16.dp, vertical = 12.dp)
-  ) {
-    Row(
-      verticalAlignment     = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.SpaceBetween,
-      modifier              = Modifier.fillMaxWidth()
+  Column (
+    verticalArrangement = Arrangement.Top,
+    horizontalAlignment = Alignment.CenterHorizontally
+  )
+  {
+    Box(
+      modifier = Modifier
+        .fillMaxWidth()
+        .padding(vertical = 8.dp)
+        .shadow(2.dp)
+        .background(GameBoyColors.MediumGreen)
+        .clickable { paletteExpanded = true }
+        .padding(horizontal = 16.dp, vertical = 12.dp)
     )
     {
-      CustomText(options[SELECTED_INDEX])
-
-      androidx.compose.material3.Icon(
-        imageVector         = Icons.Default.ArrowDropDown,
-        contentDescription  = "Dropdown Arrow",
-        tint                = GameBoyColors.Green,
-        modifier            = Modifier.rotate(if (expanded) 180f else 0f)
+      Row(
+        verticalAlignment     = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier              = Modifier.fillMaxWidth()
       )
+      {
+        CustomText("Choose color palette : ${palettes[PALETTE_INDEX]}")
+
+        androidx.compose.material3.Icon(
+          imageVector         = Icons.Default.ArrowDropDown,
+          contentDescription  = "Dropdown Arrow",
+          tint                = GameBoyColors.Green,
+          modifier            = Modifier.rotate(if (paletteExpanded) 180f else 0f)
+        )
+      }
+
+      DropdownMenu(
+        expanded          = paletteExpanded,
+        onDismissRequest  = { paletteExpanded = false },
+        modifier          = Modifier.background(GameBoyColors.MediumGreen)
+      )
+      {
+        palettes.forEachIndexed()
+        { index, label ->
+          DropdownMenuItem(
+            text    = { CustomText(label) },
+            onClick = {
+              ON_PALETTE_SELECT(index)
+              paletteExpanded = false
+            }
+          )
+        }
+      }
     }
 
-    DropdownMenu(
-      expanded          = expanded,
-      onDismissRequest  = { expanded = false },
-      modifier          = Modifier.background(GameBoyColors.MediumGreen)
+    Box(
+      modifier = Modifier
+        .fillMaxWidth()
+        .padding(vertical = 8.dp)
+        .shadow(2.dp)
+        .background(GameBoyColors.MediumGreen)
+        .clickable { shadersExpanded = true }
+        .padding(horizontal = 16.dp, vertical = 12.dp)
     )
     {
-      options.forEachIndexed()
-      { index, label ->
-        DropdownMenuItem(
-          text    = { CustomText(label) },
-          onClick = {
-            ON_COLOR_SELECTED(index)
-            expanded = false
-          }
+      Row(
+        verticalAlignment     = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier              = Modifier.fillMaxWidth()
+      )
+      {
+        CustomText("Choose shader : ${shaders[SHADER_INDEX]}")
+
+        androidx.compose.material3.Icon(
+          imageVector         = Icons.Default.ArrowDropDown,
+          contentDescription  = "Dropdown Arrow",
+          tint                = GameBoyColors.Green,
+          modifier            = Modifier.rotate(if (shadersExpanded) 180f else 0f)
         )
+      }
+
+      DropdownMenu(
+        expanded          = shadersExpanded,
+        onDismissRequest  = { shadersExpanded = false },
+        modifier          = Modifier.background(GameBoyColors.MediumGreen)
+      )
+      {
+        shaders.forEachIndexed()
+        { index, label ->
+          DropdownMenuItem(
+            text    = { CustomText(label) },
+            onClick = {
+              ON_SHADER_SELECT(index)
+              shadersExpanded = false
+            }
+          )
+        }
       }
     }
   }

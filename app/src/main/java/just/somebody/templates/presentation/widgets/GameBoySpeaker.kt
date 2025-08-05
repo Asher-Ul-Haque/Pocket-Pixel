@@ -5,15 +5,20 @@ import android.media.AudioFormat
 import android.media.AudioTrack
 import android.media.AudioTrack.PLAYSTATE_PLAYING
 import just.somebody.templates.appModule.ForgeLogger
+import android.media.AudioTrack.WRITE_NON_BLOCKING
 
-class GameBoySpeaker
-{
-  private val sampleRate  = 44150
+class GameBoySpeaker {
+
+  private val sampleRate = 44100 // 44100 is standard
   private val channelMask = AudioFormat.CHANNEL_OUT_STEREO
-  private val encoding    = AudioFormat.ENCODING_PCM_8BIT
+  private val encoding = AudioFormat.ENCODING_PCM_8BIT
+  private val frameSize = 2 // stereo: 1 byte per channel
 
-  private val audioTrack : AudioTrack by lazy ()
-  {
+  // This is a safe multiple of the system minimum — adjust if needed
+  private val minBufferSize = AudioTrack.getMinBufferSize(sampleRate, channelMask, encoding)
+  private val bufferSizeInBytes = minBufferSize * 4 // More buffering to prevent underruns
+
+  private val audioTrack: AudioTrack by lazy {
     AudioTrack.Builder()
       .setAudioAttributes(
         AudioAttributes.Builder()
@@ -28,31 +33,37 @@ class GameBoySpeaker
           .setChannelMask(channelMask)
           .build()
       )
-      .setBufferSizeInBytes(AudioTrack.getMinBufferSize(sampleRate, channelMask, encoding))
+      .setBufferSizeInBytes(bufferSizeInBytes)
       .setTransferMode(AudioTrack.MODE_STREAM)
-      .build().apply ()
-      {
-        if (playState != PLAYSTATE_PLAYING) play()
+      .build().apply {
+        play()
       }
   }
 
-  fun play(SAMPLE_BUFFER : ByteArray)
-  {
-    val bytesWritten = audioTrack.write(SAMPLE_BUFFER, 0, SAMPLE_BUFFER.size, AudioTrack.WRITE_NON_BLOCKING)
-    if (bytesWritten < 0)
-    { ForgeLogger.error("Game boy speaker : error writing audio data. $bytesWritten") }
-    else if (bytesWritten != SAMPLE_BUFFER.size){}
-    //{ ForgeLogger.warn("Game boy speaker : partial write only") }
+  /**
+   * Pushes interleaved 8-bit stereo PCM data to the audio stream.
+   */
+  fun play(sampleBuffer: ByteArray) {
+    if (sampleBuffer.isEmpty()) return
 
-    if (audioTrack.playState != PLAYSTATE_PLAYING)
-    {
+    val written = audioTrack.write(sampleBuffer, 0, sampleBuffer.size, WRITE_NON_BLOCKING)
+
+    if (written < 0) {
+      ForgeLogger.error("GameBoySpeaker: Audio write failed with code $written")
+    } else if (written < sampleBuffer.size) {
+      ForgeLogger.warn("GameBoySpeaker: Partial write — $written / ${sampleBuffer.size} bytes")
+    }
+
+    if (audioTrack.playState != PLAYSTATE_PLAYING) {
       audioTrack.play()
-      ForgeLogger.info("Game boy speaker : AudioTrack started playing.")
+      ForgeLogger.info("GameBoySpeaker: Re-started playback.")
     }
   }
 
-  fun release()
-  {
-    if (audioTrack.playState == PLAYSTATE_PLAYING) audioTrack.stop()
+  fun release() {
+    if (audioTrack.playState == PLAYSTATE_PLAYING) {
+      audioTrack.stop()
+    }
+    audioTrack.release()
   }
 }

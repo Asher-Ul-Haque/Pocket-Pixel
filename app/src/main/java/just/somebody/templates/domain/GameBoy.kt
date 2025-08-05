@@ -46,6 +46,7 @@ class GameBoy
   fun setVolumes(VOLUMES: FloatArray) { nativeSetVolumes(VOLUMES); }
   fun flushSave() { nativeFlushSave() }
   fun setPalette(INDEX : Int) { nativeChangePallete(INDEX) }
+  fun setShader(INDEX : Int) { nativeSetShader(INDEX); }
 
   // - - - Input
   fun sendButton(
@@ -66,6 +67,7 @@ class GameBoy
   private external fun nativeRecieveByte(BYTE : Byte)
   private external fun nativeFlushSave();
   private external fun nativeChangePallete(INDEX : Int)
+  private external fun nativeSetShader(INDEX: Int)
 
   // - - - Native Bindings for OpenGL ES Rendering (existing)
   external fun nativeOnSurfaceCreated()

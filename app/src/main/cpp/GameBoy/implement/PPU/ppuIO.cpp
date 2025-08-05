@@ -7,17 +7,9 @@
 u8   ppuVRAMread (u16 ADDRESS)             { return ppuGetContext()->VRAM[ADDRESS & 0x1FFF]; }
 u8   ppuOAMread  (u16 ADDRESS)             { return ppuGetContext()->OAM[ADDRESS & 0xFF]; }
 void ppuVRAMwrite(u16 ADDRESS, u8 VALUE)
-{
-  auto mode = (PPUMode)(ppuGetContext()->stat & 0x3);
-  if (mode == MODE_OAM || mode == MODE_VRAM) return;
-  ppuGetContext()->VRAM[ADDRESS & 0x1FFF] = VALUE;
-}
+{ ppuGetContext()->VRAM[ADDRESS & 0x1FFF] = VALUE; }
 void ppuOAMwrite (u16 ADDRESS, u8 VALUE)
-{
-  auto mode = (PPUMode)(ppuGetContext()->stat & 0x3);
-  if (mode == MODE_OAM || mode == MODE_VRAM) return;
-  ppuGetContext()->OAM[ADDRESS & 0xFF]    = VALUE;
-}
+{ ppuGetContext()->OAM[ADDRESS & 0xFF]    = VALUE; }
 
 
 // - - - Register Access - - -
@@ -142,6 +134,7 @@ void ppuWrite(u16 ADDRESS, u8 VALUE)
         
     case 0xFF4A: ctx->wy = VALUE; break; // - - - WY
     case 0xFF4B: ctx->wx = VALUE; break; // - - - WX
+    
     default:
       FORGE_LOG_ERROR("Attempted to write unknown PPU register: 0x%04X = 0x%02X\n", ADDRESS, VALUE);
       break;

@@ -23,6 +23,7 @@
 #include "GameBoy/include/cartridge.h"
 #include "GameBoy/include/ppu.h"
 #include "GameBoy/include/serial.h"
+#include "shader.h"
 
 
 #ifdef __cplusplus
@@ -53,10 +54,25 @@ const i32 GB_SCREEN_HEIGHT = 144;
 static GLuint gbTextureId      = 0; // - - - openGL texture ID for the framebuffer
 static GLuint gbProgramObject  = 0; // - - - openGL program ID for rendering
 
+// - - - Store actual display dimensions (from nativeOnSurfaceChanged)
+static GLint currentDisplayWidth = 0;
+static GLint currentDisplayHeight = 0;
+
+// - - - Uniform locations
+static GLint positionLoc;
+static GLint texCoordLoc;
+static GLint samplerLoc;
+static GLint resolutionLoc;
+static GLint shaderIndexLoc;
+static GLint timeLoc;
+
+// - - - Flag to signal shader reload on the GL thread - - -
+static bool shaderNeedsReload = false;
+
 
 // - - - JNI Callback to Kotlin UI - - -
 
-static JavaVM*    cachedJvm             = nullptr;
+static JavaVM* cachedJvm             = nullptr;
 static jclass     gameboyClassGlobalRef = nullptr;
 static jmethodID  requestRenderMethodId = nullptr;
 static jmethodID  playAudioMethodId     = nullptr;
@@ -76,29 +92,6 @@ static const long long TARGET_FPS               = 60;
 static const long long NANOSECONDS_PER_SECOND   = 1000000000LL;
 static const long long TARGET_FRAME_DURATION_NS = NANOSECONDS_PER_SECOND / TARGET_FPS;
 static struct timespec prevFrameTime = {0, 0};
-
-
-// - - - Shader Source - - -
-
-// - - - vertex shader
-const char* gVertexShader =
-  "attribute vec4 a_position;\n"
-  "attribute vec2 a_texCoord;\n"
-  "varying vec2 v_texCoord;\n"
-  "void main() {\n"
-  "  gl_Position = a_position;\n"
-  "  v_texCoord = a_texCoord;\n"
-  "}\n";
-
-
-// - - - Fragment Shader Source
-const char* gFragmentShader =
-  "precision mediump float;\n"
-  "varying vec2 v_texCoord;\n"
-  "uniform sampler2D s_texture;\n"
-  "void main() {\n"
-  "  gl_FragColor = texture2D(s_texture, v_texCoord);\n"
-  "}\n";
 
 
 // - - - | HELPER FUNCTIONS | - - -
@@ -155,6 +148,11 @@ GLuint loadShader(GLenum TYPE, const char* SOURCE)
   if (SHADER == 0)
   {
     FORGE_LOG_ERROR("Failed to create shader of type %d", TYPE);
+    // Check for GL error after glCreateShader
+    GLenum error = glGetError();
+    if (error != GL_NO_ERROR) {
+      FORGE_LOG_ERROR("glCreateShader GL Error: 0x%x", error);
+    }
     return 0;
   }
   glShaderSource(SHADER, 1, &SOURCE, NULL);
@@ -177,6 +175,104 @@ GLuint loadShader(GLenum TYPE, const char* SOURCE)
   return SHADER;
 }
 
+// - - - Helper function to compile and link shader program, and get uniform locations - - -
+bool setupShaderProgram()
+{
+  GLuint VERTEX_SHADER;
+  GLuint FRAGMENT_SHADER;
+  GLint  LINKED;
+  GLint  INFO_LEN = 0;
+  char*  INFO_LOG = nullptr;
+
+  FORGE_LOG_INFO("Attempting to setup shader program (current index: %d)", currentShaderIndex);
+
+  // - - - Delete existing program if any
+  if (gbProgramObject != 0)
+  {
+    glDeleteProgram(gbProgramObject);
+    gbProgramObject = 0;
+    FORGE_LOG_INFO("Deleted old shader program.");
+  }
+
+  // - - - Load shaders from the shader.h file
+  VERTEX_SHADER   = loadShader(GL_VERTEX_SHADER, gVertexShader);
+  FRAGMENT_SHADER = loadShader(GL_FRAGMENT_SHADER, gFragmentShader); // Use the single combined fragment shader
+
+  if (VERTEX_SHADER == 0 || FRAGMENT_SHADER == 0)
+  {
+    FORGE_LOG_ERROR("Failed to load shaders (vertex or fragment failed compilation). VERTEX_SHADER=0x%x, FRAGMENT_SHADER=0x%x", VERTEX_SHADER, FRAGMENT_SHADER);
+    return false;
+  }
+  FORGE_LOG_INFO("Shaders compiled successfully.");
+
+  gbProgramObject = glCreateProgram();
+  if (gbProgramObject == 0)
+  {
+    FORGE_LOG_ERROR("Failed to create shader program.");
+    GLenum error = glGetError();
+    if (error != GL_NO_ERROR) {
+      FORGE_LOG_ERROR("glCreateProgram GL Error: 0x%x", error);
+    }
+    return false;
+  }
+  FORGE_LOG_INFO("Shader program created: %d", gbProgramObject);
+
+
+  glAttachShader(gbProgramObject, VERTEX_SHADER);
+  glAttachShader(gbProgramObject, FRAGMENT_SHADER);
+  glLinkProgram(gbProgramObject);
+
+  glGetProgramiv(gbProgramObject, GL_LINK_STATUS, &LINKED);
+  if (!LINKED)
+  {
+    glGetProgramiv(gbProgramObject, GL_INFO_LOG_LENGTH, &INFO_LEN);
+    if (INFO_LEN > 1)
+    {
+      INFO_LOG = (char*)malloc(sizeof(char) * INFO_LEN);
+      glGetProgramInfoLog(gbProgramObject, INFO_LEN, NULL, INFO_LOG);
+      FORGE_LOG_ERROR("Error linking program:\n%s", INFO_LOG);
+      free(INFO_LOG);
+    }
+    glDeleteProgram(gbProgramObject);
+    gbProgramObject = 0;
+    FORGE_LOG_ERROR("Shader program linking failed.");
+    return false;
+  }
+  FORGE_LOG_INFO("Shader program linked successfully.");
+
+  // D - - - etach and delete shaders after linking (they are now part of the program)
+  glDetachShader(gbProgramObject, VERTEX_SHADER);
+  glDetachShader(gbProgramObject, FRAGMENT_SHADER);
+  glDeleteShader(VERTEX_SHADER);
+  glDeleteShader(FRAGMENT_SHADER);
+  FORGE_LOG_INFO("Shaders detached and deleted.");
+
+  // - - - Get all uniform and attribute locations AFTER linking
+  glUseProgram(gbProgramObject);
+
+  positionLoc     = glGetAttribLocation(gbProgramObject, "a_position");
+  texCoordLoc     = glGetAttribLocation(gbProgramObject, "a_texCoord");
+  samplerLoc      = glGetUniformLocation(gbProgramObject, "s_texture");
+  resolutionLoc   = glGetUniformLocation(gbProgramObject, "u_Resolution");
+  shaderIndexLoc  = glGetUniformLocation(gbProgramObject, "u_ShaderIndex");
+  timeLoc         = glGetUniformLocation(gbProgramObject, "u_Time");
+
+
+  if (positionLoc == -1 || texCoordLoc == -1 || samplerLoc == -1 || resolutionLoc == -1 || shaderIndexLoc == -1 || timeLoc == -1)
+  {
+    FORGE_LOG_FATAL("Failed to get one or more uniform/attribute locations! This is critical.");
+    GLenum error = glGetError();
+    if (error != GL_NO_ERROR)
+    {
+      FORGE_LOG_FATAL("glGetUniformLocation/glGetAttribLocation GL Error: 0x%x", error);
+    }
+    return false;
+  }
+
+  FORGE_LOG_INFO("All uniform/attribute locations retrieved successfully.");
+  return true;
+}
+
 
 // - - - OpenGL Frame Rendering - - -
 
@@ -184,33 +280,44 @@ GLuint loadShader(GLenum TYPE, const char* SOURCE)
 void renderFrameGl()
 {
   GLfloat vertices[] =
-    {
-      -1.0f,  1.0f, 0.0f, // - - - Top-left
-      -1.0f, -1.0f, 0.0f, // - - - Bottom-left
-       1.0f, -1.0f, 0.0f, // - - - Bottom-right
-       1.0f,  1.0f, 0.0f  // - - - Top-right
-    };
+      {
+          -1.0f,  1.0f, 0.0f, // - - - Top-left
+          -1.0f, -1.0f, 0.0f, // - - - Bottom-left
+          1.0f, -1.0f, 0.0f, // - - - Bottom-right
+          1.0f,  1.0f, 0.0f  // - - - Top-right
+      };
 
   GLfloat texCoords[] =
-    {
-      0.0f, 0.0f, // - - - Top-left of texture
-      0.0f, 1.0f, // - - - Bottom-left of texture
-      1.0f, 1.0f, // - - - Bottom-right of texture
-      1.0f, 0.0f  // - - - Top-right of texture
-    };
+      {
+          0.0f, 0.0f, // - - - Top-left of texture
+          0.0f, 1.0f, // - - - Bottom-left of texture
+          1.0f, 1.0f, // - - - Bottom-right of texture
+          1.0f, 0.0f  // - - - Top-right of texture
+      };
 
   PPUContext* ppuCTX       = nullptr;
   GLushort    indices[]    = { 0, 1, 2, 0, 2, 3 };
-  GLint       positionLoc;
-  GLint       texCoordLoc;
-  GLint       samplerLoc;
-
-  // - - - Wait for a new frame to be available from the emulator thread
 
   glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT);
 
-  glUseProgram(gbProgramObject);
+  // - - - Check if shader needs reloading or if program is not initialized
+  if (shaderNeedsReload || gbProgramObject == 0)
+  {
+    FORGE_LOG_INFO("renderFrameGl: Shader needs reload or program is uninitialized. Attempting setup.");
+    if (setupShaderProgram())
+    {
+      shaderNeedsReload = false;
+      FORGE_LOG_INFO("renderFrameGl: Shader program successfully setup/reloaded.");
+    }
+    else
+    {
+      FORGE_LOG_ERROR("renderFrameGl: Failed to setup shader program. Screen may remain black.");
+      return;
+    }
+  }
+
+  glUseProgram(gbProgramObject); // - - - Ensure the correct program is active before setting uniforms
 
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, gbTextureId);
@@ -226,17 +333,18 @@ void renderFrameGl()
     FORGE_LOG_ERROR("Emulator frameBuffer is NULL in renderFrameGl!");
   }
 
-  positionLoc = glGetAttribLocation(gbProgramObject, "a_position");
-  texCoordLoc = glGetAttribLocation(gbProgramObject, "a_texCoord");
-  samplerLoc  = glGetUniformLocation(gbProgramObject, "s_texture");
-
   glEnableVertexAttribArray(positionLoc);
   glVertexAttribPointer(positionLoc, 3, GL_FLOAT, GL_FALSE, 0, vertices);
 
   glEnableVertexAttribArray(texCoordLoc);
   glVertexAttribPointer(texCoordLoc, 2, GL_FLOAT, GL_FALSE, 0, texCoords);
 
+  // - - - Set uniforms (these locations are global and should be valid if setupShaderProgram succeeded)
   glUniform1i(samplerLoc, 0);
+  glUniform2f(resolutionLoc, (GLfloat)currentDisplayWidth, (GLfloat)currentDisplayHeight);
+  glUniform1i(shaderIndexLoc, currentShaderIndex);
+  glUniform1f(timeLoc, (GLfloat)emuGetContext()->ticks / (GLfloat)4194304.0f);
+
 
   glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, indices);
 
@@ -251,35 +359,27 @@ void playAudio()
 {
   APUcontext* ctx = apuGetContext();
 
-  // Check if there are any samples to play.
-  // ctx->bufferPtr holds the number of 8-bit bytes (stereo samples) accumulated.
-  if (ctx->bufferPtr <= 0) {
-      return; // No samples to play
+  if (ctx->bufferPtr <= 0)
+  {
+    return; // No samples to play
   }
 
-  JNIEnv* ENV = getJniEnv(); // Get JNIEnv for this thread
+  JNIEnv* ENV = getJniEnv();
   if (ENV && gameboyClassGlobalRef && playAudioMethodId)
   {
-    // Create a new Java byte array with the exact size of the accumulated stereo data
     jbyteArray audioBuffer = ENV->NewByteArray(ctx->bufferPtr);
 
     if (audioBuffer)
     {
-      // Copy the raw 8-bit stereo samples from apuCtx.sampleBuffer into the Java byte array
-      // ctx->sampleBuffer already contains interleaved L/R 8-bit samples.
       ENV->SetByteArrayRegion(audioBuffer, 0, ctx->bufferPtr, (const jbyte*)ctx->sampleBuffer);
-
-      // Call the Kotlin method to play audio
       ENV->CallStaticVoidMethod(gameboyClassGlobalRef, playAudioMethodId, audioBuffer);
-
-      // Delete the local reference to the Java byte array
       ENV->DeleteLocalRef(audioBuffer);
     }
     else
     {
       FORGE_LOG_ERROR("Failed to create new Java byte array for audio.");
     }
-    ctx->bufferPtr = 0; // Reset APU buffer pointer after sending samples to Kotlin
+    ctx->bufferPtr = 0;
   }
   else
   {
@@ -292,7 +392,7 @@ void sendSerialByte(u8 BYTE)
   JNIEnv* ENV = getJniEnv();
   if (ENV && gameboyClassGlobalRef && sendByteMethodId)
   {
-    jbyte signedByte = static_cast<jbyte>(BYTE);  // Fix: Safe cast to signed
+    jbyte signedByte = static_cast<jbyte>(BYTE);
     ENV->CallStaticVoidMethod(gameboyClassGlobalRef, sendByteMethodId, signedByte);
   }
 }
@@ -304,14 +404,12 @@ void sendSerialByte(u8 BYTE)
 // - - - Puase and Play - - -
 
 void pauseEmulator()
-{
-
-}
+{}
 
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativePauseEmulator(
-  JNIEnv* ENV,
-  jobject THIZ)
+    JNIEnv* ENV,
+    jobject THIZ)
 {
   pthread_mutex_lock(&pauseMutex);
   isPaused = true;
@@ -320,14 +418,12 @@ Java_just_somebody_templates_domain_GameBoy_nativePauseEmulator(
 
 
 void resumeEmulator()
-{
-
-}
+{}
 
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeResumeEmulator(
-  JNIEnv* ENV,
-  jobject THIZ)
+    JNIEnv* ENV,
+    jobject THIZ)
 {
   pthread_mutex_lock(&pauseMutex);
   isPaused = false;
@@ -401,63 +497,63 @@ void render()
 
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeLoadROM(
-  JNIEnv*     ENV,
-  jobject    THIZ,
-  jbyteArray ROM,
-  jint       SIZE)
+    JNIEnv* ENV,
+    jobject    THIZ,
+    jbyteArray ROM,
+    jint       SIZE)
 {
   jbyte* BUFFER = ENV->GetByteArrayElements(ROM, nullptr);
 
   // - - - Define and initialize CartridgeFileIO for Android
   static CartridgeFileIO androidFileIO =
-    {
-      .saveRamToFile = [](const u8* ram_data, u32 ram_size) -> bool
-        {
-          JNIEnv* env = getJniEnv();
-          if (!env || !gameboyClassGlobalRef || !saveRamToFileMethodId) {
+      {
+          .saveRamToFile = [](const u8* ram_data, u32 ram_size) -> bool
+          {
+            JNIEnv* env = getJniEnv();
+            if (!env || !gameboyClassGlobalRef || !saveRamToFileMethodId) {
               FORGE_LOG_ERROR("JNI: Cannot call saveRamToFile: JNIEnv or method ID not cached.");
               return false;
-          }
-          jbyteArray j_ram_data = env->NewByteArray(ram_size);
-          env->SetByteArrayRegion(j_ram_data, 0, ram_size, (const jbyte*)ram_data);
+            }
+            jbyteArray j_ram_data = env->NewByteArray(ram_size);
+            env->SetByteArrayRegion(j_ram_data, 0, ram_size, (const jbyte*)ram_data);
 
-          // Call Kotlin method without rom_filepath
-          jboolean result = env->CallStaticBooleanMethod(gameboyClassGlobalRef, saveRamToFileMethodId, j_ram_data, ram_size);
+            // Call Kotlin method without rom_filepath
+            jboolean result = env->CallStaticBooleanMethod(gameboyClassGlobalRef, saveRamToFileMethodId, j_ram_data, ram_size);
 
-          env->DeleteLocalRef(j_ram_data);
-          return (bool)result;
-        },
-      .loadRamFromFile = [](u8* ram_data_buffer, u32 buffer_size) -> bool
-        {
-          JNIEnv* env = getJniEnv();
-          if (!env || !gameboyClassGlobalRef || !loadRamFromFileMethodId)
+            env->DeleteLocalRef(j_ram_data);
+            return (bool)result;
+          },
+          .loadRamFromFile = [](u8* ram_data_buffer, u32 buffer_size) -> bool
           {
-            FORGE_LOG_ERROR("JNI: Cannot call loadRamFromFile: JNIEnv or method ID not cached.");
-            return false;
-          }
-          jbyteArray j_ram_data_buffer = env->NewByteArray(buffer_size); // Create a Java byte array for the data
+            JNIEnv* env = getJniEnv();
+            if (!env || !gameboyClassGlobalRef || !loadRamFromFileMethodId)
+            {
+              FORGE_LOG_ERROR("JNI: Cannot call loadRamFromFile: JNIEnv or method ID not cached.");
+              return false;
+            }
+            jbyteArray j_ram_data_buffer = env->NewByteArray(buffer_size); // Create a Java byte array for the data
 
-          // - - - Call Kotlin method
-          jboolean result = env->CallStaticBooleanMethod(gameboyClassGlobalRef, loadRamFromFileMethodId, j_ram_data_buffer, buffer_size);
+            // - - - Call Kotlin method
+            jboolean result = env->CallStaticBooleanMethod(gameboyClassGlobalRef, loadRamFromFileMethodId, j_ram_data_buffer, buffer_size);
 
-          if ((bool)result) env->GetByteArrayRegion(j_ram_data_buffer, 0, buffer_size, (jbyte*)ram_data_buffer);
-          else              memset(ram_data_buffer, 0, buffer_size);
+            if ((bool)result) env->GetByteArrayRegion(j_ram_data_buffer, 0, buffer_size, (jbyte*)ram_data_buffer);
+            else              memset(ram_data_buffer, 0, buffer_size);
 
-          env->DeleteLocalRef(j_ram_data_buffer);
-          return (bool)result;
-        },
-      .getExpectedSaveSize = []() -> u32
-        {
-          JNIEnv* env = getJniEnv();
-          if (!env || !gameboyClassGlobalRef || !getExpectedSaveSizeMethodId)
+            env->DeleteLocalRef(j_ram_data_buffer);
+            return (bool)result;
+          },
+          .getExpectedSaveSize = []() -> u32
           {
+            JNIEnv* env = getJniEnv();
+            if (!env || !gameboyClassGlobalRef || !getExpectedSaveSizeMethodId)
+            {
               FORGE_LOG_ERROR("JNI: Cannot call getExpectedSaveSize: JNIEnv or method ID not cached.");
               return 0;
+            }
+            jint result = env->CallStaticIntMethod(gameboyClassGlobalRef, getExpectedSaveSizeMethodId);
+            return (u32)result;
           }
-          jint result = env->CallStaticIntMethod(gameboyClassGlobalRef, getExpectedSaveSizeMethodId);
-          return (u32)result;
-        }
-    };
+      };
 
 
   cartridgeLoad(reinterpret_cast<u8*>(BUFFER), SIZE, &androidFileIO);
@@ -468,16 +564,16 @@ Java_just_somebody_templates_domain_GameBoy_nativeLoadROM(
 // - - - Sets the state of a Game Boy button in the native core.
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeSetButtonState(
-  JNIEnv* ENV,
-  jobject   THIZ,
-  jint      BUTTON,
-  jboolean  PRESSED)
+    JNIEnv* ENV,
+    jobject   THIZ,
+    jint      BUTTON,
+    jboolean  PRESSED)
 {
   setButton(static_cast<Buttons>(BUTTON), static_cast<bool>(PRESSED));
 }
 
 JNIEXPORT void JNICALL
-Java_just_somebody_templates_domain_GameBoy_nativeFlushSave(JNIEnv* ENV)
+Java_just_somebody_templates_domain_GameBoy_nativeFlushSave(JNIEnv* ENV, jobject THIS)
 {
   if (isRunning) cartridgeFlushRAM();
 }
@@ -512,8 +608,8 @@ Java_just_somebody_templates_domain_GameBoy_nativeStartEmulator(
 // - - - Stops the Game Boy emulator thread and releases resources.
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeStopEmulator(
-  JNIEnv* ENV,
-  jobject THIZ)
+    JNIEnv* ENV,
+    jobject THIZ)
 {
   pthread_mutex_lock(&isRunningMutex);
   if (!isRunning)
@@ -536,35 +632,12 @@ Java_just_somebody_templates_domain_GameBoy_nativeStopEmulator(
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeOnSurfaceCreated(JNIEnv* ENV, jobject THIZ)
 {
-  GLuint  VERTEX_SHADER;
-  GLuint  FRAGMENT_SHADER;
-  GLint   LINKED;
-  GLint   INFO_LEN = 0;
-  char* INFO_LOG = nullptr;
-
   FORGE_LOG_INFO("nativeOnSurfaceCreated: Initializing OpenGL ES");
 
-  VERTEX_SHADER   = loadShader(GL_VERTEX_SHADER, gVertexShader);
-  FRAGMENT_SHADER = loadShader(GL_FRAGMENT_SHADER, gFragmentShader);
-
-  gbProgramObject = glCreateProgram();
-  glAttachShader(gbProgramObject, VERTEX_SHADER);
-  glAttachShader(gbProgramObject, FRAGMENT_SHADER);
-  glLinkProgram(gbProgramObject);
-
-  glGetProgramiv(gbProgramObject, GL_LINK_STATUS, &LINKED);
-  if (!LINKED)
-  {
-    glGetProgramiv(gbProgramObject, GL_INFO_LOG_LENGTH, &INFO_LEN);
-    if (INFO_LEN > 1)
-    {
-      INFO_LOG = (char*)malloc(sizeof(char) * INFO_LEN);
-      glGetProgramInfoLog(gbProgramObject, INFO_LEN, NULL, INFO_LOG);
-      FORGE_LOG_ERROR("Error linking program:\n%s", INFO_LOG);
-      free(INFO_LOG);
-    }
-    glDeleteProgram(gbProgramObject);
-    gbProgramObject = 0;
+  // Setup the shader program for the first time
+  // This will now happen on the GL thread.
+  if (!setupShaderProgram()) {
+    FORGE_LOG_ERROR("Failed to setup initial shader program in nativeOnSurfaceCreated! Screen may be black.");
     return;
   }
 
@@ -580,20 +653,23 @@ Java_just_somebody_templates_domain_GameBoy_nativeOnSurfaceCreated(JNIEnv* ENV, 
   // - - - Allocate texture memory on the GPU. Data will be updated with glTexSubImage2D.
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, GB_SCREEN_WIDTH, GB_SCREEN_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
-  glUseProgram(gbProgramObject);
+  // glUseProgram is already called inside setupShaderProgram()
 }
 
 
 // - - - Updates the OpenGL ES viewport when the rendering surface changes size.
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeOnSurfaceChanged(
-  JNIEnv* ENV,
-  jobject THIZ,
-  jint    WIDTH,
-  jint    HEIGHT)
+    JNIEnv* ENV,
+    jobject THIZ,
+    jint    WIDTH,
+    jint    HEIGHT)
 {
   FORGE_LOG_INFO("nativeOnSurfaceChanged: %d x %d", WIDTH, HEIGHT);
   glViewport(0, 0, WIDTH, HEIGHT);
+  // Store the actual display dimensions for the shader
+  currentDisplayWidth = WIDTH;
+  currentDisplayHeight = HEIGHT;
 }
 
 
@@ -694,8 +770,8 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* VM, void* RESERVED)
       "([BI)Z"); // (byte[] ram_data_buffer, int buffer_size) -> boolean
   if (!loadRamFromFileMethodId)
   {
-      FORGE_LOG_ERROR("Failed to find method ID for loadRamFromFile");
-      return JNI_ERR;
+    FORGE_LOG_ERROR("Failed to find method ID for loadRamFromFile");
+    return JNI_ERR;
   }
 
   getExpectedSaveSizeMethodId = ENV->GetStaticMethodID(
@@ -704,8 +780,8 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* VM, void* RESERVED)
       "()I"); // () -> int
   if (!getExpectedSaveSizeMethodId)
   {
-      FORGE_LOG_ERROR("Failed to find method ID for getExpectedSaveSize");
-      return JNI_ERR;
+    FORGE_LOG_ERROR("Failed to find method ID for getExpectedSaveSize");
+    return JNI_ERR;
   }
 
 
@@ -785,11 +861,12 @@ Java_just_somebody_templates_domain_GameBoy_nativeRecieveByte(
     jbyte BYTE)
 { serialReceiveNetworkByte((u8)BYTE); }
 
+extern "C"
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeSetVolumes(
-  JNIEnv* ENV,
-  jobject THIS,
-  jfloatArray VOLUMES)
+    JNIEnv* ENV,
+    jobject THIS,
+    jfloatArray VOLUMES)
 {
   if (VOLUMES == nullptr || ENV->GetArrayLength(VOLUMES) != 5) return;
 
@@ -799,12 +876,39 @@ Java_just_somebody_templates_domain_GameBoy_nativeSetVolumes(
   apuSetVolume(nativeVolumes);}
 }
 
+// - - - JNI function to set the active shader
+extern "C"
+JNIEXPORT void JNICALL
+Java_just_somebody_templates_domain_GameBoy_nativeSetShader(
+    JNIEnv* ENV,
+    jobject THIS,
+    jint SHADER_INDEX)
+{
+  // Check if the index is within the valid range (0 to 4 for 5 shaders)
+  // The size of gFragmentShaders is not directly available here since it's an extern array.
+  // We'll hardcode 5 for now, assuming 5 shaders.
+  if (SHADER_INDEX >= 0 && SHADER_INDEX <= 4) // Max index is 4 for 5 shaders
+  {
+    currentShaderIndex = SHADER_INDEX;
+    shaderNeedsReload = true; // Signal that the shader needs to be reloaded on the GL thread
+    FORGE_LOG_INFO("Shader index set to: %d. Flagging for reload on GL thread.", currentShaderIndex);
+
+    // Request a render. The renderFrameGl will then pick up the shaderNeedsReload flag.
+    callJavaRequestRender();
+  }
+  else
+  {
+    FORGE_LOG_ERROR("Invalid shader index: %d", SHADER_INDEX);
+  }
+}
+
+
 extern "C"
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeChangePallete(
-  JNIEnv* ENV,
-  jobject THIS,
-  jint INDEX)
+    JNIEnv* ENV,
+    jobject THIS,
+    jint INDEX)
 {
   setColorScheme(INDEX);
 }
@@ -812,4 +916,3 @@ Java_just_somebody_templates_domain_GameBoy_nativeChangePallete(
 #ifdef __cplusplus
 #endif
 #endif // __ANDROID__
-

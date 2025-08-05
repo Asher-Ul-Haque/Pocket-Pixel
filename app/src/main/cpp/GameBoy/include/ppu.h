@@ -52,9 +52,10 @@ typedef struct
   u8  windowInternalLine;
 
   // - - - Framebuffers (double buffering)
-  u32 frameBufferFront[SCREEN_WIDTH * SCREEN_HEIGHT];
-  u32 frameBufferBack[SCREEN_WIDTH * SCREEN_HEIGHT];
+  u32  bufferFront[SCREEN_WIDTH * SCREEN_HEIGHT];
+  u32  bufferBack[SCREEN_WIDTH * SCREEN_HEIGHT];
   u32* frameBuffer;
+  u32* drawBuffer;
 
   // - - - Cached palettes
   u32 backgroundPalette[4];

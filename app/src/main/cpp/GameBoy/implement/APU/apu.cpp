@@ -3,18 +3,18 @@
 
 static APUcontext apuCtx;
 
-APUcontext* apuGetContext()
-{ return &apuCtx; }
+APUcontext* apuGetContext() { return &apuCtx; }
 
-void apuInit(f32* VOLUMES)
+void apuInit(f32* VOLUMES) 
 {
   memset(&apuCtx, 0, sizeof(apuCtx));
 
   apuCtx.bufferPtr              = 0;
-  apuCtx.sampleCounter          = 0;
-  apuCtx.frameSequencerCounter  = 0;
+  apuCtx.sampleCounter          = 95;
+  apuCtx.frameSequencerCounter  = 8192;
   apuCtx.frameSequencerStep     = 0;
-  for (int i = 0; i < 5; ++i) apuCtx.volumes[i] = VOLUMES[i];
+
+  for (int i = 0; i < 5; ++i)   apuCtx.volumes[i] = VOLUMES[i];
 
   channelPulseInit(&apuCtx.channel1);
   channelPulseInit(&apuCtx.channel2);
@@ -22,46 +22,48 @@ void apuInit(f32* VOLUMES)
   channelNoiseInit(&apuCtx.channel4);
 }
 
-void apuSetVolume(f32* VOLUMES)
+void apuSetVolume(f32* VOLUMES) 
 {
-  for (int i = 0; i < 5; ++i) apuCtx.volumes[i] = VOLUMES[i];
+  for (int i = 0; i < 5; ++i)
+    apuCtx.volumes[i] = VOLUMES[i];
 }
 
-void apuUpdate(i32 CYCLES)
+void apuUpdate(i32 CYCLES) 
 {
   apuCtx.sampleCounter          -= CYCLES;
   apuCtx.frameSequencerCounter  -= CYCLES;
 
   channelPulseTickSampleGenerator(&apuCtx.channel1, CYCLES);
   channelPulseTickSampleGenerator(&apuCtx.channel2, CYCLES);
-  channelWaveTickSampleGenerator (&apuCtx.channel3, CYCLES);
+  channelWaveTickSampleGenerator(&apuCtx.channel3, CYCLES);
   channelNoiseTickSampleGenerator(&apuCtx.channel4, CYCLES);
 
-  if (apuCtx.frameSequencerCounter <= 0)
+  if (apuCtx.frameSequencerCounter <= 0) 
   {
     apuCtx.frameSequencerCounter += 8192;
 
-    if ((apuCtx.frameSequencerStep & 1) == 0)
+    if ((apuCtx.frameSequencerStep & 1) == 0) 
     {
       channelPulseTickLength(&apuCtx.channel1);
       channelPulseTickLength(&apuCtx.channel2);
-      channelWaveTickLength (&apuCtx.channel3);
+      channelWaveTickLength(&apuCtx.channel3);
       channelNoiseTickLength(&apuCtx.channel4);
     }
-    if (apuCtx.frameSequencerStep == 2 || apuCtx.frameSequencerStep == 6)
-    {
-      channelPulseTickSweep(&apuCtx.channel1);
-    }
-    if (apuCtx.frameSequencerStep == 7)
+
+    if (apuCtx.frameSequencerStep == 2 || apuCtx.frameSequencerStep == 6)  
+    { channelPulseTickSweep(&apuCtx.channel1); }
+
+    if (apuCtx.frameSequencerStep == 7) 
     {
       channelPulseTickEnvelope(&apuCtx.channel1);
       channelPulseTickEnvelope(&apuCtx.channel2);
       channelNoiseTickEnvelope(&apuCtx.channel4);
     }
+
     apuCtx.frameSequencerStep = (apuCtx.frameSequencerStep + 1) & 7;
   }
 
-  if (apuCtx.sampleCounter <= 0)
+  if (apuCtx.sampleCounter <= 0) 
   {
     apuCtx.sampleCounter += 95;
     if (!apuCtx.isEnabled) return;
@@ -73,36 +75,37 @@ void apuUpdate(i32 CYCLES)
     i32 ch3L = apuCtx.channel3Left  ? apuCtx.channel3.sample * apuCtx.volumes[3] : 0;
     i32 ch3R = apuCtx.channel3Right ? apuCtx.channel3.sample * apuCtx.volumes[3] : 0;
     i32 ch4L = apuCtx.channel4Left  ? apuCtx.channel4.sample * apuCtx.volumes[4] : 0;
-    i32 ch4R = apuCtx.channel4Right ? apuCtx.channel4.sample * apuCtx.volumes[4]: 0;
+    i32 ch4R = apuCtx.channel4Right ? apuCtx.channel4.sample * apuCtx.volumes[4] : 0;
 
     i32 left  = ch1L + ch2L + ch3L + ch4L;
     i32 right = ch1R + ch2R + ch3R + ch4R;
 
-    left  = (left * apuCtx.masterVolumeLeft)   >> 3;
+    left  = (left  * apuCtx.masterVolumeLeft)  >> 3;
     right = (right * apuCtx.masterVolumeRight) >> 3;
 
     left  = (i32)(left  * apuCtx.volumes[0]);
     right = (i32)(right * apuCtx.volumes[0]);
 
-    left  = left < -128 ? -128 : (left > 127 ? 127 : left);
+    left  = left  < -128 ? -128 : (left  > 127 ? 127 : left);
     right = right < -128 ? -128 : (right > 127 ? 127 : right);
 
-    u8 mixedL = (u8)(left  + 128);
+    u8 mixedL = (u8)(left + 128);
     u8 mixedR = (u8)(right + 128);
 
-    if (apuCtx.bufferPtr + 2 <= APU_BUFFER_SIZE)
+    if (apuCtx.bufferPtr + 2 <= APU_BUFFER_SIZE) 
     {
       apuCtx.sampleBuffer[apuCtx.bufferPtr++] = mixedL;
       apuCtx.sampleBuffer[apuCtx.bufferPtr++] = mixedR;
     }
 
-    if (apuCtx.bufferPtr >= APU_BUFFER_SIZE)
+    if (apuCtx.bufferPtr >= APU_BUFFER_SIZE) 
     {
       playAudio();
       apuCtx.bufferPtr = 0;
     }
   }
 }
+
 
 void apuWrite(u16 ADDRESS, u8 VALUE)
 {
