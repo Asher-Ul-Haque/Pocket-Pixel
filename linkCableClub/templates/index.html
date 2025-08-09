@@ -1,95 +1,214 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Link Cable Debug</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f0f2f5;
+      color: #333;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+    h1 {
+      color: #1a73e8;
+    }
+    .container {
+      background: #fff;
+      padding: 20px 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 500px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    .button-group, .input-group, .control-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+    }
+    input[type="text"], input[type="number"], select {
+      flex-grow: 1;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+    }
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      background-color: #1a73e8;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+    button:hover {
+      background-color: #155bb5;
+    }
+    #status {
+      font-weight: bold;
+      padding: 10px;
+      background-color: #e8f0fe;
+      border-radius: 8px;
+      text-align: center;
+    }
+    #receivedData {
+      list-style-type: none;
+      padding: 0;
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid #eee;
+      border-radius: 8px;
+      margin-top: 10px;
+    }
+    #receivedData li {
+      padding: 8px 15px;
+      border-bottom: 1px solid #eee;
+    }
+    #receivedData li:last-child {
+      border-bottom: none;
+    }
+  </style>
   <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 </head>
 <body>
-  <h1>Link Cable Debug UI</h1>
+<h1>Game Boy Link Cable Debug UI</h1>
 
-  <div>
+<div class="container">
+  <h2>Session Control</h2>
+  <div class="button-group">
     <button onclick="createSession()">Create Session</button>
-    <input type="text" id="sessionIdInput" placeholder="Session ID">
+    <span>OR</span>
+  </div>
+  <div class="input-group">
+    <input type="text" id="sessionIdInput" placeholder="Enter Session ID">
     <button onclick="joinSession()">Join Session</button>
   </div>
+</div>
 
-  <div>
-    <input type="number" id="byteInput" min="0" max="255">
+<div class="container">
+  <h2>Transfer Control</h2>
+  <div class="input-group">
+    <input type="number" id="byteInput" min="0" max="255" value="0">
     <button onclick="sendByte()">Send Byte</button>
   </div>
+  <div id="status">Status: Not connected</div>
+</div>
 
-  <p id="status"></p>
+<div class="container">
+  <h2>Received Data</h2>
   <ul id="receivedData"></ul>
+</div>
 
-  <script>
-    const socket = io(location.origin, { transports: ['websocket'] });
-    let currentSessionId = null;
+<script>
+  const socket = io('http://0.0.0.0:5000', { transports: ['websocket'] });
+  let currentSessionId = null;
 
-    socket.on('connect', () => {
-      console.log(`[CONNECT] Connected to server as ${socket.id}`);
-    });
+  socket.on('connect', () => {
+    console.log(`[CONNECT] Connected to server as ${socket.id}`);
+    document.getElementById('status').innerText = `Connected.`;
+  });
 
-    socket.on('connect_error', err => {
-      console.error(`[CONNECT ERROR]`, err.message);
-      document.getElementById('status').innerText = 'Connection failed';
-    });
+  socket.on('connect_error', err => {
+    console.error(`[CONNECT ERROR]`, err.message);
+    document.getElementById('status').innerText = 'Connection failed';
+  });
 
-    socket.on('session_created', data => {
-      currentSessionId = data.sessionId;
-      console.log(`[SESSION CREATED] ID: ${data.sessionId}`);
-      document.getElementById('status').innerText = `Created session: ${data.sessionId}`;
-    });
+  socket.on('session_created', data => {
+    currentSessionId = data.session_id;
+    console.log(`[SESSION CREATED] ID: ${data.session_id}`);
+    document.getElementById('status').innerText = `Created session. Share this ID: ${data.session_id}`;
+  });
 
-    socket.on('session_joined', data => {
-      currentSessionId = data.sessionId;
-      console.log(`[SESSION JOINED] ID: ${data.sessionId}`);
-      document.getElementById('status').innerText = `Joined session: ${data.sessionId}`;
-    });
+  socket.on('session_ready', () => {
+    console.log(`[SESSION READY] Your partner has connected.`);
+    document.getElementById('status').innerText = `Partner connected! Session is ready.`;
+  });
 
-    socket.on('session_error', data => {
-      console.warn(`[SESSION ERROR] ${data.message}`);
-      document.getElementById('status').innerText = `Error: ${data.message}`;
-    });
+  socket.on('session_not_found', () => {
+    console.warn(`[SESSION NOT FOUND]`);
+    document.getElementById('status').innerText = `Error: Session not found.`;
+  });
 
-    socket.on('partner_connected', data => {
-      console.log(`[PARTNER CONNECTED] Session: ${data.sessionId}`);
-      document.getElementById('status').innerText = `Partner connected: ${data.sessionId}`;
-    });
+  socket.on('session_full', () => {
+    console.warn(`[SESSION FULL]`);
+    document.getElementById('status').innerText = `Error: Session is full.`;
+  });
 
-    socket.on('partner_disconnected', () => {
-      console.warn(`[PARTNER DISCONNECTED]`);
-      document.getElementById('status').innerText = `Partner disconnected`;
-    });
+  socket.on('waiting_for_partner', data => {
+    currentSessionId = data.session_id;
+    console.log(`[WAITING] ID: ${data.session_id}`);
+    document.getElementById('status').innerText = `Waiting for a partner to join session: ${data.session_id}`;
+  });
 
-    socket.on('receive_link_data', data => {
-      console.log(`[RECEIVED BYTE]`, data.byte);
-      const li = document.createElement('li');
-      li.textContent = `Received byte: ${data.byte}`;
-      document.getElementById('receivedData').appendChild(li);
-    });
+  socket.on('waiting_for_transfer_partner', () => {
+    console.log(`[TRANSFER PENDING] Waiting for partner's byte.`);
+    document.getElementById('status').innerText = `Sent byte. Waiting for partner...`;
+  });
 
-    function createSession() {
-      console.log(`[EMIT] create_session`);
-      socket.emit('create_session');
+  socket.on('partner_disconnected', () => {
+    console.warn(`[PARTNER DISCONNECTED]`);
+    document.getElementById('status').innerText = `Partner disconnected`;
+    currentSessionId = null;
+  });
+
+  socket.on('receive_link_data', data => {
+    console.log(`[RECEIVED BYTE]`, data.byte);
+    document.getElementById('status').innerText = `Received byte: ${data.byte}`;
+    const li = document.createElement('li');
+    li.textContent = `Received byte: ${data.byte}`;
+    document.getElementById('receivedData').prepend(li);
+  });
+
+  function createSession() {
+    if (!socket.connected) {
+      document.getElementById('status').innerText = 'Error: Not connected to server.';
+      return;
     }
+    console.log(`[EMIT] create_session`);
+    socket.emit('create_session');
+  }
 
-    function joinSession() {
-      const id = document.getElementById('sessionIdInput').value.trim();
+  function joinSession() {
+    if (!socket.connected) {
+      document.getElementById('status').innerText = 'Error: Not connected to server.';
+      return;
+    }
+    const id = document.getElementById('sessionIdInput').value.trim();
+    if (id) {
       console.log(`[EMIT] join_session with ID: ${id}`);
-      if (id) {
-        socket.emit('join_session', { sessionId: id });
-      }
+      socket.emit('join_session', { session_id: id });
+      currentSessionId = id;
+    } else {
+      document.getElementById('status').innerText = 'Please enter a Session ID.';
+    }
+  }
+
+  function sendByte() {
+    if (!currentSessionId) {
+      document.getElementById('status').innerText = 'Error: Not in a session.';
+      return;
+    }
+    const byte = parseInt(document.getElementById('byteInput').value);
+    if (isNaN(byte) || byte < 0 || byte > 255) {
+      document.getElementById('status').innerText = 'Error: Invalid byte value.';
+      return;
     }
 
-    function sendByte() {
-      const byte = parseInt(document.getElementById('byteInput').value);
-      if (!isNaN(byte) && byte >= 0 && byte <= 255 && currentSessionId) {
-        console.log(`[EMIT] send_link_data: byte=${byte}, session=${currentSessionId}`);
-        socket.emit('send_link_data', { sessionId: currentSessionId, byte });
-      } else {
-        console.warn(`[INVALID BYTE] Not sent`);
-      }
-    }
-  </script>
+    console.log(`[EMIT] send_link_data: byte=${byte}, session=${currentSessionId}`);
+    socket.emit('send_link_data', { byte });
+  }
+</script>
 </body>
 </html>

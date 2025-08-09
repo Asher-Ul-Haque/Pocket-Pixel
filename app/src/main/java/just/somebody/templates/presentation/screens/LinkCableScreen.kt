@@ -12,7 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.material3.Text
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -22,12 +22,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewModelScope
-import just.somebody.templates.App
 import just.somebody.templates.R
 import just.somebody.templates.appModule.NetworkStatus
 import just.somebody.templates.presentation.effects.SnackbarController
@@ -38,8 +34,7 @@ import just.somebody.templates.presentation.widgets.CustomText
 import just.somebody.templates.presentation.widgets.TextInp
 import just.somebody.templates.ui.theme.GameBoyColors
 import kotlinx.coroutines.launch
-import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.text.buildAnnotatedString
+
 
 
 @Composable
@@ -48,12 +43,17 @@ fun LinkCableScreen(
   MODIFIER    : Modifier = Modifier,
   SHOW_IMAGES : Boolean = true
 ) {
-  val isNetworkAvailable  = VIEW_MODEL.isNetworkAvailable.collectAsState()
-  val sessionID           = VIEW_MODEL.sessionID.collectAsState()
-  val isConnectedToServer = VIEW_MODEL.isConnectedToServer.collectAsState()
-  val isInSession         = VIEW_MODEL.isInSession.collectAsState()
-  val isPartnerConnected  = VIEW_MODEL.isPartnerConnected.collectAsState()
+  val isNetworkAvailable    = VIEW_MODEL.isNetworkAvailable.collectAsState()
+  val sessionID             = VIEW_MODEL.sessionID.collectAsState()
+  val isConnectedToServer   = VIEW_MODEL.isConnectedToServer.collectAsState()
+  val isInSession           = VIEW_MODEL.isInSession.collectAsState()
+  val isPartnerConnected    = VIEW_MODEL.isPartnerConnected.collectAsState()
+  val isSessionNotFound     = VIEW_MODEL.isSessionNotFound.collectAsState()
+  val isSessionFull         = VIEW_MODEL.isSessionFull.collectAsState()
+  val waitingForTransfer    = VIEW_MODEL.waitingForTransfer.collectAsState()
+
   val scope = rememberCoroutineScope()
+  val clipboard = LocalClipboard.current
 
   // - - - Show a snackbar when network is lost
   LaunchedEffect(isNetworkAvailable.value)
@@ -99,8 +99,11 @@ fun LinkCableScreen(
     {
       when
       {
+        isSessionNotFound.value -> CustomText("Session not found. Please check the ID.", COLOR = GameBoyColors.Error)
+        isSessionFull.value     -> CustomText("Session is full. Try another ID.", COLOR = GameBoyColors.Error)
+
         !isInSession.value ->
-          {
+        {
           // - - - Not in session → show create & join options
           ColumnBoxed("Join a Room")
           {
@@ -117,18 +120,17 @@ fun LinkCableScreen(
         }
 
         isInSession.value ->
-          {
+        {
           ColumnBoxed("Session Active")
           {
             sessionID.let {
               it.value?.let { it1 ->
                 CustomText(
                   TEXT = it1,
-                  MODIFIER = Modifier.background(GameBoyColors.Green),
+                  MODIFIER = Modifier.background(GameBoyColors.Green, RoundedCornerShape(8.dp)),
                   COLOR = GameBoyColors.DarkGreen
                 )
 
-                val clipboard = LocalClipboard.current
                 val sessionIdToCopy = sessionID.value ?: ""
 
                 CustomButton(ON_CLICK =
@@ -144,8 +146,15 @@ fun LinkCableScreen(
               }
             }
 
-            if (isPartnerConnected.value) CustomText("Partner Connected!")
-            else                          CustomText("Waiting for partner...")
+            if (isPartnerConnected.value)
+            {
+              if (waitingForTransfer.value) CustomText("Waiting for partner to send data...", COLOR = GameBoyColors.LightGreen)
+              else                          CustomText("Partner Connected!", COLOR = GameBoyColors.LightGreen)
+            }
+            else
+            {
+              CustomText("Waiting for partner...", COLOR = GameBoyColors.LightGreen)
+            }
 
             CustomButton(
               ON_CLICK = { VIEW_MODEL.disconnect() },
@@ -171,7 +180,8 @@ fun LinkCableScreen(
 
 // - - -UI helper
 @Composable
-private fun ColumnBoxed(title: String, content: @Composable () -> Unit) {
+private fun ColumnBoxed(TITLE : String, CONTENT : @Composable () -> Unit)
+{
   Column(
     modifier = Modifier
       .padding(16.dp)
@@ -182,9 +192,9 @@ private fun ColumnBoxed(title: String, content: @Composable () -> Unit) {
     horizontalAlignment = Alignment.CenterHorizontally
   )
   {
-    CustomText(TEXT = title, FONT_SIZE = 42)
+    CustomText(TEXT = TITLE, FONT_SIZE = 42)
     Spacer(modifier = Modifier.size(8.dp))
-    content()
+    CONTENT()
     Spacer(modifier = Modifier.size(8.dp))
   }
 }

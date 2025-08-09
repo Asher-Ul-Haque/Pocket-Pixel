@@ -62,17 +62,9 @@ void serialWrite(u16 ADDRESS, u8 VALUE)
 
       if (BIT(ctx.SC, 7))
       {
-        if (!ctx.isTransfering)
-        {
-          ctx.isTransfering           = true;
-          ctx.newNetworkByteAvaiable  = false;
-          FORGE_LOG_INFO("Serial: Transfer initiated. Sending SB=0x%02X, SC=0x%02X", ctx.SB, ctx.SC);
-          sendSerialByte(ctx.SB, ctx.SC);
-        }
-        else
-        {
-          FORGE_LOG_WARNING("Serial: Attempted to start new transfer while already in progress.");
-        }
+        ctx.isTransfering           = true;
+        ctx.newNetworkByteAvaiable  = false;
+        sendSerialByte(ctx.SB);
       }
       break;
 

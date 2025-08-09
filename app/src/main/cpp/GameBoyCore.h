@@ -27,7 +27,7 @@ FORGE_API void       getDebugFrame (u32* DEBUG_BUFFER);
 FORGE_API void       getAudio      (u8*  AUDIO_BUFFER);
 FORGE_API void       playAudio     ();
 FORGE_API void       render();
-FORGE_API void       sendSerialByte(u8 BYTE, u8 SC);
+FORGE_API void       sendSerialByte(u8 BYTE);
 FORGE_API void       setButton     (Buttons BUTTON, bool PRESSED);
 FORGE_API void       pauseEmulator();
 FORGE_API void       resumeEmulator();

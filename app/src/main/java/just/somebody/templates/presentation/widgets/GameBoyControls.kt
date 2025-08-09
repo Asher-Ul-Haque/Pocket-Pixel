@@ -107,8 +107,13 @@ fun GameBoyControls(
       Spacer(Modifier.padding(16.dp))
       Row(horizontalArrangement = Arrangement.spacedBy(8.dp))
       {
-        NormalButton("B", Buttons.B, GAME_BOY, true, Modifier.absoluteOffset(y = (64).dp))
-        NormalButton("A", Buttons.A, GAME_BOY, true)
+        NormalButton("B", Buttons.B, GAME_BOY, Buttons.A, true)
+        NormalButton("A", Buttons.A, GAME_BOY, null, true)
+      }
+      Row(horizontalArrangement = Arrangement.spacedBy(8.dp))
+      {
+        NormalButton("B", Buttons.B, GAME_BOY, null, true)
+        NormalButton("A", Buttons.A, GAME_BOY, Buttons.B, true)
       }
     }
 
@@ -124,7 +129,7 @@ fun GameBoyControls(
       NormalButton("Start", Buttons.START, GAME_BOY)
     }
 
-    Spacer(modifier = Modifier.padding(8.dp))
+    Spacer(modifier = Modifier.padding(4.dp))
     Icon(
       painter             = painterResource(R.drawable.settings),
       contentDescription  = null,
@@ -148,6 +153,7 @@ fun NormalButton(
   LABEL     : String,
   BUTTON    : Buttons,
   GAME_BOY  : GameBoy,
+  SECONDARY : Buttons?  = null,
   IS_SQUARE : Boolean   = false,
   MODIFIER  : Modifier  = Modifier
 )
@@ -172,12 +178,14 @@ fun NormalButton(
             {
               isPressed.value = true
               GAME_BOY.sendButton(BUTTON, true)
+              if (SECONDARY != null) GAME_BOY.sendButton(SECONDARY, true)
             }
 
             if (!pressed && isPressed.value)
             {
               isPressed.value = false
               GAME_BOY.sendButton(BUTTON, false)
+              if (SECONDARY != null) GAME_BOY.sendButton(SECONDARY, false)
             }
           }
         }
@@ -189,8 +197,12 @@ fun NormalButton(
       disabledContentColor    = Color.Gray,
       disabledContainerColor  = Color.Gray
     ),
-    border = BorderStroke(4.dp, GameBoyColors.Green),
-  ) {
+    border = BorderStroke(
+      if (SECONDARY == null) 4.dp
+      else                   0.dp,
+      GameBoyColors.Green),
+  )
+  {
     Text(
       text        = LABEL,
       color       = GameBoyColors.LightGreen,

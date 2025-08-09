@@ -10,17 +10,26 @@ import kotlinx.coroutines.launch
 
 class LinkCableViewModel : ViewModel()
 {
-  private val _isNetworkAvailable : MutableStateFlow<NetworkStatus> = MutableStateFlow(NetworkStatus.Unavailable)
-  public  val isNetworkAvailable  : StateFlow<NetworkStatus>        = _isNetworkAvailable
+  private val _isNetworkAvailable     : MutableStateFlow<NetworkStatus> = MutableStateFlow(NetworkStatus.Unavailable)
+  public  val isNetworkAvailable      : StateFlow<NetworkStatus>        = _isNetworkAvailable
 
-  private val _sessionID : MutableStateFlow<String?>  = MutableStateFlow(null)
-  public  val sessionID  : StateFlow<String?>         = _sessionID
+  private val _sessionID              : MutableStateFlow<String?>       = MutableStateFlow(null)
+  public  val sessionID               : StateFlow<String?>              = _sessionID
 
-  private val _isConnectedToServer : MutableStateFlow<Boolean>  = MutableStateFlow(false)
-  public  val isConnectedToServer  : StateFlow<Boolean>         = _isConnectedToServer
+  private val _isConnectedToServer    : MutableStateFlow<Boolean>       = MutableStateFlow(false)
+  public  val isConnectedToServer     : StateFlow<Boolean>              = _isConnectedToServer
 
-  private val _isPartnerConnected : MutableStateFlow<Boolean> = MutableStateFlow(false)
-  public  val isPartnerConnected  : StateFlow<Boolean>        = _isPartnerConnected
+  private val _isPartnerConnected     : MutableStateFlow<Boolean>       = MutableStateFlow(false)
+  public  val isPartnerConnected      : StateFlow<Boolean>              = _isPartnerConnected
+
+  private val _isSessionNotFound      : MutableStateFlow<Boolean>       = MutableStateFlow(false)
+  public  val isSessionNotFound       : StateFlow<Boolean>              = _isSessionNotFound
+
+  private val _isSessionFull          : MutableStateFlow<Boolean>       = MutableStateFlow(false)
+  public  val isSessionFull           : StateFlow<Boolean>              = _isSessionFull
+
+  private val _waitingForTransfer     : MutableStateFlow<Boolean>       = MutableStateFlow(false)
+  public  val waitingForTransfer      : StateFlow<Boolean>              = _waitingForTransfer
 
   val isInSession : StateFlow<Boolean> = _sessionID
     .map { !it.isNullOrBlank() }
@@ -34,19 +43,16 @@ class LinkCableViewModel : ViewModel()
 
     linkClient.connect()
 
-    linkClient.onSessionCreated =
+    linkClient.onWaitingForPartner =
       { id ->
-        _sessionID.value = id
-        ForgeLogger.warn("Created session with id: $id")
+        _sessionID.value          = id
+        _isPartnerConnected.value = false
+        _isSessionNotFound.value  = false
+        _isSessionFull.value      = false
+        ForgeLogger.warn("Waiting for partner in session: $id")
       }
 
-    linkClient.onSessionJoined =
-      { id ->
-        _sessionID.value = id
-        ForgeLogger.warn("Joined session with id: $id")
-      }
-
-    linkClient.onPartnerConnected =
+    linkClient.onSessionReady =
       {
         _isPartnerConnected.value = true
         ForgeLogger.warn("Partner connected")
@@ -55,8 +61,34 @@ class LinkCableViewModel : ViewModel()
     linkClient.onPartnerDisconnected =
       {
         _isPartnerConnected.value = false
+        _sessionID.value          = null
         ForgeLogger.warn("Partner disconnected")
       }
+
+    linkClient.onSessionNotFound =
+      {
+        _isSessionNotFound.value  = true
+        _isSessionFull.value      = false
+        _sessionID.value          = null
+      }
+
+    linkClient.onSessionFull =
+      {
+        _isSessionFull.value      = true
+        _isSessionNotFound.value  = false
+        _sessionID.value          = null
+      }
+
+    linkClient.onWaitingForTransferPartner =
+      {
+        _waitingForTransfer.value = true
+      }
+
+    linkClient.onByteReceived =
+      {
+        _waitingForTransfer.value = false
+      }
+
 
     linkClient.onError =
       { _isConnectedToServer.value = false }
@@ -89,12 +121,15 @@ class LinkCableViewModel : ViewModel()
 
   fun resetSession()
   {
-    _sessionID.value = null
+    _sessionID.value          = null
     _isPartnerConnected.value = false
+    _isSessionNotFound.value  = false
+    _isSessionFull.value      = false
+    _waitingForTransfer.value = false
   }
 
   fun createSession()
-  { linkClient.createSession() }
+  { linkClient.joinSession(null) }
 
   fun joinSession(ID : String)
   { linkClient.joinSession(ID) }
@@ -102,6 +137,7 @@ class LinkCableViewModel : ViewModel()
   fun disconnect()
   {
     resetSession()
+    linkClient.disconnect()
     _isConnectedToServer.value = false
   }
 }

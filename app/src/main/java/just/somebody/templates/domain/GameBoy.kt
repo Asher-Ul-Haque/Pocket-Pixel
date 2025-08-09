@@ -120,11 +120,10 @@ class GameBoy
     { glSurfaceViewInstance = view }
 
     @JvmStatic
-    fun sendByte(BYTE: Byte, SC : Byte)
+    fun sendByte(BYTE: Byte)
     {
       val sb : Int = BYTE.toInt() and 0xFF
-      val sc : Int = SC.toInt()   and 0xFF
-      App.appModule.linkCable.sendByte(sb, sc)
+      App.appModule.linkCable.sendByte(sb)
     }
 
     // - - - Function to update the static ROM URI from a GameBoy instance

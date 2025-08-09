@@ -4,6 +4,7 @@ import just.somebody.templates.appModule.ForgeLogger
 import org.json.JSONObject
 import java.net.URISyntaxException
 
+
 class LinkCable
 {
   // - - - Socket Info
@@ -15,16 +16,16 @@ class LinkCable
     private set
   var connected        : Boolean  = false
     private set
-  var sentByte     : Int = 0
-  var receivedByte : Int = 0
 
   // - - - Callbacks
-  var onSessionCreated      : ((String) -> Unit)? = null
-  var onSessionJoined       : ((String) -> Unit)? = null
-  var onPartnerConnected    : (() -> Unit)?       = null
-  var onPartnerDisconnected : (() -> Unit)?       = null
-  var onByteReceived        : ((Int) -> Unit)?    = null
-  var onError               : ((String) -> Unit)? = null
+  var onSessionReady              : (() -> Unit)?       = null
+  var onWaitingForPartner         : ((String) -> Unit)? = null
+  var onPartnerDisconnected       : (() -> Unit)?       = null
+  var onByteReceived              : ((Int) -> Unit)?    = null
+  var onWaitingForTransferPartner : (() -> Unit)?       = null
+  var onError                     : ((String) -> Unit)? = null
+  var onSessionNotFound           : (() -> Unit)?       = null
+  var onSessionFull               : (() -> Unit)?       = null
 
   // - - - Connect to server
   fun connect()
@@ -61,32 +62,39 @@ class LinkCable
           onError?.invoke(msg)
         }
 
-        on("session_created")
+        on("waiting_for_partner")
         { args ->
-          val sessionId = (args.getOrNull(0) as? JSONObject)?.optString("sessionId")
+          val sessionId = (args.getOrNull(0) as? JSONObject)?.optString("session_id")
           if (!sessionId.isNullOrBlank())
           {
             currentSessionId = sessionId
-            ForgeLogger.info("Session created: $sessionId")
-            onSessionCreated?.invoke(sessionId)
+            ForgeLogger.info("Waiting for partner in session: $sessionId")
+            onWaitingForPartner?.invoke(sessionId)
           }
         }
 
-        on("session_joined")
-        { args ->
-          val sessionId = (args.getOrNull(0) as? JSONObject)?.optString("sessionId")
-          if (!sessionId.isNullOrBlank())
-          {
-            currentSessionId = sessionId
-            ForgeLogger.info("Session joined: $sessionId")
-            onSessionJoined?.invoke(sessionId)
-          }
-        }
-
-        on("partner_connected")
+        on("session_ready")
         {
-          ForgeLogger.info("Partner connected")
-          onPartnerConnected?.invoke()
+          ForgeLogger.info("Partner connected and session is ready")
+          onSessionReady?.invoke()
+        }
+
+        on("session_not_found")
+        {
+          ForgeLogger.warn("Attempted to join a session that does not exist.")
+          onSessionNotFound?.invoke()
+        }
+
+        on("session_full")
+        {
+          ForgeLogger.warn("Attempted to join a session that is already full.")
+          onSessionFull?.invoke()
+        }
+
+        on("waiting_for_transfer_partner")
+        {
+          ForgeLogger.info("Transfer sent, waiting for partner to send their byte.")
+          onWaitingForTransferPartner?.invoke()
         }
 
         on("partner_disconnected")
@@ -100,7 +108,6 @@ class LinkCable
           val byte = (args.getOrNull(0) as? JSONObject)?.optInt("byte", -1) ?: -1
           if (byte in 0..255)
           {
-            receivedByte = byte
             ForgeLogger.trace("Received byte: $byte")
             onByteReceived?.invoke(byte)
           }
@@ -123,32 +130,32 @@ class LinkCable
   }
 
   // - - - Emit commands
-  fun createSession()
+  fun joinSession(SESSION_ID : String?)
   {
     ifNotConnected { return }
-    socket?.emit("create_session")
-  }
 
-  fun joinSession(SESSION_ID : String)
-  {
-    ifNotConnected { return }
-    val payload = JSONObject().put("sessionId", SESSION_ID)
+    val payload = if (SESSION_ID.isNullOrBlank())
+    {
+      ForgeLogger.info("Creating a new session.")
+      JSONObject()
+    }
+    else
+    {
+      ForgeLogger.info("Joining session: $SESSION_ID")
+      JSONObject().put("session_id", SESSION_ID)
+    }
+
     socket?.emit("join_session", payload)
     currentSessionId = SESSION_ID
   }
 
-  fun sendByte(BYTE : Int, SC : Int)
+  fun sendByte(SB : Int)
   {
     ifNotConnected { return }
-    val sessionId = currentSessionId ?: return ForgeLogger.error("No session to send byte")
-
     val payload = JSONObject()
-      .put("sessionId", sessionId)
-      .put("byte", BYTE)
-      .put("sc", SC)
+      .put("byte",   SB)
 
-    ForgeLogger.trace("Sending byte: $BYTE to $sessionId")
-    sentByte = BYTE
+    ForgeLogger.trace("Sending byte: $SB")
     socket?.emit("send_link_data", payload)
   }
 

@@ -1,150 +1,163 @@
 import eventlet
-from flask import Flask, request, render_template
-from flask_socketio import SocketIO, emit, join_room
+eventlet.monkey_patch()
+from flask import Flask, render_template, request
+from flask_socketio import SocketIO, emit, join_room, close_room
 import uuid
 import time
-
-eventlet.monkey_patch()
 
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*", transports=["websocket"])
 
-sessions = {}
-session_states = {}
-
-TRANSFER_TIMEOUT = 2.0  # seconds
-
-
-class TransferState:
-    def __init__(self):
-        self.sb_bytes = {}       # {sid: byte}
-        self.sc_flags = {}       # {sid: sc}
-        self.master_sid = None   # sid of current master
-        self.last_transfer_time = 0.0
-
+# Dictionary to store active sessions.
+sessions                    = {}
+sessions_with_pending_bytes = {}
 
 @app.route('/')
 def index():
-    return render_template("index.html")
+  return render_template('index.html')
 
 
 @socketio.on('connect')
 def on_connect():
-    print(f"[CONNECT] Client connected: {request.sid}")
+  print(f"[CONNECT] Client connected: {request.sid}")
 
 
 @socketio.on('disconnect')
 def on_disconnect():
-    print(f"[DISCONNECT] Client disconnected: {request.sid}")
-    for sid, clients in list(sessions.items()):
-        if request.sid in clients:
-            clients.remove(request.sid)
-            print(f"[LEAVE] {request.sid} removed from session {sid}")
+  print(f"[DISCONNECT] Client disconnected: {request.sid}")
 
-            if sid in session_states:
-                del session_states[sid]
+  # Find which session this client was part of
+  for session_id, session_data in list(sessions.items()):
+    clients_in_session = session_data['clients']
+    if request.sid in clients_in_session:
+      clients_in_session.remove(request.sid)
+      print(f"[LEAVE] {request.sid} removed from session {session_id}")
 
-            if not clients:
-                del sessions[sid]
-                print(f"[SESSION REMOVED] {sid}")
-            elif len(clients) == 1:
-                emit("partner_disconnected", room=clients[0])
-                print(f"[NOTIFY] Partner in session {sid} notified of disconnect")
+      # Notify remaining client if there's only one left
+      if len(clients_in_session) == 1:
+        remaining_client_sid = list(clients_in_session)[0]
+        emit("partner_disconnected", room=remaining_client_sid)
+        print(f"[NOTIFY] Partner disconnected in session {session_id}, notifying {remaining_client_sid}")
+
+        # Clear master/slave roles since the session is now invalid
+        session_data['master']  = None
+        session_data['slave']   = None
+
+      # If no clients left, remove the session
+      elif not clients_in_session:
+        del sessions[session_id]
+        close_room(session_id)
+        print(f"[SESSION REMOVED] {session_id}")
+
+      # Also clear any pending transfers for this session
+      if session_id in sessions_with_pending_bytes:
+        del sessions_with_pending_bytes[session_id]
+        print(f"[CLEANUP] Cleared pending transfer for session {session_id}")
+      break
 
 
 @socketio.on('create_session')
-def create_session():
-    session_id = str(uuid.uuid4())[:8]
-    sessions[session_id] = [request.sid]
-    session_states[session_id] = TransferState()
-    join_room(session_id)
-    print(f"[SESSION CREATED] {request.sid} created session {session_id}")
-    emit('session_created', {'sessionId': session_id, 'status': 'Waiting for partner...'})
+def on_create_session():
+  # Generate a new unique session ID
+  session_id                        = str(uuid.uuid4())[:8]
+  sessions[session_id]              = {'clients': set(), 'master': None, 'slave': None}
+  sessions[session_id]['clients'].add(request.sid)
+  sessions[session_id]['master']    = request.sid
+
+  join_room(session_id)
+  print(f"[CREATE] New session created: {session_id} by {request.sid}. Assigned as Master.")
+  emit('session_created', {'session_id': session_id}, room=request.sid)
+  emit('waiting_for_partner', {'session_id': session_id}, room=request.sid)
 
 
 @socketio.on('join_session')
-def join_session(data):
-    session_id = data.get("sessionId")
+def on_join_session(data):
+  session_id = data.get('session_id')
 
-    if session_id not in sessions:
-        emit("session_error", {"message": "Session not found"})
-        print(f"[ERROR] Join failed: Session {session_id} not found")
-        return
+  # Generate a new session ID if none provided
+  if not session_id or session_id not in sessions:
+    print(f"[REJECT] Session {session_id} not found. {request.sid} rejected.")
+    emit('session_not_found', room=request.sid)
+    return
 
-    if len(sessions[session_id]) >= 2:
-        emit("session_error", {"message": "Session is full"})
-        print(f"[ERROR] Join failed: Session {session_id} is full")
-        return
-
-    sessions[session_id].append(request.sid)
+  clients_in_session = sessions[session_id]['clients']
+  if len(clients_in_session) < 2:
     join_room(session_id)
-    print(f"[JOINED] {request.sid} joined session {session_id}")
-    emit("session_joined", {"sessionId": session_id, "status": "Connected!"})
-    emit("partner_connected", {"sessionId": session_id}, room=session_id)
+    clients_in_session.add(request.sid)
+    sessions[session_id]['slave'] = request.sid
+    print(f"[JOIN] {request.sid} joined session {session_id}. Assigned as Slave. Current clients: {len(clients_in_session)}")
+
+    # Notify both clients that the session is ready
+    if len(clients_in_session) == 2:
+      print(f"[READY] Session {session_id} is full. Both clients connected.")
+      emit('session_ready', room=session_id)
+    else:
+      emit('waiting_for_partner', {'session_id': session_id}, room=request.sid)
+      print(f"[WAIT] {request.sid} waiting for partner in session {session_id}.")
+  else:
+    print(f"[REJECT] Session {session_id} is full. {request.sid} rejected.")
+    emit('session_full', room=request.sid)
 
 
 @socketio.on('send_link_data')
-def send_link_data(data):
-    session_id = data.get("sessionId")
-    byte = data.get("byte")
-    sc = data.get("sc", 0)
-    current_time = time.time()
+def on_send_link_data(data):
+  byte = data.get('byte')
 
-    if session_id not in sessions:
-        print(f"[ERROR] Invalid session ID: {session_id}")
-        return
+  if byte is None:
+    print(f"[ERROR] Received send_link_data without 'byte' from {request.sid}")
+    return
 
-    clients = sessions[session_id]
-    if len(clients) != 2:
-        print(f"[WAIT] Only one client in session {session_id}, skipping")
-        return
+  # Find the session and role for this client
+  session_id    = None
+  client_type   = None
+  for sid, session_data in sessions.items():
+    if request.sid == session_data.get('master'):
+      session_id    = sid
+      client_type   = "master"
+      break
+    elif request.sid == session_data.get('slave'):
+      session_id    = sid
+      client_type   = "slave"
+      break
 
-    state = session_states[session_id]
-    sender = request.sid
-    recipient = [sid for sid in clients if sid != sender][0]
+  if not session_id:
+    print(f"[ERROR] {request.sid} not in any active session, ignoring data.")
+    return
 
-    # Store SB and SC
-    state.sb_bytes[sender] = byte
-    state.sc_flags[sender] = sc
-    state.last_transfer_time = current_time
+  # Initialize a pending transfer object if one doesn't exist for the session
+  print(f"[TRANSFER] Received byte from {client_type} ({request.sid}), session {session_id}. Byte: 0x{byte:02X}")
+  if session_id not in sessions_with_pending_bytes:
+    sessions_with_pending_bytes[session_id] = {}
 
-    # Detect master
-    if (sc & 0x80) != 0:
-        if state.master_sid is None:
-            state.master_sid = sender
-            print(f"[MASTER SET] {sender} is master for session {session_id}")
-        elif state.master_sid != sender:
-            print(f"[RACE] Both clients tried to be master in {session_id}")
-            emit("error", {"message": "Both devices attempted to be master — transfer aborted"})
-            return
+  # Store the incoming byte based on its client type (master or slave)
+  sessions_with_pending_bytes[session_id][client_type] = {'sid': request.sid, 'byte': byte}
 
-    # Check if both clients are ready
-    if len(state.sb_bytes) == 2 and state.master_sid is not None:
-        master = state.master_sid
-        slave = [sid for sid in clients if sid != master][0]
+  # Check if both a master and a slave byte are now available for this session
+  if 'master' in sessions_with_pending_bytes[session_id] and 'slave' in sessions_with_pending_bytes[session_id]:
+    master_data = sessions_with_pending_bytes[session_id]['master']
+    slave_data  = sessions_with_pending_bytes[session_id]['slave']
+    master_sid  = master_data['sid']
+    master_byte = master_data['byte']
+    slave_sid   = slave_data['sid']
+    slave_byte  = slave_data['byte']
 
-        master_byte = state.sb_bytes[master]
-        slave_byte = state.sb_bytes[slave]
+    # Send the master's byte to the slave
+    emit('receive_link_data', {'byte': master_byte}, room=slave_sid)
+    print(f"[RELAY] Master ({master_sid}) -> Slave ({slave_sid}), byte: 0x{master_byte:02X}")
 
-        # Full-duplex exchange
-        emit("receive_link_data", {"byte": slave_byte}, room=master)
-        emit("receive_link_data", {"byte": master_byte}, room=slave)
+    # Send the slave's byte to the master
+    emit('receive_link_data', {'byte': slave_byte}, room=master_sid)
+    print(f"[RELAY] Slave ({slave_sid}) -> Master ({master_sid}), byte: 0x{slave_byte:02X}")
 
-        print(f"[TRANSFER] {master} ⇄ {slave} | Bytes: {master_byte:02X} ⇄ {slave_byte:02X}")
+    # Clear the pending transfer for this session
+    del sessions_with_pending_bytes[session_id]
+    print(f"[SYNC] Transfer complete for session {session_id}. Cleared pending transfer.")
 
-        # Reset state
-        state.sb_bytes.clear()
-        state.sc_flags.clear()
-        state.master_sid = None
-
-    # Timeout handling
-    elif current_time - state.last_transfer_time > TRANSFER_TIMEOUT:
-        print(f"[TIMEOUT] Transfer timeout in session {session_id}, resetting state")
-        state.sb_bytes.clear()
-        state.sc_flags.clear()
-        state.master_sid = None
+  else:
+    print(f"[PENDING] Stored byte from {client_type} ({request.sid}), waiting for partner.")
+    emit('waiting_for_transfer_partner', room=request.sid)
 
 
 if __name__ == '__main__':
-    print("[STARTING] Link Cable Server running on http://0.0.0.0:5000")
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
+  print("Starting Flask-SocketIO server for Game Boy Link Cable emulation...")
+  socketio.run(app, host='0.0.0.0', port=5000, debug=True)

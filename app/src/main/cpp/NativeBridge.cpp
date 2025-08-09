@@ -387,14 +387,13 @@ void playAudio()
   }
 }
 
-void sendSerialByte(u8 BYTE, u8 SC)
+void sendSerialByte(u8 BYTE)
 {
   JNIEnv* ENV = getJniEnv();
   if (ENV && gameboyClassGlobalRef && sendByteMethodId)
   {
     jbyte sb = static_cast<jbyte>(BYTE);
-    jbyte sc = static_cast<jbyte>(SC);
-    ENV->CallStaticVoidMethod(gameboyClassGlobalRef, sendByteMethodId, sb, sc);
+    ENV->CallStaticVoidMethod(gameboyClassGlobalRef, sendByteMethodId, sb);
   }
 }
 
@@ -725,7 +724,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* VM, void* RESERVED)
   sendByteMethodId = ENV->GetStaticMethodID(
       gameboyClassGlobalRef,
       "sendByte",
-      "(BB)V"
+      "(B)V"
   );
   if (!sendByteMethodId)
   {
