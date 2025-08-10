@@ -16,6 +16,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,12 +39,14 @@ import kotlinx.coroutines.launch
 
 
 
+
 @Composable
 fun LinkCableScreen(
   VIEW_MODEL  : LinkCableViewModel,
   MODIFIER    : Modifier = Modifier,
   SHOW_IMAGES : Boolean = true
-) {
+)
+{
   val isNetworkAvailable    = VIEW_MODEL.isNetworkAvailable.collectAsState()
   val sessionID             = VIEW_MODEL.sessionID.collectAsState()
   val isConnectedToServer   = VIEW_MODEL.isConnectedToServer.collectAsState()
@@ -52,16 +56,27 @@ fun LinkCableScreen(
   val isSessionFull         = VIEW_MODEL.isSessionFull.collectAsState()
   val waitingForTransfer    = VIEW_MODEL.waitingForTransfer.collectAsState()
 
-  val scope = rememberCoroutineScope()
+  val scope     = rememberCoroutineScope()
   val clipboard = LocalClipboard.current
+  var showCPY   = remember { mutableStateOf(false) }
 
   // - - - Show a snackbar when network is lost
   LaunchedEffect(isNetworkAvailable.value)
   {
     if (isNetworkAvailable.value != NetworkStatus.Available)
-    {
-      SnackbarController.sendEvent(SnackbarEvent("Lost internet connectivity", null))
-    }
+    { SnackbarController.sendEvent(SnackbarEvent("Lost internet connectivity", null)) }
+  }
+
+  // - - - Show snackbars for session errors
+  LaunchedEffect(isSessionNotFound.value)
+  {
+    if (isSessionNotFound.value)
+    { SnackbarController.sendEvent(SnackbarEvent("Session not found. Please check the ID.", null)) }
+  }
+
+  LaunchedEffect(isSessionFull.value)
+  {
+    if (isSessionFull.value) { SnackbarController.sendEvent(SnackbarEvent("Session is full. Try another ID.", null)) }
   }
 
   Column(
@@ -72,22 +87,16 @@ fun LinkCableScreen(
     horizontalAlignment = Alignment.CenterHorizontally
   )
   {
-
-    // - - - Status Message
-    if (isNetworkAvailable.value != NetworkStatus.Available)
-    { CustomText("Connect to the internet to play with a buddy") }
-
-
     // - - - Show the appropriate image
     if (SHOW_IMAGES)
     {
       Image(
         painter =
-        if (isNetworkAvailable.value != NetworkStatus.Available)  painterResource(R.drawable.no_internet)
-        else                                                      painterResource(R.drawable.linked_boys),
+          if (isNetworkAvailable.value != NetworkStatus.Available)  painterResource(R.drawable.no_internet)
+          else                                                      painterResource(R.drawable.linked_boys),
         modifier =
-        if (isNetworkAvailable.value == NetworkStatus.Available)  Modifier.fillMaxWidth()
-        else                                                      Modifier.fillMaxSize(0.3f),
+          if (isNetworkAvailable.value == NetworkStatus.Available)  Modifier.fillMaxWidth()
+          else                                                      Modifier.fillMaxSize(0.3f),
         contentDescription = null
       )
     }
@@ -99,22 +108,19 @@ fun LinkCableScreen(
     {
       when
       {
-        isSessionNotFound.value -> CustomText("Session not found. Please check the ID.", COLOR = GameBoyColors.Error)
-        isSessionFull.value     -> CustomText("Session is full. Try another ID.", COLOR = GameBoyColors.Error)
-
         !isInSession.value ->
         {
           // - - - Not in session → show create & join options
           ColumnBoxed("Join a Room")
           {
             val room = TextInp("Enter Room Number")
-            CustomButton(ON_CLICK = { VIEW_MODEL.joinSession(room) })
+            CustomButton(ON_CLICK = { VIEW_MODEL.joinSession(room); showCPY.value = false })
             { CustomText("Join") }
           }
 
           ColumnBoxed("Create a Room")
           {
-            CustomButton(ON_CLICK= { VIEW_MODEL.createSession() })
+            CustomButton(ON_CLICK= { VIEW_MODEL.createSession(); showCPY.value = true })
             { CustomText("Create") }
           }
         }
@@ -123,26 +129,31 @@ fun LinkCableScreen(
         {
           ColumnBoxed("Session Active")
           {
-            sessionID.let {
-              it.value?.let { it1 ->
+            sessionID.let()
+            {
+              it.value?.let()
+              { it1 ->
                 CustomText(
-                  TEXT = it1,
-                  MODIFIER = Modifier.background(GameBoyColors.Green, RoundedCornerShape(8.dp)),
-                  COLOR = GameBoyColors.DarkGreen
+                  TEXT      = it1,
+                  MODIFIER  = Modifier.background(GameBoyColors.Green),
+                  COLOR     = GameBoyColors.DarkGreen
                 )
 
-                val sessionIdToCopy = sessionID.value ?: ""
 
-                CustomButton(ON_CLICK =
+                if (showCPY.value)
                 {
-                  scope.launch()
+                  val sessionIdToCopy = sessionID.value ?: ""
+                  CustomButton(ON_CLICK =
                   {
-                    val clipData = ClipData.newPlainText("Session ID", sessionIdToCopy)
-                    clipboard.setClipEntry(ClipEntry(clipData))
-                    SnackbarController.sendEvent(SnackbarEvent("Session ID copied!", null))
-                  }
-                })
-                { CustomText("Copy") }
+                    scope.launch()
+                    {
+                      val clipData = ClipData.newPlainText("Session ID", sessionIdToCopy)
+                      clipboard.setClipEntry(ClipEntry(clipData))
+                      SnackbarController.sendEvent(SnackbarEvent("Session ID copied!", null))
+                    }
+                  })
+                  { CustomText("Copy") }
+                }
               }
             }
 
@@ -180,7 +191,7 @@ fun LinkCableScreen(
 
 // - - -UI helper
 @Composable
-private fun ColumnBoxed(TITLE : String, CONTENT : @Composable () -> Unit)
+private fun ColumnBoxed(TITLE : String, CONTENT : @Composable () -> Unit) 
 {
   Column(
     modifier = Modifier
@@ -193,8 +204,8 @@ private fun ColumnBoxed(TITLE : String, CONTENT : @Composable () -> Unit)
   )
   {
     CustomText(TEXT = TITLE, FONT_SIZE = 42)
-    Spacer(modifier = Modifier.size(8.dp))
+    Spacer(modifier = Modifier.size(4.dp))
     CONTENT()
-    Spacer(modifier = Modifier.size(8.dp))
+    Spacer(modifier = Modifier.size(4.dp))
   }
 }

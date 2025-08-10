@@ -112,7 +112,7 @@
 </div>
 
 <script>
-  const socket = io('http://0.0.0.0:5000', { transports: ['websocket'] });
+  const socket = io('https://pocket-pixel-link-cable-club.onrender.com/', { transports: ['websocket'] });
   let currentSessionId = null;
 
   socket.on('connect', () => {

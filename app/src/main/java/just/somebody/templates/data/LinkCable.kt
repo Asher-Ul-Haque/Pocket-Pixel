@@ -134,19 +134,18 @@ class LinkCable
   {
     ifNotConnected { return }
 
-    val payload = if (SESSION_ID.isNullOrBlank())
+    if (SESSION_ID.isNullOrBlank())
     {
       ForgeLogger.info("Creating a new session.")
-      JSONObject()
+      socket?.emit("create_session")
     }
     else
     {
       ForgeLogger.info("Joining session: $SESSION_ID")
-      JSONObject().put("session_id", SESSION_ID)
+      val payload = JSONObject().put("session_id", SESSION_ID)
+      socket?.emit("join_session", payload)
+      currentSessionId = SESSION_ID
     }
-
-    socket?.emit("join_session", payload)
-    currentSessionId = SESSION_ID
   }
 
   fun sendByte(SB : Int)
@@ -162,11 +161,8 @@ class LinkCable
   fun disconnect()
   {
     ForgeLogger.warn("Disconnecting from link cable")
-    socket?.disconnect()
-    socket?.off()
-    socket            = null
+    socket?.emit("exit")
     currentSessionId  = null
-    connected         = false
   }
 
   // - - - Helpers

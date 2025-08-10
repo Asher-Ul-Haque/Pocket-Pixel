@@ -105,15 +105,18 @@ fun GameBoyControls(
         }
       }
       Spacer(Modifier.padding(16.dp))
-      Row(horizontalArrangement = Arrangement.spacedBy(8.dp))
+      Column ()
       {
-        NormalButton("B", Buttons.B, GAME_BOY, Buttons.A, true)
-        NormalButton("A", Buttons.A, GAME_BOY, null, true)
-      }
-      Row(horizontalArrangement = Arrangement.spacedBy(8.dp))
-      {
-        NormalButton("B", Buttons.B, GAME_BOY, null, true)
-        NormalButton("A", Buttons.A, GAME_BOY, Buttons.B, true)
+        Row(horizontalArrangement = Arrangement.Center)
+        {
+          NormalButton("B", Buttons.B, GAME_BOY, Buttons.A, true)
+          NormalButton("A", Buttons.A, GAME_BOY, null, true)
+        }
+        Row(horizontalArrangement = Arrangement.Center)
+        {
+          NormalButton("B", Buttons.B, GAME_BOY, null, true)
+          NormalButton("A", Buttons.A, GAME_BOY, Buttons.B, true)
+        }
       }
     }
 
@@ -193,22 +196,36 @@ fun NormalButton(
     shape  = RectangleShape,
     colors = ButtonColors(
       contentColor            = GameBoyColors.DarkGreen,
-      containerColor          = GameBoyColors.MediumGreen.copy(alpha = if (isPressed.value) 0.6f else 1.0f),
+      containerColor          = GameBoyColors.MediumGreen.copy(
+        alpha =
+        if (SECONDARY != null) 0.0f
+        else
+        {
+          if (isPressed.value) 0.6f
+          else                 1.0f
+        }),
       disabledContentColor    = Color.Gray,
       disabledContainerColor  = Color.Gray
     ),
     border = BorderStroke(
       if (SECONDARY == null) 4.dp
       else                   0.dp,
-      GameBoyColors.Green),
+      GameBoyColors.Green.copy(
+        alpha =
+          if (SECONDARY != null) 0.0f
+          else                   1.0f
+      )),
   )
   {
-    Text(
-      text        = LABEL,
-      color       = GameBoyColors.LightGreen,
-      fontSize    = 16.sp,
-      fontFamily  = PokeFontFamily,
-    )
+    if (SECONDARY == null)
+    {
+      Text(
+        text        = LABEL,
+        color       = GameBoyColors.LightGreen,
+        fontSize    = 16.sp,
+        fontFamily  = PokeFontFamily,
+      )
+    }
   }
 }
 

@@ -5,8 +5,11 @@ import androidx.lifecycle.viewModelScope
 import just.somebody.templates.App
 import just.somebody.templates.appModule.ForgeLogger
 import just.somebody.templates.appModule.NetworkStatus
+import just.somebody.templates.presentation.effects.SnackbarController
+import just.somebody.templates.presentation.effects.SnackbarEvent
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+
 
 class LinkCableViewModel : ViewModel()
 {
@@ -70,6 +73,7 @@ class LinkCableViewModel : ViewModel()
         _isSessionNotFound.value  = true
         _isSessionFull.value      = false
         _sessionID.value          = null
+        viewModelScope.launch { SnackbarController.sendEvent(SnackbarEvent("Session not found. Please check the ID.", null)) }
       }
 
     linkClient.onSessionFull =
@@ -77,6 +81,7 @@ class LinkCableViewModel : ViewModel()
         _isSessionFull.value      = true
         _isSessionNotFound.value  = false
         _sessionID.value          = null
+        viewModelScope.launch { SnackbarController.sendEvent(SnackbarEvent("Session is full. Try another ID.", null)) }
       }
 
     linkClient.onWaitingForTransferPartner =

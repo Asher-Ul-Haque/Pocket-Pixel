@@ -22,7 +22,7 @@ def on_connect():
   print(f"[CONNECT] Client connected: {request.sid}")
 
 
-@socketio.on('disconnect')
+@socketio.on('exit')
 def on_disconnect():
   print(f"[DISCONNECT] Client disconnected: {request.sid}")
 
