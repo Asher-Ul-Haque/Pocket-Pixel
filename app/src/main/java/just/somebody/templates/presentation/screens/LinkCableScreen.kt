@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -59,6 +60,7 @@ fun LinkCableScreen(
   val scope     = rememberCoroutineScope()
   val clipboard = LocalClipboard.current
   var showCPY   = remember { mutableStateOf(false) }
+
 
   // - - - Show a snackbar when network is lost
   LaunchedEffect(isNetworkAvailable.value)
@@ -140,7 +142,7 @@ fun LinkCableScreen(
                 )
 
 
-                if (showCPY.value)
+                if (showCPY.value && !isSessionFull.value)
                 {
                   val sessionIdToCopy = sessionID.value ?: ""
                   CustomButton(ON_CLICK =

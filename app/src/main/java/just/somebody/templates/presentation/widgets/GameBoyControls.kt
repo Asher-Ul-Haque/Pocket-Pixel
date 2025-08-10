@@ -107,12 +107,12 @@ fun GameBoyControls(
       Spacer(Modifier.padding(16.dp))
       Column ()
       {
-        Row(horizontalArrangement = Arrangement.Center)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp))
         {
           NormalButton("B", Buttons.B, GAME_BOY, Buttons.A, true)
           NormalButton("A", Buttons.A, GAME_BOY, null, true)
         }
-        Row(horizontalArrangement = Arrangement.Center)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp))
         {
           NormalButton("B", Buttons.B, GAME_BOY, null, true)
           NormalButton("A", Buttons.A, GAME_BOY, Buttons.B, true)
@@ -120,7 +120,17 @@ fun GameBoyControls(
       }
     }
 
-    Spacer(modifier = Modifier.padding(24.dp))
+    Spacer(modifier = Modifier.padding(10.dp))
+
+    Icon(
+      painter             = painterResource(R.drawable.settings),
+      contentDescription  = null,
+      tint                = GameBoyColors.MediumGreen,
+      modifier            = Modifier
+        .size(24.dp)
+        .clickable { showBottomSheet.value = true }
+    )
+    Spacer(modifier = Modifier.padding(10.dp))
 
     Row(
       modifier                = Modifier.fillMaxWidth(),
@@ -131,16 +141,6 @@ fun GameBoyControls(
       Spacer(Modifier.padding(16.dp))
       NormalButton("Start", Buttons.START, GAME_BOY)
     }
-
-    Spacer(modifier = Modifier.padding(4.dp))
-    Icon(
-      painter             = painterResource(R.drawable.settings),
-      contentDescription  = null,
-      tint                = GameBoyColors.MediumGreen,
-      modifier            = Modifier
-        .size(24.dp)
-        .clickable { showBottomSheet.value = true }
-    )
 
 
     if (showBottomSheet.value)

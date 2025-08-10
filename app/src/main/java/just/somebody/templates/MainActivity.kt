@@ -124,4 +124,5 @@ class MainActivity : ComponentActivity()
     App.appModule.gameBoy.stopEmulator()
     App.appModule.gameBoy.flushSave()
   }
+
 }

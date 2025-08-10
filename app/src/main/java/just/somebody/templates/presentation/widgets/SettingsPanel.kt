@@ -289,12 +289,13 @@ private fun SaveSettingsSection(
   ON_DELETE : () -> Unit
 )
 {
-  CustomButton(ON_CLICK = ON_FLUSH)
+  CustomButton(ON_CLICK = ON_FLUSH, Modifier.fillMaxWidth())
   { CustomText("Flush Save File Now") }
 
   CustomButton(
     ON_CLICK  = ON_DELETE,
-    COLOR     = GameBoyColors.Error
+    COLOR     = GameBoyColors.Error,
+    MODIFIER  = Modifier.fillMaxWidth()
   )
   { CustomText("Delete Save File") }
 }

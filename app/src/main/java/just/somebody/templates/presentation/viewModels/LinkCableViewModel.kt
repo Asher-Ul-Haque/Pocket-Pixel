@@ -58,6 +58,7 @@ class LinkCableViewModel : ViewModel()
     linkClient.onSessionReady =
       {
         _isPartnerConnected.value = true
+        _sessionID.value          = linkClient.currentSessionId
         ForgeLogger.warn("Partner connected")
       }
 
