@@ -12,10 +12,11 @@ Pocket-Pixel is a Game Boy emulator designed for playing Game Boy games on the b
 ---
 
 ## Screen Shots
-![1](https://github.com/user-attachments/assets/7bc6cb80-745f-4021-b475-3a6099965082)
-![2](https://github.com/user-attachments/assets/2251e6b6-8c66-4ab0-8b64-5aa1ff3a5f99)
-![3](https://github.com/user-attachments/assets/c97d032d-d463-44e5-86e4-853147d95f7e)
-![4](https://github.com/user-attachments/assets/0ff487f0-9292-4c5a-b019-1631fcbce425)
+
+| | |
+|:---:|:---:|
+| ![Screenshot 3](https://github.com/user-attachments/assets/c97d032d-d463-44e5-86e4-853147d95f7e) | ![Screenshot 4](https://github.com/user-attachments/assets/0ff487f0-9292-4c5a-b019-1631fcbce425) |
+| ![Screenshot 1](https://github.com/user-attachments/assets/7bc6cb80-745f-4021-b475-3a6099965082) | ![Screenshot 2](https://github.com/user-attachments/assets/2251e6b6-8c66-4ab0-8b64-5aa1ff3a5f99) |
 
 
 ## Features
