@@ -5,90 +5,51 @@
 
 ### **Bored in college lectures?** *CO nahi ho raha?* Don't worry—Pocket-Pixel is here to keep you entertained! Relive the joy of retro gaming anytime, anywhere.
 
-Pocket-Pixel is a Game Boy emulator designed to deliver a seamless gaming experience across Android and Web platforms. Save your progress, compete for high scores, and discover new games through smart recommendations. Dive into the nostalgia of Game Boy games with a modern twist!
-
-![tribute](https://github.com/user-attachments/assets/d9cd301d-9125-4be8-8d02-6a16ac2af9e8)
+Pocket-Pixel is a Game Boy emulator designed for playing Game Boy games on the best handheld ever: your Android phone!. Dive into the nostalgia of Game Boy games with a modern twist!
 
 </div>
 
 ---
 
+## Screen Shots
+![1](https://github.com/user-attachments/assets/7bc6cb80-745f-4021-b475-3a6099965082)
+![2](https://github.com/user-attachments/assets/2251e6b6-8c66-4ab0-8b64-5aa1ff3a5f99)
+![3](https://github.com/user-attachments/assets/c97d032d-d463-44e5-86e4-853147d95f7e)
+![4](https://github.com/user-attachments/assets/0ff487f0-9292-4c5a-b019-1631fcbce425)
+
+
 ## Features
 
-### 1. Cross-Platform Gameplay
-- **Android App**: Play Game Boy games on the go, optimized for touch controls.
-- **Web App**: Enjoy gaming in your browser with WebAssembly for smooth performance.
-- **Powerful Emulator Core**: Built in C/C++ ensuring high performance.
+### Cycle Accurate CPU
+* All games made for the original DMG Game Boy and even some made for the Game Boy Colour (CGB-Enhanced) will work.
+* All BLAARG CPU tests pass.
 
-### 2. ROM Management
-- **Server Integration**: Download popular ROMs directly within the Android app and play offline
-- **Find Any ROM**: If it exists, it is here
+### Pixel Processing Unit
+* Accurate PPU
+* 8 colour palettes to choose from
+* 5 shaders to choose from
 
-### 3. Cloud Saves
-- **Save Progress Anywhere**: Sync your game saves to a secure web server using PostgreSQL.
-- **Pick Up Where You Left Off**: Switch seamlessly between devices without losing progress.
+### Audio Processing Unit
+* All 4 channels work
+* Per-channel Adjustable volumes
 
-### 4. Competitive Gaming
-- **Leaderboards**: Compete with others for high scores, hours played, and more.
-- **Community Challenges**: Engage with global players in unique challenges.
+### ROM management
+* Save file loading
+* Save file saving
+* Supported Mappers-
+  * MBC0
+  * MBC1
+  * MBC2
+  * MBC3
+  * MBC5
+ 
+### Easy to use interface
+* Controls optimised for fat fingers
+* Simple and true to the art style of the Game Boy interface
 
-### 5. Game Discovery
-- **Smart Recommendations**: Discover new and popular games powered by machine learning.
-- **Trending Titles**: Stay updated on what’s hot in the retro gaming community.
-
----
-
-## Technology Stack
-
-### Core Components
-- **Emulator Core**: C/C++ for game emulation.
-- **WebAssembly**: Bringing the emulator to the Web for a smooth in-browser experience.
-
-### Android App
-- **Kotlin Multiplatform (KMP)**: Native Android development with Kotlin for shared code.
-- **JNI Integration**: Connecting the C++ emulator core to the Android app.
-
-### Backend
-- **Framework**: Spring Boot / Ktor for robust backend services.
-- **Database**: PostgreSQL for storing user data, game saves, and leaderboards.
-
-### Web App
-- **Frontend**: Kotlin/JS for an interactive user experience.
-- **WebAssembly Integration**: Running the emulator core directly in the browser.
-
----
-
-## Repository Structure
-```
-pocket-pixel/
-├── app/                    # The app for android, web and the C emulator Core
-├── server/                 # Backend server (Spring Boot / Ktor) and PostGreSQL server
-├── bin/                    # APK builds currently unstable
-├── README.md               # Project documentation
-└── LICENSE                 # License file
-```
-
----
-
-## Installation and Usage
-
-### Android App (Soon on Google Play Store)
-1. Clone the repository.
-3. Build and run the app using Android Studio.
-
-### Web App (Soon on vercel)
-1. Clone the repository.
-2. Navigate to the `wasmJSMain/` directory.
-3. Build the WebAssembly module and run the frontend using your preferred server.
-
-### Server Setup
-1. Clone the repository.
-2. Navigate to the `server/` directory.
-3. Set up the PostgreSQL database.
-4. Run the server using Spring Boot or Ktor.
-
----
-
+### Small app size
+* 20 MB for combined APKs
+* 8 MB for APKs through google play store or App Bundle
 
 ## License
 This project is licensed under the [MIT License](LICENSE).
