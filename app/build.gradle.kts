@@ -1,3 +1,13 @@
+import java.util.Properties
+import java.io.FileInputStream
+
+val properties = Properties().apply {
+  val file = rootProject.file("keystore.properties")
+  if (file.exists()) {
+    load(FileInputStream(file))
+  }
+}
+
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.android)
