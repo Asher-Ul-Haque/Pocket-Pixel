@@ -179,7 +179,7 @@ fun VisualSettingsSection(
   ON_SHADER_SELECT  : (Int) -> Unit
 )
 {
-  val palettes = listOf("Default", "Authentic", "Ice-Cream", "Hollow", "Space-Haze", "Honey", "Coffee", "Comrade", "Snowflake, Rabbit")
+  val palettes = listOf("Default", "Authentic", "Ice-Cream", "Hollow", "Space-Haze", "Honey", "Coffee", "Comrade", "Snowflake", "Rabbit")
   val shaders  = listOf("Default", "CRT", "Chromatic Aberration", "Bad Signal", "Ghosting")
   var paletteExpanded by remember { mutableStateOf(false) }
   var shadersExpanded by remember { mutableStateOf(false) }

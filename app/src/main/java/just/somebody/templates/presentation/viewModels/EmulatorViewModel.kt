@@ -101,7 +101,7 @@ class EmulatorViewModel : ViewModel()
     viewModelScope.launch()
     {
       val currentSettings = App.appModule.dataStoreManager.getSettings()
-      val updatedSettings = currentSettings.copy(paletteIndex = INDEX % 8)
+      val updatedSettings = currentSettings.copy(paletteIndex = INDEX % 10)
 
       App.appModule.dataStoreManager.updateSettings(updatedSettings)
       _settings.value = updatedSettings
