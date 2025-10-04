@@ -57,6 +57,17 @@ This project is licensed under the [MIT License](LICENSE).
 The user is solely responsible for copyright breaking, from, and emulation laws. 
 Nintendo shouldn't know this exists
 
+
+THESE ARE THE NAMES AND LINKS OF THE ORIGINAL CREATORS OF CUSTOM COLOR PALETTES
+1. ICE CREAM    : KERRIE LAKE   : https://lospec.com/kerrielake
+2. HOLLOW       : POLTERGASM    : https://lospec.com/iampoltergasm
+3. SPACE HAZE   : WILDLEOKNIGHT : https://lospec.com/wildleoknight
+4. HONEY        : ANUBI         : https://lospec.com/anubiarts
+5. COFFEE       : MAHYELLAW     : https://lospec.com/mahyellaw
+6. RED IS DEAD  : DEVINE DEVINE : https://lospec.com/devine-devine
+7. SNOWFLAKE    : YOUSURNAME    : https://lospec.com/yousurname
+8. MŒBIUS       : RABBITKING    : https://lospec.com/rabbitkng
+
 ---
 
 **Get ready to turn boring lectures into epic gaming sessions with Pocket-Pixel!**

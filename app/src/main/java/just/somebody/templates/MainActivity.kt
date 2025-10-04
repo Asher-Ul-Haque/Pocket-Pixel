@@ -44,24 +44,27 @@ class MainActivity : ComponentActivity()
 
       setOnExitAnimationListener()
       { splash ->
-        // - - - Play custom sound effect (if needed)
+        // - - - Play splash sound
         SoundController.play(SoundEffect.Splash)
-        val iconView = splash.iconView
-        // - - - Scale X animation
-        val scaleX = ObjectAnimator.ofFloat(iconView, View.SCALE_X, 1.0f, 0.4f).apply { duration = 500L }
-        // - - - Scale Y animation
-        val scaleY = ObjectAnimator.ofFloat(iconView, View.SCALE_Y, 1.0f, 0.4f).apply { duration = 500L }
-        // - - - fade out
-        val fade = ObjectAnimator.ofFloat(iconView, View.ALPHA, 1f, 0f).apply { duration = 500L }
 
-        // - - - Run animations together
-        AnimatorSet().apply()
-        {
-          playTogether(scaleX, scaleY, fade)
-          interpolator = OvershootInterpolator()
-          doOnEnd { splash.remove() }
-          start()
-        }
+        splash.iconView?.let()
+        { iconView ->
+          // - - - Scale X animation
+          val scaleX = ObjectAnimator.ofFloat(iconView, View.SCALE_X, 1.0f, 0.4f).apply { duration = 500L }
+          // - - - Scale Y animation
+          val scaleY = ObjectAnimator.ofFloat(iconView, View.SCALE_Y, 1.0f, 0.4f).apply { duration = 500L }
+          // - - - fade out
+          val fade = ObjectAnimator.ofFloat(iconView, View.ALPHA, 1f, 0f).apply { duration = 500L }
+
+          // - - - Run animations together
+          AnimatorSet().apply()
+          {
+            playTogether(scaleX, scaleY, fade)
+            interpolator = OvershootInterpolator()
+            doOnEnd { splash.remove() }
+            start()
+          }
+        } ?: run { splash.remove() }
       }
     }
 

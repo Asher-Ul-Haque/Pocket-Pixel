@@ -35,8 +35,8 @@ android {
     applicationId = "just.somebody.templates"
     minSdk = 24
     targetSdk = 35
-    versionCode = 1
-    versionName = "1.0"
+    versionCode = 6
+    versionName = "1.5"
     androidResources {
       localeFilters.add("en") // Keep only English
     }
@@ -51,6 +51,7 @@ android {
           "-DLOG_INFO_ENABLED=0",
           "-DLOG_DEBUG_ENABLED=0",
           "-DLOG_TRACE_ENABLED=0",
+          "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
         )
       }
     }
