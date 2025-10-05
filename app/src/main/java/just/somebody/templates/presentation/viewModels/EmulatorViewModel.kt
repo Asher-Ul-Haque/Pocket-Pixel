@@ -106,7 +106,7 @@ class EmulatorViewModel : ViewModel()
       App.appModule.dataStoreManager.updateSettings(updatedSettings)
       _settings.value = updatedSettings
 
-      App.appModule.gameBoy.setPalette(INDEX % 8)
+      App.appModule.gameBoy.setPalette(INDEX % 10)
     }
   }
 
