@@ -7,6 +7,11 @@
 
 Pocket-Pixel is a Game Boy emulator designed for playing Game Boy games on the best handheld ever: your Android phone!. Dive into the nostalgia of Game Boy games with a modern twist!
 
+
+[<img width="270" height="80" alt="GetItOnGooglePlay_Badge_Web_color_English" src="https://github.com/user-attachments/assets/a0e1055f-f833-4b9a-a2e7-20b61ac71786" />](https://play.google.com/store/apps/details?id=just.somebody.templates)
+
+
+
 </div>
 
 ---
