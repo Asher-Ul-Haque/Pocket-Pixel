@@ -40,31 +40,31 @@ class MainActivity : ComponentActivity()
 
     installSplashScreen().apply()
     {
-      setKeepOnScreenCondition { !splashViewModel.isReady.value }
+      //setKeepOnScreenCondition { !splashViewModel.isReady.value }
 
       setOnExitAnimationListener()
       { splash ->
         // - - - Play splash sound
         SoundController.play(SoundEffect.Splash)
 
-        splash.iconView?.let()
-        { iconView ->
-          // - - - Scale X animation
-          val scaleX = ObjectAnimator.ofFloat(iconView, View.SCALE_X, 1.0f, 0.4f).apply { duration = 500L }
-          // - - - Scale Y animation
-          val scaleY = ObjectAnimator.ofFloat(iconView, View.SCALE_Y, 1.0f, 0.4f).apply { duration = 500L }
-          // - - - fade out
-          val fade = ObjectAnimator.ofFloat(iconView, View.ALPHA, 1f, 0f).apply { duration = 500L }
+				splash.iconView.let()
+				{ iconView ->
+					// - - - Scale X animation
+					val scaleX = ObjectAnimator.ofFloat(iconView, View.SCALE_X, 1.0f, 0.4f).apply { duration = 500L }
+					// - - - Scale Y animation
+					val scaleY = ObjectAnimator.ofFloat(iconView, View.SCALE_Y, 1.0f, 0.4f).apply { duration = 500L }
+					// - - - fade out
+					val fade = ObjectAnimator.ofFloat(iconView, View.ALPHA, 1f, 0f).apply { duration = 500L }
 
-          // - - - Run animations together
-          AnimatorSet().apply()
-          {
-            playTogether(scaleX, scaleY, fade)
-            interpolator = OvershootInterpolator()
-            doOnEnd { splash.remove() }
-            start()
-          }
-        } ?: run { splash.remove() }
+					// - - - Run animations together
+					AnimatorSet().apply()
+					{
+						playTogether(scaleX, scaleY, fade)
+						interpolator = OvershootInterpolator()
+						doOnEnd { splash.remove() }
+						start()
+					}
+				}
       }
     }
 
