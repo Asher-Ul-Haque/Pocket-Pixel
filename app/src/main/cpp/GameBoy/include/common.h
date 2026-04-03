@@ -1,4 +1,11 @@
+/**
+ * @file common.h
+ * @brief Common utilities and macros for the project
+ * meant to be a way to simply includes by just including this file, and not worrying about the order of includes
+*/
+
 #pragma once
+
 #include "../../defines.h"
 #include "../../ForgeLibrary/include/logger.h"
 #include "../../ForgeLibrary/include/asserts.h"

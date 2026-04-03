@@ -1,0 +1,40 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/clang++",
+      "-Iinclude",
+      "-Wall",
+      "-Werror",
+      "-Wextra",
+      "-Wpedantic",
+      "-DDEBUG",
+      "-O1",
+      "-c",
+      "-o",
+      ".build/wow.o",
+      "src/wow.cpp"
+    ],
+    "directory": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp",
+    "file": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/src/wow.cpp",
+    "output": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/.build/wow.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/clang++",
+      "-Iinclude",
+      "-Wall",
+      "-Werror",
+      "-Wextra",
+      "-Wpedantic",
+      "-DDEBUG",
+      "-O1",
+      "-c",
+      "-o",
+      ".build/main.o",
+      "main.cpp"
+    ],
+    "directory": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp",
+    "file": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/main.cpp",
+    "output": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/.build/main.o"
+  }
+]

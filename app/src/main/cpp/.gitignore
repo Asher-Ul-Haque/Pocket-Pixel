@@ -1,0 +1,13 @@
+# Documentation
+*docs/
+*.docs/
+
+# Build
+/build/
+.build/
+
+# Binaries
+/bin/
+.bin/
+*.o
+.cache/
