@@ -3,14 +3,14 @@ SRC_DIR         := src
 INCLUDE_DIR     := include
 TESTS_DIR       := tests
 BUILD_DIR       := .build
-BIN_DIR         := .bin
+BIN_DIR         := bin
 DOCS_DIR        := docs
 TEST_BIN_DIR    := $(BIN_DIR)/tests
 
 # - - - Compilers
 CC      := clang
 CXX     := clang++
-CFLAGS  := -I$(INCLUDE_DIR) -Wall -Werror -Wextra -Wpedantic -DDEBUG -O1 -MMD -MP
+CFLAGS  := -I$(INCLUDE_DIR) -Wall -Werror -Wextra -Wpedantic -DDEBUG -O1 -MMD -MP 
 CXXFLAGS:= -I$(INCLUDE_DIR) -Wall -Werror -Wextra -Wpedantic -DDEBUG -O1 -MMD -MP
 LDFLAGS :=
 RPATH   :=

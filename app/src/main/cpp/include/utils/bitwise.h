@@ -3,7 +3,7 @@
  * @brief Utility macros for common bitwise operations and simple range checks.
  * @note Taken from Forge Library, 
  * @see https://github.com/Asher-Ul-Haque/ForgeLibrary
- */
+*/
 
 #pragma once
 

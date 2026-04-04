@@ -1,6 +1,25 @@
 [
   {
     "arguments": [
+      "/usr/bin/clang",
+      "-Iinclude",
+      "-Wall",
+      "-Werror",
+      "-Wextra",
+      "-Wpedantic",
+      "-DDEBUG",
+      "-O1",
+      "-c",
+      "-o",
+      ".build/io/cartridge/core.o",
+      "src/io/cartridge/core.c"
+    ],
+    "directory": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp",
+    "file": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/src/io/cartridge/core.c",
+    "output": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/.build/io/cartridge/core.o"
+  },
+  {
+    "arguments": [
       "/usr/bin/clang++",
       "-Iinclude",
       "-Wall",

@@ -2,12 +2,15 @@
 *docs/
 *.docs/
 
+# Test Roms
+*testRoms/
+
 # Build
 /build/
 .build/
 
 # Binaries
-/bin/
+bin/
 .bin/
 *.o
 .cache/
