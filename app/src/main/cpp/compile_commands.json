@@ -11,6 +11,158 @@
       "-O1",
       "-c",
       "-o",
+      ".build/utils/logger.o",
+      "src/utils/logger.c"
+    ],
+    "directory": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp",
+    "file": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/src/utils/logger.c",
+    "output": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/.build/utils/logger.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/clang",
+      "-Iinclude",
+      "-Wall",
+      "-Werror",
+      "-Wextra",
+      "-Wpedantic",
+      "-DDEBUG",
+      "-O1",
+      "-c",
+      "-o",
+      ".build/utils/testManager.o",
+      "src/utils/testManager.c"
+    ],
+    "directory": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp",
+    "file": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/src/utils/testManager.c",
+    "output": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/.build/utils/testManager.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/clang",
+      "-Iinclude",
+      "-Wall",
+      "-Werror",
+      "-Wextra",
+      "-Wpedantic",
+      "-DDEBUG",
+      "-O1",
+      "-c",
+      "-o",
+      ".build/io/cartridge/memoryBankControllers/mbc3.o",
+      "src/io/cartridge/memoryBankControllers/mbc3.c"
+    ],
+    "directory": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp",
+    "file": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/src/io/cartridge/memoryBankControllers/mbc3.c",
+    "output": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/.build/io/cartridge/memoryBankControllers/mbc3.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/clang",
+      "-Iinclude",
+      "-Wall",
+      "-Werror",
+      "-Wextra",
+      "-Wpedantic",
+      "-DDEBUG",
+      "-O1",
+      "-c",
+      "-o",
+      ".build/io/cartridge/memoryBankControllers/mbc0.o",
+      "src/io/cartridge/memoryBankControllers/mbc0.c"
+    ],
+    "directory": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp",
+    "file": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/src/io/cartridge/memoryBankControllers/mbc0.c",
+    "output": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/.build/io/cartridge/memoryBankControllers/mbc0.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/clang",
+      "-Iinclude",
+      "-Wall",
+      "-Werror",
+      "-Wextra",
+      "-Wpedantic",
+      "-DDEBUG",
+      "-O1",
+      "-c",
+      "-o",
+      ".build/io/cartridge/memoryBankControllers/mbc1.o",
+      "src/io/cartridge/memoryBankControllers/mbc1.c"
+    ],
+    "directory": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp",
+    "file": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/src/io/cartridge/memoryBankControllers/mbc1.c",
+    "output": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/.build/io/cartridge/memoryBankControllers/mbc1.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/clang",
+      "-Iinclude",
+      "-Wall",
+      "-Werror",
+      "-Wextra",
+      "-Wpedantic",
+      "-DDEBUG",
+      "-O1",
+      "-c",
+      "-o",
+      ".build/io/cartridge/memoryBankControllers/mbc5.o",
+      "src/io/cartridge/memoryBankControllers/mbc5.c"
+    ],
+    "directory": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp",
+    "file": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/src/io/cartridge/memoryBankControllers/mbc5.c",
+    "output": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/.build/io/cartridge/memoryBankControllers/mbc5.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/clang",
+      "-Iinclude",
+      "-Wall",
+      "-Werror",
+      "-Wextra",
+      "-Wpedantic",
+      "-DDEBUG",
+      "-O1",
+      "-c",
+      "-o",
+      ".build/io/cartridge/memoryBankControllers/mbc2.o",
+      "src/io/cartridge/memoryBankControllers/mbc2.c"
+    ],
+    "directory": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp",
+    "file": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/src/io/cartridge/memoryBankControllers/mbc2.c",
+    "output": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/.build/io/cartridge/memoryBankControllers/mbc2.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/clang",
+      "-Iinclude",
+      "-Wall",
+      "-Werror",
+      "-Wextra",
+      "-Wpedantic",
+      "-DDEBUG",
+      "-O1",
+      "-c",
+      "-o",
+      ".build/io/cartridge/metadata.o",
+      "src/io/cartridge/metadata.c"
+    ],
+    "directory": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp",
+    "file": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/src/io/cartridge/metadata.c",
+    "output": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/.build/io/cartridge/metadata.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/clang",
+      "-Iinclude",
+      "-Wall",
+      "-Werror",
+      "-Wextra",
+      "-Wpedantic",
+      "-DDEBUG",
+      "-O1",
+      "-c",
+      "-o",
       ".build/io/cartridge/core.o",
       "src/io/cartridge/core.c"
     ],

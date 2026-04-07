@@ -35,6 +35,15 @@ extern "C" {
 
 // - - - | Assertions | - - -
 
+#if defined(__clang__) || defined(__gcc__)
+  #ifdef __cplusplus 
+    #define COMPILE_TIME_ASSERT static_assert
+  #else   
+    #define COMPILE_TIME_ASSERT _Static_assert
+  #endif
+#else
+  #define COMPILE_TIME_ASSERT static_assert
+#endif
 
 // - - - Assert Methods - - -
 

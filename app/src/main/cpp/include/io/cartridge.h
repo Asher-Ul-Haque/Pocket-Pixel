@@ -5,6 +5,7 @@
 
 #pragma once
 #include <common.h>
+#include <io/memoryBankController.h>
 
 /**
  * @brief Structure representing the metadata of a Game Boy cartridge,
@@ -73,6 +74,7 @@ typedef struct CartridgeMetadata
   u8		headerChecksum;			///< 0x014D
   u16		globalChecksum;			///< 0x014E-0x014F
 } CartridgeMetadata; 		// - - - total : 80 bytes
+COMPILE_TIME_ASSERT(sizeof(CartridgeMetadata) == 80, "CartridgeMetadata struct must be exactly 80 bytes in size");
 
 /**
  * @brief Structure representing the file I/O operations for cartridge data,
@@ -129,6 +131,26 @@ typedef struct
   u8*								 externalRamData;		///< Pointer to allocated *external* RAM data (if cartridge has external RAM)
   u32                externalRamSize;   ///< Size of the external RAM in bytes
 
+  MapperType mapperType;
+  bool			 hasRam;
+  bool			 hasBattery;
+  bool			 hasRTC;
+
+  bool ramEnabled;   ///< mapper-controlled RAM gating
+  bool ramDirty;     ///< set on any write to RAM when enabled
+
+  u16 romBank;       ///< switchable bank for 0x4000-0x7FFF (meaning depends on mapper)
+  u8  ramBank;       ///< active RAM bank (when RAM banked)
+
+  union
+  {
+    MBC0State mbc0;
+    MBC1State mbc1;
+    MBC2State mbc2;
+    MBC3State mbc3;
+    MBC5State mbc5;
+  } mapper;
+
   CartridgeFileIO*   fileIO;						///< Pointer to the file I/O operations for loading/saving ROM and RAM data
 } CartContext;
 
@@ -138,15 +160,16 @@ typedef struct
  * @warning Do not modify the returned context directly,
  * @return Pointer to the current cartridge context.
 */
-const CartContext* cartridgeGetContext(void);
+CartContext* cartridgeGetContext(void);
 
 /**
  * @brief Initializes the cartridge system by loading the ROM data and setting up the cartridge context,
  * @param FILE_IO Pointer to a CartridgeFileIO structure.
- * @param ROM_DATA Pointer to the ROM data to be loaded into memory. This should point to a buffer that contains the entire ROM data for the cartridge.
+ * @param ROM_DATA Pointer to the ROM data to be loaded into memory. This should point to a buffer that contains the entire ROM data for the cartridge. 
  * @param ROM_SIZE Size of the ROM data in bytes. This should match the actual size
  * @see CartridgeFileIO for details on the expected function pointers and their behavior.
  * @return true if the cartridge was initialized successfully, false otherwise.
+ * @warning Catrdidge doesnt take ownership of the ROM_DATA pointer, so the caller is responsible for ensuring that the ROM data remains valid for the lifetime of the cartridge context.
 */
 bool cartridgeInit(
 	const CartridgeFileIO* FILE_IO,
@@ -214,6 +237,25 @@ void cartridgeUnload(void);
 /// @brief Flushes the cartridge RAM, writing any unsaved data to the file system and clearing the RAM data in memory.
 void cartridgeFlushRAM(void);
 
+/**
+ * @brief Checks if the cartridge type has a battery for saving game data.
+ * @return true if the cartridge type has a battery, false otherwise.
+*/
+bool cartridgeTypeHasBattery(void);
+
+/**
+ * @brief Checks if the cartridge type has a real-time clock (RTC) for time-based game features.
+ * @return true if the cartridge type has an RTC, false otherwise.
+*/
+bool cartridgeTypeHasRTC(void);
+
+/**
+ * @brief Detects the mapper type of the cartridge based on the cartridge metadata.
+ * The mapper type determines how the cartridge handles memory banking, RAM access, and other hardware features
+ * @return The detected MapperType for the cartridge, which indicates the specific hardware behavior and features of the cartridge.
+*/
+MapperType cartridgeDetectMapperType(void);
+
 
 // - - - Defines for no magic numbers - - - 
 
@@ -223,3 +265,7 @@ void cartridgeFlushRAM(void);
 #define CART_READ_OFFSET				  0x100
 #define CHECKSUM_ADDR_MIN				  0x0134
 #define CHECKSUM_ADDR_MAX				  0x014C 
+#define RAM_SIZE_MBC2             512
+#define NINTENDO_LOGO_SIZE        48
+#define NINTENDO_LOGO_OFFSET      0x0104
+#define ROM_BANK_SIZE             0x4000

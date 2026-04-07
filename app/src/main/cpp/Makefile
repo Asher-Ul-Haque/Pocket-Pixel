@@ -106,14 +106,14 @@ $(TARGET): $(OBJ_FILES) $(MAIN_OBJ)
 	@echo ""
 
 # - - - Tests build target (unchanged)
-tests: sources $(MAIN_OBJ)
+tests: sources
 	@echo "$(BLUE)- - - Building Tests - - -$(RESET)"
 	@mkdir -p $(TEST_BIN_DIR)
 	@for test in $(TEST_FILES_C) $(TEST_FILES_CPP); do \
 		name=$$(basename $$test | sed 's/\.[^.]*$$//'); \
 		echo " |_ Linking test : $$test"; \
 		if echo $$test | grep -q '\.c$$'; then \
-			$(CC) $(CFLAGS) $$test $(OBJ_FILES) $(MAIN_OBJ) -o $(TEST_BIN_DIR)/$$name $(LDFLAGS) $(RPATH_TEST) >/dev/null 2>&1 \
+			$(CC) $(CFLAGS) $$test $(OBJ_FILES) -o $(TEST_BIN_DIR)/$$name $(LDFLAGS) $(RPATH_TEST) >/dev/null 2>&1 \
 				&& echo "    $(GREEN)✓ Built test: $(TEST_BIN_DIR)/$$name$(RESET)" \
 				|| (echo "    $(RED)✗ Error building test $$test$(RESET)"; $(CC) $(CFLAGS) $$test $(OBJ_FILES) $(MAIN_OBJ) -o $(TEST_BIN_DIR)/$$name $(LDFLAGS) $(RPATH_TEST); exit 1); \
 		else \

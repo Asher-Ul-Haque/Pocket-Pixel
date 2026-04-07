@@ -1,3 +1,4 @@
+#include <io/memoryBankController.h>
 #include <io/cartridge.h>
 #include <common.h>
 
@@ -119,8 +120,6 @@ u32 cartridgeGetRamSize(void)
   }
 }
 
-#undef KILOBYTE
-#undef MEGABYTE
 
 const char* cartridgeGetLicensee(void)
 {
@@ -201,6 +200,109 @@ const char* cartridgeGetLicensee(void)
   }
 }
 
+static bool cartridgeLooksLikeMBC1M(void)
+{
+  const CartContext* ctx = cartridgeGetContext();
+
+  // - - - Must have enough ROM for bank 0x10 
+  const u32 bank10Base = 0x10u * ROM_BANK_SIZE;
+  if (ctx->romSize < bank10Base + CART_READ_OFFSET + sizeof(CartridgeMetadata))
+  {
+    return false;
+  }
+
+  const u8* logo_bank0  = ctx->romData + NINTENDO_LOGO_OFFSET;
+  const u8* logo_bank10 = ctx->romData + bank10Base + NINTENDO_LOGO_OFFSET;
+
+  // - - - Compare logo bytes : if bank 0x10 also contains a valid header logo
+  for (u32 i = 0; i < NINTENDO_LOGO_SIZE; ++i)
+  {
+    if (logo_bank0[i] != logo_bank10[i]) return false;
+  }
+  return true;
+}
+
+MapperType cartridgeDetectMapperType(void)
+{
+  const CartContext* ctx = cartridgeGetContext();
+
+  switch (ctx->metadata->cartridgeType)
+  {
+    case 0x00: return MAPPER_NONE;
+
+    case 0x01:
+    case 0x02:
+    case 0x03: 
+    {
+      if (cartridgeLooksLikeMBC1M()) return MAPPER_MBC1M;
+      return MAPPER_MBC1;
+    }
+
+    case 0x05:
+    case 0x06: return MAPPER_MBC2;
+
+    case 0x0F:
+    case 0x10:
+    case 0x11:
+    case 0x12:
+    case 0x13: return MAPPER_MBC3;
+
+    case 0x19:
+    case 0x1A:
+    case 0x1B:
+    case 0x1C:
+    case 0x1D:
+    case 0x1E: return MAPPER_MBC5;
+
+    default:   
+    {
+      FORGE_LOG_ERROR("%s", "[CARTRIDGE] : Unknown cartridge type, cannot detect mapper type");
+      return MAPPER_UNKNOWN;
+    }
+  }
+}
+
+bool cartridgeTypeHasBattery(void) 
+{
+  const CartContext*  ctx       = cartridgeGetContext();
+  u8                  cartType  = ctx->metadata->cartridgeType;
+
+  switch (cartType) 
+  {
+    case 0x03: ///< MBC1+RAM+BATTERY 
+    case 0x06: ///< MBC2+BATTERY 
+    case 0x09: ///< ROM+RAM+BATTERY 
+    case 0x0D: ///< MMM01+RAM+BATTERY 
+    case 0x0F: ///< MBC3+TIMER+BATTERY 
+    case 0x10: ///< MBC3+TIMER+RAM+BATTERY 
+    case 0x13: ///< MBC3+RAM+BATTERY 
+    case 0x1B: ///< MBC5+RAM+BATTERY 
+    case 0x1E: ///< MBC5+RUMBLE+RAM+BATTERY 
+    case 0xFF: ///< HuC1+RAM+BATTERY (unsupported)
+      return true;
+    default:
+      return false;
+  }
+}
+
+bool cartridgeTypeHasRTC(void)
+{
+  const CartContext*  ctx       = cartridgeGetContext();
+  u8                  cartType  = ctx->metadata->cartridgeType;
+
+  switch (cartType) 
+  {
+    case 0x0F: ///< MBC3+TIMER+BATTERY 
+    case 0x10: ///< MBC3+TIMER+RAM+BATTERY 
+    case 0x11: ///< MBC3 
+    case 0x12: ///< MBC3+RAM 
+    case 0x13: ///< MBC3+RAM+BATTERY 
+      return true;
+    default:
+      return false;
+  }
+}
+
 void cartridgePrintMetadata(void)
 {
 #ifdef DEBUG
@@ -213,11 +315,17 @@ void cartridgePrintMetadata(void)
   FORGE_LOG_DEBUG("Title           : %s", cartridgeGetTitle());
   FORGE_LOG_DEBUG("Type            : 0x%02X (%s)", ctx->metadata->cartridgeType, cartridgeGetType());
 
-  FORGE_LOG_DEBUG("ROM Size Code   : 0x%02X (%u bytes)", 
-                  ctx->metadata->romSize, cartridgeGetRomSize());
+  u32 romSize = cartridgeGetRomSize();
+  if (romSize >= MEGABYTE(1))
+  { FORGE_LOG_DEBUG("ROM Size        : %u MB", romSize / MEGABYTE(1)); }
+  else
+  { FORGE_LOG_DEBUG("ROM Size        : %u KB", romSize / KILOBYTE(1)); }
 
-  FORGE_LOG_DEBUG("RAM Size Code   : 0x%02X (%u bytes)", 
-                  ctx->metadata->ramSize, cartridgeGetRamSize());
+  u32 ramSize = cartridgeGetRamSize();
+  if (ramSize >= MEGABYTE(1))
+  { FORGE_LOG_DEBUG("RAM Size        : %u MB", ramSize / MEGABYTE(1));}
+  else 
+  { FORGE_LOG_DEBUG("RAM Size        : %u KB", ramSize / KILOBYTE(1)); }
 
   FORGE_LOG_DEBUG("Licensee        : 0x%02X (%s)", 
                   ctx->metadata->oldLicenseeCode, cartridgeGetLicensee());
@@ -227,9 +335,16 @@ void cartridgePrintMetadata(void)
   FORGE_LOG_DEBUG("Destination Code: 0x%02X", ctx->metadata->destinationCode);
   FORGE_LOG_DEBUG("ROM Version     : 0x%02X", ctx->metadata->maskRomVersion);
 
+  FORGE_LOG_DEBUG("Mapper Type     : %s", cartridgeGetType());
+  FORGE_LOG_DEBUG("Has Battery     : %s", cartridgeTypeHasBattery() ? "Yes" : "No");
+  FORGE_LOG_DEBUG("Has RTC         : %s", cartridgeTypeHasRTC() ? "Yes" : "No");
+
   FORGE_LOG_DEBUG("Header Checksum : 0x%02X", ctx->metadata->headerChecksum);
   FORGE_LOG_DEBUG("Global Checksum : 0x%04X", ctx->metadata->globalChecksum);
 
   FORGE_LOG_DEBUG("%s", "-------------------------------");
 #endif
 }
+
+#undef KILOBYTE
+#undef MEGABYTE
