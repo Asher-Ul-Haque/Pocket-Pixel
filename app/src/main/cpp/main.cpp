@@ -6,6 +6,7 @@
 
 extern "C" {
 #include <io/cartridge.h>
+#include <cpu/cpu.h>
 }
 
 // --------------------------------------------------
@@ -104,6 +105,16 @@ int main(int argc, char** argv)
   {
     std::cerr << "Failed to initialize cartridge\n";
     return 1;
+  }
+  cpuInit();
+
+
+  char line[256];
+  while (true)
+  {
+    cpuTick();
+    cpuInstructionToString(line, 256);
+    std::cout << line << std::endl;
   }
 
   return 0;

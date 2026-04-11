@@ -335,6 +335,13 @@ void cartridgePrintMetadata(void)
   FORGE_LOG_DEBUG("Destination Code: 0x%02X", ctx->metadata->destinationCode);
   FORGE_LOG_DEBUG("ROM Version     : 0x%02X", ctx->metadata->maskRomVersion);
 
+  if (ctx->mode == MODE_DMG_GAMEBOY)
+  { FORGE_LOG_DEBUG("%s", "Mode            : DMG (original Game Boy)"); }
+  else if (ctx->mode == MODE_CGB_GAMEBOY)
+  { FORGE_LOG_DEBUG("%s", "Mode            : CGB (backwards compatible Game Boy Color)"); }
+  else if (ctx->mode == MODE_CGB_ONLY_GAMEBOY)
+  { FORGE_LOG_DEBUG("%s", "Mode            : CGB ONLY (Game Boy Color exclusive)"); }
+
   FORGE_LOG_DEBUG("Mapper Type     : %s", cartridgeGetType());
   FORGE_LOG_DEBUG("Has Battery     : %s", cartridgeTypeHasBattery() ? "Yes" : "No");
   FORGE_LOG_DEBUG("Has RTC         : %s", cartridgeTypeHasRTC() ? "Yes" : "No");

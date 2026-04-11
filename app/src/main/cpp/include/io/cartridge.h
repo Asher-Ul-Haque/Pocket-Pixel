@@ -110,6 +110,15 @@ typedef struct CartridgeFileIO
   u32  (*getExpectedSaveSize)(void);
 } CartridgeFileIO;
 
+/**
+ * @brief Enumeration representing the different modes of the Game Boy hardware,
+*/
+typedef enum Modes 
+{
+  MODE_DMG_GAMEBOY,      ///< Original Game Boy
+  MODE_CGB_GAMEBOY,      ///< Game Boy Color but backwards compatible with original Game Boy
+  MODE_CGB_ONLY_GAMEBOY, ///< Only Game Boy Color
+} GameBoyMode;
 
 /**
  * @brief Structure representing the context of a loaded cartridge,
@@ -135,6 +144,8 @@ typedef struct
   bool			 hasRam;
   bool			 hasBattery;
   bool			 hasRTC;
+
+  GameBoyMode mode;  ///< The mode of the Game Boy 
 
   bool ramEnabled;   ///< mapper-controlled RAM gating
   bool ramDirty;     ///< set on any write to RAM when enabled

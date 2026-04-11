@@ -80,6 +80,18 @@ bool cartridgeInit(const CartridgeFileIO* FILE_IO, const u8* ROM_DATA, const u32
   ctx.hasRam            = ctx.externalRamSize > 0;
   ctx.hasRTC            = cartridgeTypeHasRTC();
 
+  if (ctx.metadata->titleInfo.cgb.cgbFlag == CART_CGB_ONLY)
+  {
+    ctx.mode = MODE_CGB_ONLY_GAMEBOY;
+  }
+  else if (ctx.metadata->titleInfo.cgb.cgbFlag == CART_CGB_SUPPORTED)
+  {
+    ctx.mode = MODE_DMG_GAMEBOY; 
+  }
+  else
+  {
+    ctx.mode = MODE_DMG_GAMEBOY;
+  }
   // - - - MBC2 has internal RAM 
   if (ctx.mapperType == MAPPER_MBC2)
   {

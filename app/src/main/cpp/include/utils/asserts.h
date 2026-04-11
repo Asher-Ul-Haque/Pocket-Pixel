@@ -183,9 +183,9 @@ void reportTODO(const char* COMMENT,
       debugBreak();                                       \
     }
   #else 
-    #define FORGE_ASSERT_DEBUG(EXPRESSION) // - - - Does nothing at all
-    #define TODO                           // - - - Does nothing at all
-    #define TODO_COMMENT(COMMENT)          // - - - Does nothing at all
+    #define FORGE_ASSERT_DEBUG(EXPRESSION, MESSAGE) // - - - Does nothing at all
+    #define TODO                                    // - - - Does nothing at all
+    #define TODO_COMMENT(COMMENT)                   // - - - Does nothing at all
   #endif
 
 
