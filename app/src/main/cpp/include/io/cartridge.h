@@ -6,6 +6,7 @@
 #pragma once
 #include <common.h>
 #include <io/memoryBankController.h>
+#include <platform.h>
 
 /**
  * @brief Structure representing the metadata of a Game Boy cartridge,
@@ -76,39 +77,6 @@ typedef struct CartridgeMetadata
 } CartridgeMetadata; 		// - - - total : 80 bytes
 COMPILE_TIME_ASSERT(sizeof(CartridgeMetadata) == 80, "CartridgeMetadata struct must be exactly 80 bytes in size");
 
-/**
- * @brief Structure representing the file I/O operations for cartridge data,
- * This structure defines function pointers for 
- *   - loading ROM data, 
- *   - saving and loading RAM data
- *   - getting the expected size of the save data for the cartridge.
- * This allows the cartridge code to be decoupled from the specific file handling implementation,
-*/
-typedef struct CartridgeFileIO 
-{
-  /**
-   * @brief Function pointer for saving RAM data to a file.
-   * @param RAM_DATA Pointer to the RAM data that should be saved.
-   * @param RAM_SIZE Size of the RAM data in bytes.
-   * @return true if the RAM data was saved successfully, false otherwise.
-  */
-  bool (*saveRamToFile)   (const u8* RAM_DATA, u32 RAM_SIZE);
-
-  /**
-   * @brief Function pointer for loading RAM data from a file.
-	 * @param RAM_DATA_BUFFER Pointer to a buffer where the RAM data should be loaded.
-	 * @param BUFFER_SIZE Size of the buffer in bytes.
-	 * @return true if the RAM data was loaded successfully, false otherwise.
-	*/
-  bool (*loadRamFromFile) (u8* RAM_DATA_BUFFER, u32 BUFFER_SIZE);
-
-  /**
-   * @brief Function pointer for getting the expected size of the save data for the cartridge.
-	 * This is used to determine how much RAM data to allocate and how much to read/write when saving/loading.
-	 * @return The expected size of the save data in bytes.
-	*/
-  u32  (*getExpectedSaveSize)(void);
-} CartridgeFileIO;
 
 /**
  * @brief Enumeration representing the different modes of the Game Boy hardware,

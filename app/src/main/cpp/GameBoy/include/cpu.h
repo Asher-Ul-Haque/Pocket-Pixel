@@ -54,11 +54,6 @@ FORGE_API bool cpuTick();
 typedef void (*INSTRUCTION_PROCESSOR)(CPUcontext *);
 FORGE_API INSTRUCTION_PROCESSOR InstructionGetProcessor(InstructionType TYPE);
 
-// - - - cpu flags
-#define CPU_FLAG_Z BIT(CTX->regs.flags, 7)
-#define CPU_FLAG_N BIT(CTX->regs.flags, 6)
-#define CPU_FLAG_H BIT(CTX->regs.flags, 5)
-#define CPU_FLAG_C BIT(CTX->regs.flags, 4)
 
 // - - - register operations
 FORGE_API u16  cpuReadRegister(RegType REG);

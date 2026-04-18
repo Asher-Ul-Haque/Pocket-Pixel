@@ -10,9 +10,12 @@ TEST_BIN_DIR    := $(BIN_DIR)/tests
 # - - - Compilers
 CC      := clang
 CXX     := clang++
-CFLAGS  := -I$(INCLUDE_DIR) -Wall -Werror -Wextra -Wpedantic -DDEBUG -O1 -MMD -MP 
-CXXFLAGS:= -I$(INCLUDE_DIR) -Wall -Werror -Wextra -Wpedantic -DDEBUG -O1 -MMD -MP
-LDFLAGS :=
+SDL3_CFLAGS := $(shell pkg-config --cflags sdl3)
+SDL3_LIBS   := $(shell pkg-config --libs sdl3)
+
+CFLAGS  := -I$(INCLUDE_DIR) $(SDL3_CFLAGS) -Wall -Werror -Wextra -Wpedantic -DDEBUG -O1 -MMD -MP 
+CXXFLAGS:= -I$(INCLUDE_DIR) $(SDL3_CFLAGS) -Wall -Werror -Wextra -Wpedantic -DDEBUG -O1 -MMD -MP
+LDFLAGS := $(SDL3_LIBS)
 RPATH   :=
 
 # - - - Colors

@@ -10,40 +10,65 @@
 
 #include <common.h>
 #include <cpu/registers.h>
-#include <cpu/instructions.h>
+#include <cpu/instruction.h>
+
+
+/**
+ * @brief CPU top-level state machine states.
+ * The CPU runs one M-cycle per cpuTickMCycle() call
+*/
+typedef enum CpuState 
+{
+  CPU_STATE_FETCH           = 0,  ///< Fetch unprefixed opcode at PC,
+  CPU_STATE_FETCH_CB,             ///< Fetch CB-prefixed opcode at PC (after fetching 0xCB)
+  CPU_STATE_DECODE,               ///< Decode the fetched opcode and extract relevant information (operands, addressing mode, etc.)                    
+  CPU_STATE_EXECUTE,              ///< Execute the decoded instruction.
+  CPU_STATE_INTERRUPT_ENTRY,      ///< Interrupt entry sequence (push PC, set vector, etc.)                      
+} CpuState;
+
 
 /**
  * @brief Represents the state of the CPU, including registers, flags, and other relevant information.
 */
 typedef struct CpuContext 
 {
-  bool          doubleSpeed; ///< Indicates if the CPU is operating in double speed mode (CGB feature).
+  // - - - Architectural state - - - 
 
-  RegisterFile  registers;
+  RegisterFile  registers; ///< CPU registers
+  
+  bool halted;  ///< HALT state
+  bool stopped; ///< STOP state
+  bool haltBug; ///< HALT bug latch (when trigger, next fetch repeats byte)
 
-  // - - - data extracted during decode
-  u16                 readData;
-  u16                 memDest;
-  bool                destIsMem;
-  bool                isCB;
-  u8                  currentOpcode;
-  u8                  cbOpcode;
-  const Instruction*  currentInstruction;
+  bool ime;        ///< Interrupt Master Enable 
+  bool imePending; ///< EI delay latch (IME becomes true after next instruction complete)
+                   
+  bool doubleSpeed;  ///< CGB double-speed mode latch (KEY1 handling lives elsewhere)
+  u64  mCyclesTotal; ///< Total M-cycles executed since power on (for profiling)                    
 
-  // - - - control flow
-  bool halted;
-  bool stopped;
-  bool haltBug; ///< Set when an instruction is executed while the CPU is halted. Causes the next opcode fetch to read the same byte twice (PC not advanced properly). SameBoy models this by decrementing PC when haltBug is set.
+  CpuState state; ///< Current CPU state (fetch, decode, execute, etc.)
+    
 
-  // - - - interrupts
-  bool  interruptMasterEnabled;
-  bool  enablingIme;
-  u8    interrupt;
-  u8    interruptFlags;
+  // - - - Current Instruction - - - 
 
-  // - - - data extracted during fetch
-  u16 imm16;
-  u8  imm8;
+  u16  pcAtFetch; ///< PC value before fetching the opcode, used for tracing and debugging purposes.
+  u8   opcode;    ///< Unprefixed opcode byte
+  bool isCB;      ///< Whether current instruction is CB-prefixed
+  u8   cbOpcode;  ///< CB opcode byte (valid if isCB)
+
+  const Instruction*  instr;   ///< Decoded instruction metadata
+  u8                  imm8;   ///< 8-bit immediate value (valid if instruction has an 8-bit immediate operand)
+  u16                 imm16;  ///< 16-bit immediate value (valid if instruction has a 16-bit immediate operand)           
+
+  u8 mCycleInInstr; ///< Which M-cycle we are in for the current instruction
+  u8 microState;    ///< Family specfic microstate (interpreted by different modules)                    
+
+  u16  addr;        ///< Effective address for memory operands
+  u16  readData;    ///< Latched read value (8 or 16, stored in low bits)
+  bool hasAddr;     
+  bool hasReadData;
+
+  bool conditionPassed;  ///< For conditional branches/calls/rets (affects cycles)
 } CpuContext;
 
 
@@ -57,48 +82,79 @@ typedef struct CpuContext
 */
 CpuContext* cpuGetContext(void);
 
-/// @brief Initializes the CPU by setting up the initial state of the registers, flags, and other relevant information. This function should be called before starting the emulation process to ensure that the CPU is in a known and consistent state.
+/** 
+ * @brief Initializes the CPU by setting up the initial state of the registers, flags, and other relevant information. This function should be called before starting the emulation process to ensure that the CPU is in a known and consistent state.
+ * @warning This must be called after loading a cartridge
+*/
 void cpuInit(void);
+
+/// @brief Reset transient decode/execute state without changing cartridge-derived model selection.
+void cpuReset(void);
+
+/**
+ * @brief Tick the CPU forward by exactly one M-cycle of work.
+ * @note This function does NOT tick PPU/APU/timer/DMA. A higher-level scheduler must do that.
+*/
+void cpuTickMCycle(void);
 
 /**
  * @brief Executes a single CPU tick, which involves fetching, decoding, and executing the next instruction based on the current state of the CPU. This function should be called repeatedly in a loop to simulate the continuous operation of the CPU.
- * @return A boolean value indicating whether the CPU tick was executed successfully. If the function returns false, it may indicate that an error occurred during instruction execution or that the CPU is in a halted.
+ * @note This function does fetch decode execute all in one call
 */
-bool cpuTick(void);
+void cpuTick(void);
 
 
-/// @brief Fetch opcode at PC and populate ctx->opcode/ctx->inst/etc. Advances PC appropriately. 
-void cpuFetchAndDecode(void);
+/// @brief Fetches the next opcode from memory based on the current program counter (PC) and updates the CPU context with the fetched opcode and any relevant information. This function is responsible for advancing the PC and preparing the CPU for the subsequent decode and execute steps.
+void cpuDecodeStep(void);
 
+
+/// @brief Executes the currently decoded instruction based on the information stored in the CPU context. This function performs the necessary operations to carry out the instruction's behavior, including manipulating registers, memory, and flags as required by the instruction's semantics.
+void cpuExecuteStep(void);
+
+
+/// @brief Performs a single step of the CPU's operation, which includes fetching, decoding, and executing an instruction. This function is intended for tracing and debugging purposes, allowing developers to observe the CPU's behavior on a per-instruction basis. It may also include additional logging or state output to facilitate debugging.
+void cpuTraceStep(void);
+
+/// @brief Finish current instructiona nd return CPU to FETCH state. 
+void cpuFinishInstruction(void);
+
+// @brief Evaluate an Instruction condition (NZ/Z/NC/C) against current flags.
+bool cpuEvalCond(ConditionType COND);
 
 /**
- * @brief Executes the instruction currently stored in the CPU context's currentInstruction field. This function assumes that the instruction has already been decoded and that all necessary information (such as operands and addressing modes) has been extracted during the decode phase. The execution of the instruction may involve manipulating registers, memory, flags, and other aspects of the CPU state based on the specific operation defined by the instruction.
-*/
-void cpuExecDecoded(void);
-
-/**
- * @brief Converts the current instruction stored in the CPU context into a human-readable string format. This function is useful for debugging and logging purposes, allowing developers to see a textual representation of the instruction being executed. The resulting string is stored in the provided output buffer, and the size of the buffer is specified to prevent overflow.
- * @param OUT A pointer to a character array (string) where the resulting instruction string will be stored.
- * @param OUT_SIZE The size of the output buffer (OUT) to ensure that the function
+ * @brief Convert the currently decoded instruction into a human-readable string.
+ * @warn Intended for trace/debug. Uses ctx->info + ctx->imm8/imm16 (prefetched during decode).
+ * @param OUT Output buffer to write the instruction string into.
+ * @param OUT_SIZE Size of the output buffer in bytes.
 */
 void cpuInstructionToString(char* OUT, u32 OUT_SIZE);
 
 /**
- * @brief Produce a one-line trace similar in spirit to SameBoy (PC/opcode bytes + regs + flags).
- * @param PC_AT_FETCH PC before fetching the opcode.
- * @param OUT Output buffer for the resulting string.
- * @param OUT_SIZE Size of the output buffer.
- */
+ * @brief Produce a one-line trace (PC/opcode bytes + regs + flags).
+ * @param PC_AT_FETCH PC before fetching opcode (ctx->pcAtFetch).
+ * @param OUT Output buffer to write the trace string into.
+ * @param OUT_SIZE Size of the output buffer in bytes.
+ * @warn Intended for trace/debug. Uses ctx->pcAtFetch, ctx->opcode,
+*/
 void cpuTraceLineToString(u16 PC_AT_FETCH, char* OUT, u32 OUT_SIZE);
 
 
+/**
+ * @brief Stack helpers: cycle-stepped by caller using microState.
+ * SM83 stack grows downward. Push writes high then low as SP decrements. 
+*/
+void cpuStackWriteHi(u16 VALUE);
+void cpuStackWriteLo(u16 VALUE);
+u8   cpuStackReadHi (void);
+u8   cpuStackReadLo (void);
+
+
 // - - - cpu flags
+
 #define CPU_FLAG_Z BIT(CTX->regs.flags, 7)
 #define CPU_FLAG_N BIT(CTX->regs.flags, 6)
 #define CPU_FLAG_H BIT(CTX->regs.flags, 5)
 #define CPU_FLAG_C BIT(CTX->regs.flags, 4)
-
-
 
 // - - - Values - - - 
 

@@ -1,5 +1,8 @@
-#include "io/cartridge.h"
+#include <io/cartridge.h>
+#include <ram.h>
 #include <bus.h>
+#include <timer.h>
+#include <cpu/interrupts.h>
 
 u16 busRead16(u16 ADDRESS)
 {
@@ -38,10 +41,20 @@ u8 busRead(u16 ADDRESS)
     return OPEN_BUS_VALUE;
   }
 
+  // - - - Interrupts 
+  if (ADDRESS == ADDR_IF || ADDRESS == ADDR_IE)
+  {
+    return cpuReadInterrupt(ADDRESS);
+  }
+
+  // - - - On board ram
   if (ADDRESS >= BUS_ADDR_WRAM_START && ADDRESS <= BUS_ADDR_WRAM_END)
   {
-    TODO_COMMENT("busRead WRAM");
-    return OPEN_BUS_VALUE;
+    return ramRead(ADDRESS);
+  }
+  if (ADDRESS >= BUS_ADDR_HRAM_START && ADDRESS <= BUS_ADDR_HRAM_END)
+  {
+    return ramRead(ADDRESS);
   }
 
   if (ADDRESS >= BUS_ADDR_ECHO_START && ADDRESS <= BUS_ADDR_ECHO_END)
@@ -63,15 +76,14 @@ u8 busRead(u16 ADDRESS)
     return OPEN_BUS_VALUE;
   }
 
+  if (ADDRESS >= DIV_REGISTER_ADDRESS && ADDRESS <= TAC_REGISTER_ADDRESS) 
+  {
+    return timerRead(ADDRESS);
+  }
+
   if (ADDRESS >= BUS_ADDR_IO_START && ADDRESS <= BUS_ADDR_IO_END)
   {
     TODO_COMMENT("busRead IO registers");
-    return OPEN_BUS_VALUE;
-  }
-
-  if (ADDRESS >= BUS_ADDR_HRAM_START && ADDRESS <= BUS_ADDR_HRAM_END)
-  {
-    TODO_COMMENT("busRead HRAM");
     return OPEN_BUS_VALUE;
   }
 
@@ -154,6 +166,17 @@ void busWrite(u16 ADDRESS, u8 VALUE)
   {
     TODO_COMMENT("busWrite IE (0xFFFF)");
     (void)VALUE;
+    return;
+  }
+  
+  if (ADDRESS >= DIV_REGISTER_ADDRESS && ADDRESS <= TAC_REGISTER_ADDRESS) 
+  {
+    timerWrite(ADDRESS, VALUE);
+  }
+
+  if (ADDRESS == ADDR_IE || ADDRESS == ADDR_IF)
+  {
+    cpuWriteInterrupt(ADDRESS, VALUE);
     return;
   }
 }

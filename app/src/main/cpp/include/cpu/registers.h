@@ -1,66 +1,109 @@
+#pragma once
 /**
  * @file registers.h
- * This file defines the register file for the sm83 game boy CPU.
- * The sm83 has 8 8-bit registers (a, f, b, c, d, e, h, l) and 2 16-bit registers (stack pointer and program counter).
- * The flag register (f) contains the following bits:
- *  - Bit 7: Zero Flag (Z)
- *  - Bit 6: Subtract Flag (N)
- *  - Bit 5: Half Carry Flag (H)
- *  - Bit 4: Carry Flag (C)
- * Most 8 bit registers can also be accessed as 16 bit registers by combining them in pairs:
- * - AF: a and f
- * - BC: b and c
- * - DE: d and e
- * - HL: h and l
+ * @brief SM83 register file and flag definitions.
  *
- * The Zero Flag (Z) is set when the result of an operation is zero. Used by conditional jumps
- * The Carry Flag (C):
- *  - When result of an 8-bit addition is higher than 0XFF.
- *  - When result of a 16-bit addition is higher than 0XFFFF.
- *  - When the result of a subtraction is negative 
- *  - When a shift operation shifts out a 1 bit.
- * Used by conditional jumps and instructions such as ADC, SBC, RL, RLA, etc.
-*/
+ * This header defines:
+ * - The CPU architectural registers (A,F,B,C,D,E,H,L,SP,PC)
+ * - Flag bit masks and small helpers for reading/writing flags
+ *
+ * Notes:
+ * - The F register lower nibble is always 0 on real hardware.
+ * - This header intentionally does not include cpu.h to avoid circular deps.
+ */
 
-#pragma once 
 #include <common.h>
-
-///@ brief The register file for the sm83 CPU.
+/**
+ * @brief CPU architectural register file.
+ *
+ * 8-bit registers are stored as separate bytes for clarity and portability.
+ * 16-bit registers (SP/PC) are stored explicitly.
+*/
 typedef struct RegisterFile
 {
-  // - - - 8 bit registers - - -
-  u8 a; ///< accumulator register
-  u8 f; ///< flag register for storing the status of various operations (Z, N, H, C)
-        
-  // - - - general purpose registers - - -
-  u8 b; ///< general purpose register
-  u8 c; ///< general purpose register
-  u8 d; ///< general purpose register
-  u8 e; ///< general purpose register
-  u8 h; ///< general purpose register
-  u8 l; ///< general purpose register
+  // - - - 8-bit registers
+  u8 a;
+  u8 f;
 
-  // - - - 16 bit registers - - -
-  u16 stackPointer;    ///< stack pointer register for function calls and interrupts
-  u16 programCounter;  ///< program counter register for keeping track of the current instruction being executed
+  u8 b;
+  u8 c;
+
+  u8 d;
+  u8 e;
+
+  u8 h;
+  u8 l;
+
+  // - - -  16-bit registers
+  u16 stackPointer;
+  u16 programCounter;
 } RegisterFile;
 
-#define CPU_FLAG_Z_MASK (1u << 7) ///< Mask for the Zero Flag (Z) in the flag register
-#define CPU_FLAG_N_MASK (1u << 6) ///< Mask for the Subtract Flag (N) in the flag register
-#define CPU_FLAG_H_MASK (1u << 5) ///< Mask for the Half Carry Flag (H) in the flag register
-#define CPU_FLAG_C_MASK (1u << 4) ///< Mask for the Carry Flag (C) in the flag register
-                                  
-#define CPU_FLAG_ZERO_GET   BIT(CTX->registers.f, 7) ///< Macro to access the Zero Flag (Z) in the flag register
-#define CPU_FLAG_SUB_GET    BIT(CTX->registers.f, 6) ///< Macro to access the Subtract Flag (N) in the flag register
-#define CPU_FLAG_HALF_GET   BIT(CTX->registers.f, 5) ///< Macro to access the Half Carry Flag (H) in the flag register
-#define CPU_FLAG_CARRY_GET  BIT(CTX->registers.f, 4) ///< Macro to access the Carry Flag (C) in the flag register
 
-#define CPU_FLAG_ZERO_SET(ON)   BIT_SET(CTX->registers.f, 7, ON) ///< Macro to set or clear the Zero Flag (Z) in the flag register
-#define CPU_FLAG_SUB_SET(ON)    BIT_SET(CTX->registers.f, 6, ON) ///< Macro to set or clear the Subtract Flag (N) in the flag register
-#define CPU_FLAG_HALF_SET(ON)   BIT_SET(CTX->registers.f, 5, ON) ///< Macro to set or clear the Half Carry Flag (H) in the flag register
-#define CPU_FLAG_CARRY_SET(ON)  BIT_SET(CTX->registers.f, 4, ON) ///< Macro to set or clear the Carry Flag (C) in the flag register
-                                                            
-#define CPU_REG_AF ((u16*) &CTX->registers.a) ///< Macro to access the combined AF register (A and F)
-#define CPU_REG_BC ((u16*) &CTX->registers.b) ///< Macro to access the combined BC register (B and C)
-#define CPU_REG_DE ((u16*) &CTX->registers.d)  ///< Macro to access the combined DE register (D and E)
-#define CPU_REG_HL ((u16*) &CTX->registers.h) ///< Macro to access the combined HL register (H and L)                                         
+// - - - Flag bit masks - - - 
+
+// - - - Zero flag (Z) bit mask in F.
+#define CPU_FLAG_ZERO_MASK (0x80u)
+
+// - - - Subtract flag (N) bit mask in F.
+#define CPU_FLAG_NEGATIVE_MASK (0x40u)
+
+// - - - Half-carry flag (H) bit mask in F.
+#define CPU_FLAG_HALF_CARRY_MASK (0x20u)
+
+// - - - Carry flag (C) bit mask in F.
+#define CPU_FLAG_CARRY_MASK (0x10u)
+
+// - - - Lower nibble of F is always 0.
+#define CPU_FLAG_LOW_MASK (0x0Fu)
+
+// - - - Mask for all valid flag bits.
+#define CPU_FLAG_VALID_MASK (0xF0u)
+
+
+// - - - 16-bit pack/unpack helpers - - - 
+
+static inline u16 cpuMakeU16(u8 HIGH, u8 LOW) { return (u16)(((u16)HIGH << 8) | (u16)LOW); }
+static inline u8  cpuHi8(u16 VALUE)           { return (u8)(VALUE >> 8); }
+static inline u8  cpuLo8(u16 VALUE)           { return (u8)(VALUE & 0xFFu); }
+
+
+// - - - Register pair helpers - - - 
+
+static inline u16 cpuGetAF(const RegisterFile* REGISTERS) { return cpuMakeU16(REGISTERS->a, (u8)(REGISTERS->f & CPU_FLAG_VALID_MASK)); }
+static inline u16 cpuGetBC(const RegisterFile* REGISTERS) { return cpuMakeU16(REGISTERS->b, REGISTERS->c); }
+static inline u16 cpuGetDE(const RegisterFile* REGISTERS) { return cpuMakeU16(REGISTERS->d, REGISTERS->e); }
+static inline u16 cpuGetHL(const RegisterFile* REGISTERS) { return cpuMakeU16(REGISTERS->h, REGISTERS->l); }
+
+static inline void cpuSetAF(RegisterFile* REGISTERS, u16 VALUE) { REGISTERS->a = cpuHi8(VALUE); REGISTERS->f = (u8)(cpuLo8(VALUE) & CPU_FLAG_VALID_MASK); }
+static inline void cpuSetBC(RegisterFile* REGISTERS, u16 VALUE) { REGISTERS->b = cpuHi8(VALUE); REGISTERS->c = cpuLo8(VALUE); }
+static inline void cpuSetDE(RegisterFile* REGISTERS, u16 VALUE) { REGISTERS->d = cpuHi8(VALUE); REGISTERS->e = cpuLo8(VALUE); }
+static inline void cpuSetHL(RegisterFile* REGISTERS, u16 VALUE) { REGISTERS->h = cpuHi8(VALUE); REGISTERS->l = cpuLo8(VALUE); }
+
+
+// - - - Flag read helpers - - - 
+
+static inline bool cpuFlagZ(const RegisterFile* r) { return (r->f & CPU_FLAG_ZERO_MASK) != 0; }
+static inline bool cpuFlagN(const RegisterFile* r) { return (r->f & CPU_FLAG_NEGATIVE_MASK) != 0; }
+static inline bool cpuFlagH(const RegisterFile* r) { return (r->f & CPU_FLAG_HALF_CARRY_MASK) != 0; }
+static inline bool cpuFlagC(const RegisterFile* r) { return (r->f & CPU_FLAG_CARRY_MASK) != 0; }
+
+
+// - - - Flag write helper - - -
+
+static inline void cpuFlagSet(RegisterFile* REGISTER_FILE, u8 MASK, bool ON)
+{
+  if (ON) REGISTER_FILE->f = (u8)(REGISTER_FILE->f | MASK);
+  else    REGISTER_FILE->f = (u8)(REGISTER_FILE->f & (u8)~MASK);
+
+  REGISTER_FILE->f &= CPU_FLAG_VALID_MASK;
+}
+
+static inline void cpuSetZ(RegisterFile* REGISTERS, bool ON) { cpuFlagSet(REGISTERS, CPU_FLAG_ZERO_MASK, ON); }
+static inline void cpuSetN(RegisterFile* REGISTERS, bool ON) { cpuFlagSet(REGISTERS, CPU_FLAG_NEGATIVE_MASK, ON); }
+static inline void cpuSetH(RegisterFile* REGISTERS, bool ON) { cpuFlagSet(REGISTERS, CPU_FLAG_HALF_CARRY_MASK, ON); }
+static inline void cpuSetC(RegisterFile* REGISTERS, bool ON) { cpuFlagSet(REGISTERS, CPU_FLAG_CARRY_MASK, ON); }
+
+/// @brief Clear all flags (sets F=0).
+static inline void cpuClearFlags(RegisterFile* REGISTER_FILE)
+{ REGISTER_FILE->f = 0; }
