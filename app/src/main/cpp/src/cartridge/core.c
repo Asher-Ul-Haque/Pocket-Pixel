@@ -1,6 +1,6 @@
 #include <bus.h>
-#include <io/memoryBankController.h>
-#include <io/cartridge.h>
+#include <cartridge/memoryBankController.h>
+#include <cartridge/cartridge.h>
 #include <common.h>
 #include <time.h>
 

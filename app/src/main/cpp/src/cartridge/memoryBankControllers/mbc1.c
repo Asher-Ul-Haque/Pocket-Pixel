@@ -1,7 +1,7 @@
 #include <bus.h>
 #include <utils/asserts.h>
-#include <io/memoryBankController.h>
-#include <io/cartridge.h>
+#include <cartridge/memoryBankController.h>
+#include <cartridge/cartridge.h>
 #include <common.h>
 
 static inline u32 mbc1GetRomBankCount(const CartContext* CTX)

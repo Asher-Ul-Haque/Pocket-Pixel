@@ -15,6 +15,7 @@
 
 #define BUS_ADDR_ECHO_START     0xE000
 #define BUS_ADDR_ECHO_END       0xFDFF
+#define BUS_ADDR_ECHO_OFFSET    0x2000
 
 #define BUS_ADDR_OAM_START      0xFE00
 #define BUS_ADDR_OAM_END        0xFE9F

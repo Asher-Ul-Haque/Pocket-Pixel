@@ -1,8 +1,8 @@
-#include "cpu/interrupts.h"
-#include "utils/asserts.h"
+#include <cpu/interrupts.h>
+#include <utils/asserts.h>
 #include <bus.h>
 #include <cpu/cpu.h>
-#include <io/cartridge.h>
+#include <cartridge/cartridge.h>
 
 static CpuContext ctx;
 

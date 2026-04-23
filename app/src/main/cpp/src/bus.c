@@ -1,8 +1,11 @@
-#include <io/cartridge.h>
+#include <ppu/internal.h>
+#include <cartridge/cartridge.h>
 #include <ram.h>
 #include <bus.h>
 #include <timer.h>
 #include <cpu/interrupts.h>
+#include <ppu/ppu.h>
+#include <ppu/dma.h>
 
 u16 busRead16(u16 ADDRESS)
 {
@@ -21,160 +24,164 @@ void busWrite16(u16 ADDRESS, u16 VALUE)
   busWrite((u16)(ADDRESS + 1), hi);
 }
 
-u8 busRead(u16 ADDRESS)
+u8 busRead(u16 ADDRESS) 
 {
-  // - - - Cartridge ROM (and mapper regs are written via busWrite)
-  if (ADDRESS <= BUS_ADDR_ROM_END)
+  // - - - 1. OAM DMA Lockout: Only HRAM is accessible during DMA
+  if (dmaIsActive()) 
   {
-    return cartridgeRead(ADDRESS);
-  }
-
-  // - - -  Cartridge external RAM
-  if (ADDRESS >= BUS_ADDR_CART_RAM_START && ADDRESS <= BUS_ADDR_CART_RAM_END)
-  {
-    return cartridgeRead(ADDRESS);
-  }
-
-  if (ADDRESS >= BUS_ADDR_VRAM_START && ADDRESS <= BUS_ADDR_VRAM_END)
-  {
-    TODO_COMMENT("busRead VRAM (PPU)");
+    if (ADDRESS >= BUS_ADDR_HRAM_START && ADDRESS <= BUS_ADDR_HRAM_END) 
+    { return ramRead(ADDRESS); }
     return OPEN_BUS_VALUE;
   }
 
-  // - - - Interrupts 
-  if (ADDRESS == ADDR_IF || ADDRESS == ADDR_IE)
-  {
-    return cpuReadInterrupt(ADDRESS);
-  }
+  // - - - 2. ROM Range (0x0000 - 0x7FFF)
+  if (ADDRESS <= BUS_ADDR_ROM_END) 
+  { return cartridgeRead(ADDRESS); }
 
-  // - - - On board ram
-  if (ADDRESS >= BUS_ADDR_WRAM_START && ADDRESS <= BUS_ADDR_WRAM_END)
-  {
-    return ramRead(ADDRESS);
-  }
-  if (ADDRESS >= BUS_ADDR_HRAM_START && ADDRESS <= BUS_ADDR_HRAM_END)
-  {
-    return ramRead(ADDRESS);
-  }
+  // - - - 3. VRAM Range (0x8000 - 0x9FFF) - Mode dependent
+  if (ADDRESS >= BUS_ADDR_VRAM_START && ADDRESS <= BUS_ADDR_VRAM_END) 
+  { return ppuVRAMRead(ADDRESS); }
 
-  if (ADDRESS >= BUS_ADDR_ECHO_START && ADDRESS <= BUS_ADDR_ECHO_END)
+  // - - - 4. External Cartridge RAM (0xA000 - 0xBFFF)
+  if (ADDRESS >= BUS_ADDR_CART_RAM_START && ADDRESS <= BUS_ADDR_CART_RAM_END) 
+  { return cartridgeRead(ADDRESS); }
+
+  // - - - 5. Work RAM (0xC000 - 0xDFFF)
+  if (ADDRESS >= BUS_ADDR_WRAM_START && ADDRESS <= BUS_ADDR_WRAM_END) 
+  { return ramRead(ADDRESS); }
+
+  // - - - 6. Echo RAM (0xE000 - 0xFDFF)
+  if (ADDRESS >= BUS_ADDR_ECHO_START && ADDRESS <= BUS_ADDR_ECHO_END) 
+  { return ramRead(ADDRESS - BUS_ADDR_ECHO_OFFSET); }
+
+  // - - - 7. OAM (0xFE00 - 0xFE9F) - Mode dependent
+  if (ADDRESS >= BUS_ADDR_OAM_START && ADDRESS <= BUS_ADDR_OAM_END) 
+  { return ppuOAMRead(ADDRESS); }
+
+  // - - - 8. Unusable Area (0xFEA0 - 0xFEFF)
+  if (ADDRESS >= BUS_ADDR_UNUSED_START && ADDRESS <= BUS_ADDR_UNUSED_END) 
+  { return OPEN_BUS_VALUE; }
+
+  // - - - 9. I/O Registers (0xFF00 - 0xFF7F)
+  if (ADDRESS >= BUS_ADDR_IO_START && ADDRESS <= BUS_ADDR_IO_END) 
   {
-    TODO_COMMENT("busRead Echo RAM (mirror of WRAM)");
+    // - - - Joypad 
+    if (ADDRESS == 0xFF00) TODO_COMMENT("Implement joypad input handling");
+
+    // - - - Timer Registers (0xFF04 - 0xFF07)
+    if (ADDRESS >= DIV_REGISTER_ADDRESS && ADDRESS <= TAC_REGISTER_ADDRESS) 
+    { return timerRead(ADDRESS); }
+
+    // - - - Interrupt Flag (0xFF0F)
+    if (ADDRESS == ADDR_IF) return cpuReadInterrupt(ADDRESS);
+
+    // - - - PPU Registers (0xFF40 - 0xFF6B)
+    if (ADDRESS >= LCD_CONTROL_REG && ADDRESS <= OBJ_PALLETE_DATA_REG) 
+    { return ppuRead(ADDRESS); }
+
     return OPEN_BUS_VALUE;
   }
 
-  if (ADDRESS >= BUS_ADDR_OAM_START && ADDRESS <= BUS_ADDR_OAM_END)
-  {
-    TODO_COMMENT("busRead OAM (PPU)");
-    return OPEN_BUS_VALUE;
-  }
+  // - - - 10. High RAM (0xFF80 - 0xFFFE)
+  if (ADDRESS >= BUS_ADDR_HRAM_START && ADDRESS <= BUS_ADDR_HRAM_END) 
+  { return ramRead(ADDRESS); }
 
-  // - - - Unusable 
-  if (ADDRESS >= BUS_ADDR_UNUSED_START && ADDRESS <= BUS_ADDR_UNUSED_END)
-  {
-    FORGE_LOG_WARNING("%s", "Attempted to read from unusable memory area (0xFEA0-0xFEFF). Returning open bus value.");
-    return OPEN_BUS_VALUE;
-  }
-
-  if (ADDRESS >= DIV_REGISTER_ADDRESS && ADDRESS <= TAC_REGISTER_ADDRESS) 
-  {
-    return timerRead(ADDRESS);
-  }
-
-  if (ADDRESS >= BUS_ADDR_IO_START && ADDRESS <= BUS_ADDR_IO_END)
-  {
-    TODO_COMMENT("busRead IO registers");
-    return OPEN_BUS_VALUE;
-  }
-
-  if (ADDRESS == BUS_ADDR_IE)
-  {
-    TODO_COMMENT("busRead IE (0xFFFF)");
-    return OPEN_BUS_VALUE;
-  }
+  // - - - 11. Interrupt Enable Register (0xFFFF)
+  if (ADDRESS == ADDR_IE) 
+  { return cpuReadInterrupt(ADDRESS); }
 
   return OPEN_BUS_VALUE;
 }
 
-void busWrite(u16 ADDRESS, u8 VALUE)
+
+void busWrite(u16 ADDRESS, u8 VALUE) 
 {
-  // - - - Cartridge ROM range is also where mapper control registers live 
-  if (ADDRESS <= BUS_ADDR_ROM_END)
+  // - - - 1. OAM DMA Lockout
+  if (dmaIsActive()) 
+  {
+    if (ADDRESS >= BUS_ADDR_HRAM_START && ADDRESS <= BUS_ADDR_HRAM_END) 
+    { ramWrite(ADDRESS, VALUE); }
+    return;
+  }
+
+  // - - - 2. ROM Range (Mapper writes)
+  if (ADDRESS <= BUS_ADDR_ROM_END) 
   {
     cartridgeWrite(ADDRESS, VALUE);
     return;
   }
 
-  // - - -  Cartridge external RAM 
-  if (ADDRESS >= BUS_ADDR_CART_RAM_START && ADDRESS <= BUS_ADDR_CART_RAM_END)
+  // - - - 3. VRAM Range
+  if (ADDRESS >= BUS_ADDR_VRAM_START && ADDRESS <= BUS_ADDR_VRAM_END) 
+  {
+    ppuVRAMWrite(ADDRESS, VALUE);
+    return;
+  }
+
+  // - - - 4. External Cartridge RAM
+  if (ADDRESS >= BUS_ADDR_CART_RAM_START && ADDRESS <= BUS_ADDR_CART_RAM_END) 
   {
     cartridgeWrite(ADDRESS, VALUE);
     return;
   }
 
-  if (ADDRESS >= BUS_ADDR_VRAM_START && ADDRESS <= BUS_ADDR_VRAM_END)
+  // - - - 5. Work RAM
+  if (ADDRESS >= BUS_ADDR_WRAM_START && ADDRESS <= BUS_ADDR_WRAM_END) 
   {
-    TODO_COMMENT("busWrite VRAM (PPU)");
-    (void)VALUE;
+    ramWrite(ADDRESS, VALUE);
     return;
   }
 
-  if (ADDRESS >= BUS_ADDR_WRAM_START && ADDRESS <= BUS_ADDR_WRAM_END)
+  // - - - 6. Echo RAM
+  if (ADDRESS >= BUS_ADDR_ECHO_START && ADDRESS <= BUS_ADDR_ECHO_END) 
   {
-    TODO_COMMENT("busWrite WRAM");
-    (void)VALUE;
+    ramWrite(ADDRESS - BUS_ADDR_ECHO_OFFSET, VALUE);
     return;
   }
 
-  if (ADDRESS >= BUS_ADDR_ECHO_START && ADDRESS <= BUS_ADDR_ECHO_END)
+  // - - - 7. OAM 
+  if (ADDRESS >= BUS_ADDR_OAM_START && ADDRESS <= BUS_ADDR_OAM_END) 
   {
-    TODO_COMMENT("busWrite Echo RAM (mirror of WRAM)");
-    (void)VALUE;
+    ppuOAMWrite(ADDRESS, VALUE);
     return;
   }
 
-  if (ADDRESS >= BUS_ADDR_OAM_START && ADDRESS <= BUS_ADDR_OAM_END)
+  // - - - 8. Unusable Area (Ignored)
+  if (ADDRESS >= BUS_ADDR_UNUSED_START && ADDRESS <= BUS_ADDR_UNUSED_END) 
+  { return; }
+
+  // - - - 9. I/O Registers
+  if (ADDRESS >= BUS_ADDR_IO_START && ADDRESS <= BUS_ADDR_IO_END) 
   {
-    TODO_COMMENT("busWrite OAM (PPU)");
-    (void)VALUE;
+    if (ADDRESS >= DIV_REGISTER_ADDRESS && ADDRESS <= TAC_REGISTER_ADDRESS) 
+    {
+      timerWrite(ADDRESS, VALUE);
+      return;
+    }
+
+    if (ADDRESS == ADDR_IF) 
+    {
+      cpuWriteInterrupt(ADDRESS, VALUE);
+      return;
+    }
+
+    if (ADDRESS >= LCD_CONTROL_REG && ADDRESS <= OBJ_PALLETE_DATA_REG) 
+    {
+      ppuWrite(ADDRESS, VALUE);
+      return;
+    }
     return;
   }
 
-  // - - -  Unusable 
-  if (ADDRESS >= BUS_ADDR_UNUSED_START && ADDRESS <= BUS_ADDR_UNUSED_END)
+  // - - - 10. High RAM
+  if (ADDRESS >= BUS_ADDR_HRAM_START && ADDRESS <= BUS_ADDR_HRAM_END) 
   {
-    FORGE_LOG_WARNING("%s", "Attempted to write to unusable memory area (0xFEA0-0xFEFF). Ignoring.");
-    (void)VALUE;
+    ramWrite(ADDRESS, VALUE);
     return;
   }
 
-  if (ADDRESS >= BUS_ADDR_IO_START && ADDRESS <= BUS_ADDR_IO_END)
-  {
-    TODO_COMMENT("busWrite IO registers");
-    (void)VALUE;
-    return;
-  }
-
-  if (ADDRESS >= BUS_ADDR_HRAM_START && ADDRESS <= BUS_ADDR_HRAM_END)
-  {
-    TODO_COMMENT("busWrite HRAM");
-    (void)VALUE;
-    return;
-  }
-
-  if (ADDRESS == BUS_ADDR_IE)
-  {
-    TODO_COMMENT("busWrite IE (0xFFFF)");
-    (void)VALUE;
-    return;
-  }
-  
-  if (ADDRESS >= DIV_REGISTER_ADDRESS && ADDRESS <= TAC_REGISTER_ADDRESS) 
-  {
-    timerWrite(ADDRESS, VALUE);
-  }
-
-  if (ADDRESS == ADDR_IE || ADDRESS == ADDR_IF)
+  // - - - 11. Interrupt Enable
+  if (ADDRESS == ADDR_IE) 
   {
     cpuWriteInterrupt(ADDRESS, VALUE);
     return;

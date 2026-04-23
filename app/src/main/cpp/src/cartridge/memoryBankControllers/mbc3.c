@@ -1,8 +1,8 @@
 #include <bus.h>
 #include <time.h>
 #include <utils/asserts.h>
-#include <io/memoryBankController.h>
-#include <io/cartridge.h>
+#include <cartridge/memoryBankController.h>
+#include <cartridge/cartridge.h>
 #include <common.h>
 
 static inline u32 mbc3GetRomBankCount(const CartContext* CTX)
@@ -182,7 +182,7 @@ static void mbc3RtcWriteReg(CartContext* CTX, u8 REGISTER, u8 VALUE)
       s->rtcDays = (u16)((s->rtcDays & 0x00FFu) | (dayHi << 8));
       s->rtcHalt = (VALUE & MBC3_RTC_DH_DAY_HALT_BIT) ? true : false;
 
-      // - - - Writing carry bit is allowed on many implementations; treat it as set/clear.
+      // - - - Writing carry bit is allowed on many implementatcartridgens; treat it as set/clear.
       s->rtcDayCarry = (VALUE & MBC3_RTC_DH_DAY_CARRY_BIT) ? true : false;
       break;
     }
@@ -209,7 +209,7 @@ u8 mbc3Read(u16 ADDRESS)
       return OPEN_BUS_VALUE;
     }
 
-    // - - - Banked region 4000-7FFF
+    // - - - Banked regcartridgen 4000-7FFF
     u8  bank        = mbc3NormalizeRomBank(ctx->mapper.mbc3.romBank7, ctx);
     u32 addrInBank  = (u32)(ADDRESS - ADDR_ROMX_START);
     u32 romIndex    = (u32)bank * ROM_BANK_SIZE + addrInBank;
@@ -283,7 +283,7 @@ void mbc3Write(u16 ADDRESS, u8 VALUE)
     return;
   }
 
-  // - - - 6000-7FFF: Latch clock data (0->1 transition)
+  // - - - 6000-7FFF: Latch clock data (0->1 transitcartridgen)
   if (ADDRESS <= ADDR_LATCH_END)
   {
     if (!ctx->hasRTC) 
@@ -295,7 +295,7 @@ void mbc3Write(u16 ADDRESS, u8 VALUE)
     u8 prev = ctx->mapper.mbc3.latchPrev;
     ctx->mapper.mbc3.latchPrev = VALUE;
 
-    // - - - latch on 0 -> 1 transition
+    // - - - latch on 0 -> 1 transitcartridgen
     if (prev == 0x00 && VALUE == 0x01)
     {
       mbc3RtcLatch(ctx);

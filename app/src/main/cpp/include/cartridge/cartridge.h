@@ -5,7 +5,7 @@
 
 #pragma once
 #include <common.h>
-#include <io/memoryBankController.h>
+#include <cartridge/memoryBankController.h>
 #include <platform.h>
 
 /**
