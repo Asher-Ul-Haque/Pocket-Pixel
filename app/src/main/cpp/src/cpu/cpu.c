@@ -113,10 +113,28 @@ void cpuStepMCycle(void)
     TODO_COMMENT("Implement STOP behavior (entering low-power mode, waiting for button press or serial input, etc.)");
   }
 
-  // - - - HALT: for now, just spin until interrupt logic exists.
-  if (ctx->halted)
+  if (ctx->state == CPU_STATE_FETCH && ctx->mCycleInInstr == 0)
   {
-    TODO_COMMENT("Implement HALT behavior (CPU stops executing instructions until an interrupt occurs, but still responds to interrupts and can wake from HALT)");
+    bool pending = cpuInterruptAnyPending();
+
+    // - - - Wake up if we were halted but now have an interrupt to service. We check this here at the start of fetch because HALT halts before checking for interrupts, so if we check at the end of the previous instruction, we might miss that we need to wake up until the next instruction, which would be incorrect.
+    if (ctx->halted && pending)
+    { ctx->halted = false; }
+
+    // - - - if IME is active and an interrupt is pending, enter the interrupt sequence
+    if (ctx->ime && pending)
+    {
+      ctx->state          = CPU_STATE_INTERRUPT_ENTRY;
+      ctx->mCycleInInstr  = 0;
+      ctx->microState     = 0;
+    }
+
+    // - - - If still halted, just spin
+    if (ctx->halted)
+    {
+      ctx->mCyclesTotal++;
+      return;
+    }
   }
 
   switch (ctx->state)
