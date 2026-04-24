@@ -35,6 +35,13 @@
  * @brief Reads a byte from the bus at the specified address.
  * @param ADDRESS The 16-bit address to read from.
  * @return The byte read from the bus at the specified address. If the address is not
+ * @warning Does not care about the OAM DMA lockout
+*/
+u8 busReadRaw(u16 ADDRESS);
+
+/**
+ * @brief busReadRaw but respects OAM DMA lockout (only HRAM is accessible during DMA)
+ * @see busReadRaw
 */
 u8 busRead(u16 ADDRESS);
 

@@ -42,8 +42,14 @@ void ppuOAMWrite(u16 ADDRESS, u8 VALUE)
   PpuContext* ctx  = ppuGetContext();
   u8          mode = STAT_GET_MODE(ctx);
 
+  if (dmaIsActive() || (mode != PPU_MODE_OAM && mode != PPU_MODE_DRAW)) 
+  { 
+    ctx->oam[ADDRESS - BUS_ADDR_OAM_START] = VALUE; 
+    return;
+  }
+
   if (mode == PPU_MODE_OAM || mode == PPU_MODE_DRAW) return;
-  ctx->oam[ADDRESS & OAM_MASK] = VALUE;
+  ctx->oam[ADDRESS - BUS_ADDR_OAM_START] = VALUE;
 }
 
 u8 ppuRead(u16 ADDRESS)
@@ -121,7 +127,7 @@ void ppuWrite(u16 ADDRESS, u8 VALUE)
     case VBK_REG                : if (!dmg) { ctx->vramBank = VALUE & 0x01; } break;
     case OBJ_PALLETE_INDEX_REG  : if (!dmg) { ctx->objPaletteIndex = VALUE & PALLETE_MASK; } break;
     case OBJ_PALLETE_DATA_REG   : if (!dmg) { ctx->objColorRam[ctx->objPaletteIndex & PALLETE_MASK] = VALUE; } break;
-    case BG_PALLETE_INDEX_REG   : if (!dmg) { ctx->bgPaletteIndex = VALUE & PALLETE_MASK; ctx->bgPaletteAuto = (VALUE & 0x80) != 0; } break;
+    case BG_PALLETE_INDEX_REG   : if (!dmg) { ctx->bgPaletteIndex = VALUE; } break;
     case BG_PALLETE_DATA_REG    : 
       {
         if (!dmg && STAT_GET_MODE(ctx) != PPU_MODE_DRAW)

@@ -32,7 +32,7 @@ void dmaStepMCycle(void)
   }
 
   // - - - Perform the transfer: 1 byte per M-cycle
-  u8 data = busRead(ctx.sourceAddr + ctx.byteIndex);
+  u8 data = busReadRaw(ctx.sourceAddr + ctx.byteIndex);
   ppuOAMWrite(DMA_OFFSET + ctx.byteIndex, data);
 
   ctx.byteIndex++;
