@@ -200,7 +200,11 @@ void opsLoadStep(void)
         cpuFinishInstruction();
         return;
       }
-      *reg8Ptr(regs, ins->reg1) = *reg8Ptr(regs, ins->reg2);
+
+      u8* dst = reg8Ptr(regs, ins->reg1);
+      u8* src = reg8Ptr(regs, ins->reg2);
+      if (dst && src) *dst = *src;
+
       cpuFinishInstruction();
       break;
 

@@ -308,13 +308,13 @@ void opsAlu16SpecialStep(void)
   if (ctx->microState == 1) { ctx->microState = 2; return; } // - - - Internal cycle
     
   // - - - Logic for ADD SP, e8 and LD HL, SP+e8
-  i8 offset = (i8)ctx->imm8;
-  u16 sp = regs->stackPointer;
+  i8  offset = (i8)ctx->imm8;
+  u16 sp     = regs->stackPointer;
     
   // - - - Flags are always calculated based on the lower 8-bit addition
   cpuSetZ(regs, false);
   cpuSetN(regs, false);
-  cpuSetH(regs, ((sp & 0xF) + (offset & 0xF)) > 0xF);
+  cpuSetH(regs, ((sp & 0xF)  + (offset & 0xF))  > 0xF);
   cpuSetC(regs, ((sp & 0xFF) + (offset & 0xFF)) > 0xFF);
 
   if (ins->type == IN_ADD) 

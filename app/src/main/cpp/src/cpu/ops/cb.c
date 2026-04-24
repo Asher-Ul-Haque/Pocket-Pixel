@@ -84,7 +84,7 @@ void opsCbRotateShiftStep(void)
     case IN_RL  : cpuSetC(regs, BIT(val, 7)); out = (val << 1) | (c ? 1 : 0);           break;
     case IN_RR  : cpuSetC(regs, BIT(val, 0)); out = (val >> 1) | (c ? 0x80 : 0);        break;
     case IN_SLA : cpuSetC(regs, BIT(val, 7)); out = (val << 1);                         break;
-    case IN_SRA : cpuSetC(regs, BIT(val, 7)); out = (val >> 1) | (val & 0x80);          break;
+    case IN_SRA : cpuSetC(regs, BIT(val, 0)); out = (val >> 1) | (val & 0x80);          break;
     case IN_SRL : cpuSetC(regs, BIT(val, 0)); out = (val >> 1);                         break;
     case IN_SWAP: 
       out = ((val & 0xF) << 4) | ((val & 0xF0) >> 4); 
