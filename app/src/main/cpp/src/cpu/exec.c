@@ -1,3 +1,4 @@
+#include "cpu/instruction.h"
 #include "utils/asserts.h"
 #include <cpu/cpu.h>
 #include <cpu/ops.h>
@@ -158,6 +159,21 @@ static inline bool isAlu16Type(const Instruction* INSTR)
           INSTR->reg1 == RT_SP);
 }
 
+static inline bool isRotateType(InstructionType TYPE)
+{
+  switch (TYPE)
+  {
+    case IN_RLCA :
+    case IN_RRCA :
+    case IN_RLA  :
+    case IN_RRA  :
+      return true;
+
+    default:
+      return false;
+  }
+}
+
 void cpuExecuteStep(void)
 {
   CpuContext*     ctx  = cpuGetContext();
@@ -221,6 +237,13 @@ void cpuExecuteStep(void)
       opsAlu8Step();
     }
     return;
+  }
+
+  // - - - 7. Rotate Family
+  if (isRotateType(type)) 
+  { 
+    opsRotateStep(); 
+    return; 
   }
 
   FORGE_LOG_ERROR("Unmapped Instruction Family for Opcode: 0x%02X", ctx->opcode);

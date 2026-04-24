@@ -53,7 +53,7 @@ static u16 aluAdd16(CpuContext* CTX, u16 A, u16 B)
   cpuSetN(r, false);
  
   // - - - 16-bit Half-Carry is from bit 11 to 12
-  cpuSetH(r, ((A & 0xFFF) + (B & 0xFFF)) > 0xFFF);
+  cpuSetH(r, ((A & 0x0FFF) + (B & 0x0FFF)) > 0x0FFF);
   cpuSetC(r, res > 0xFFFF);
 
   return (u16)res;
@@ -148,6 +148,49 @@ void opsAlu8Step(void)
       break;
     default: break;
   }
+  cpuFinishInstruction();
+}
+
+void opsRotateStep(void)
+{
+  CpuContext* ctx = cpuGetContext();
+  RegisterFile* regs = &ctx->registers;
+  u8 a = regs->a;
+  u8 carry = cpuFlagC(regs) ? 1 : 0;
+
+  switch (ctx->instr->type)
+  {
+    case IN_RLCA: // ROTATE A left; Bit 7 to carry, and bit 0
+      cpuSetC(regs, (a & 0x80) != 0);
+      regs->a = (a << 1) | (a >> 7);
+      break;
+
+    case IN_RRCA: // Rotate A right; Bit 0 to carry and Bit 7
+      cpuSetC(regs, (a & 0x01) != 0);
+      regs->a = (a >> 1) | (a << 7);
+      break;
+
+    case IN_RLA: // Rotate A Left through carry
+      {
+        bool newCarry = (a & 0x80) != 0;
+        regs->a = (a << 1) | carry;
+        cpuSetC(regs, newCarry);
+      }
+      break;
+
+    case IN_RRA: // Rotate A Right through carry
+      {
+        bool newCarry = (a & 0x01) != 0;
+        regs->a = (a >> 1) | (carry << 7);
+        cpuSetC(regs, newCarry);
+      }
+      break;
+
+    default: break;
+  }
+  cpuSetZ(regs, false);
+  cpuSetN(regs, false);
+  cpuSetH(regs, false);
   cpuFinishInstruction();
 }
 
@@ -351,3 +394,5 @@ void opsLdHlSpE8Step(void)
   cpuSetHL(regs, sp + rel);
   cpuFinishInstruction();
 }
+
+

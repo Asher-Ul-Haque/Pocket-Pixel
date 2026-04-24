@@ -1,3 +1,4 @@
+#include "cpu/registers.h"
 #include <cpu/cpu.h>
 #include <cpu/ops.h>
 #include <bus.h>
@@ -104,6 +105,78 @@ void opsLoadHighStep(void)
 
 // - - - Dispatcher - - -
 
+void opsPushStep(void)
+{
+  CpuContext*   ctx   = cpuGetContext();
+  RegisterFile* regs  = &ctx->registers;
+  u16           val   = 0;
+
+  switch (ctx->instr->reg1)
+  {
+    case RT_BC: val = cpuGetBC(regs); break;
+    case RT_DE: val = cpuGetDE(regs); break;
+    case RT_HL: val = cpuGetHL(regs); break;
+    case RT_AF: val = cpuGetAF(regs); break;
+    default:
+      FORGE_ASSERT_DEBUG(false, "Unsupported register pair in opsPushStep");
+      break;
+  }
+
+  if (ctx->microState == 0)
+  {
+    ctx->microState = 1;
+    return;
+  }
+
+  if (ctx->microState == 1)
+  {
+    cpuStackWriteHi(val);
+    ctx->microState = 2;
+    return;
+  }
+
+  if (ctx->microState == 2)
+  {
+    cpuStackWriteLo(val);
+  }
+
+  cpuFinishInstruction();
+}
+
+
+void opsPopStep(void) 
+{
+  CpuContext*   ctx   = cpuGetContext();
+  RegisterFile* regs  = &ctx->registers;
+  u16           val   = 0;
+
+  // - - - M2: Read low
+  if (ctx->microState == 0) 
+  { 
+    ctx->readData   = cpuStackReadLo();
+    ctx->microState = 1;
+    return;
+  }
+
+  // - - - M3: Read High
+  if (ctx->microState == 1) 
+  { 
+    // - - - M3: Read High
+    u8 hi = cpuStackReadHi();
+    val   = (hi << 8) | (ctx->readData & 0xFF);
+    
+    switch(ctx->instr->reg1) 
+    {
+        case RT_AF: cpuSetAF(regs, val); break; 
+        case RT_BC: cpuSetBC(regs, val); break;
+        case RT_DE: cpuSetDE(regs, val); break;
+        case RT_HL: cpuSetHL(regs, val); break;
+        default: break;
+    }
+  }
+  cpuFinishInstruction();
+}
+
 void opsLoadStep(void) 
 {
   CpuContext*        ctx  = cpuGetContext();
@@ -116,6 +189,17 @@ void opsLoadStep(void)
   {
     // - - - LD r, r (1 M-cycle)
     case AM_R_R: 
+      if (ins->reg1 == RT_SP && ins->reg2 == RT_HL) 
+      {
+        if (ctx->microState == 0) 
+        { 
+          ctx->microState = 1; 
+          return; 
+        } 
+        regs->stackPointer = cpuGetHL(regs);
+        cpuFinishInstruction();
+        return;
+      }
       *reg8Ptr(regs, ins->reg1) = *reg8Ptr(regs, ins->reg2);
       cpuFinishInstruction();
       break;
@@ -212,6 +296,11 @@ void opsLoadStep(void)
     case AM_MR_C: 
     case AM_R_MR_C:
       opsLoadHighStep();
+      break;
+
+    case AM_R:
+      if      (ins->type == IN_PUSH) opsPushStep();
+      else if (ins->type == IN_POP)  opsPopStep();
       break;
 
     default:

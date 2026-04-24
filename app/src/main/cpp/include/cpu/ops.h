@@ -63,3 +63,20 @@ void opsCbRotateShiftStep(void);
  * @brief Execute one M-cycle for CB-prefixed bit manipulation group.
 */
 void opsCbBitStep(void);
+
+/**
+ * @brief Handle rotate instructions
+*/
+void opsRotateStep(void);
+
+/**
+ * @brief Hanldes PUSH rr (4 M-cycles)
+ * M1: Fetch, M2: Internal, M3: write Hi, M4: write Lo
+*/
+void opsPushStep(void);
+
+/**
+ * @brief Handles POP rr (3 M-cycles)
+ * M1: Fetch, M2: read Lo, M3: read Hi
+*/
+void opsPopStep(void);
