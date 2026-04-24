@@ -78,15 +78,23 @@ void opsLoadHighStep(void)
 
   if (ctx->microState == 0) 
   {
+    // - - - 1. Determine address ($FF00 + imeddiate OR $FF00 + C)
     u16 addr = 0xFF00 + ((ins->mode == AM_R_A8 || ins->mode == AM_A8_R) ? ctx->imm8 : regs->c);
-    if (ins->type == IN_LDH || ins->reg1 == RT_A) 
+
+    // - - - 2, Direction check based on Addressing Mode
+
+    // - - - Read modes: AM_R_A8 or AM_R_MR_C, Register 1 is the destination
+    if (ins->mode == AM_R_A8 || ins->mode == AM_R_MR_C)
     {
       regs->a = busRead(addr);
-    } 
+    }
+    
+    // - - - Write mode: AM_A8_R or AM_MR_C (Memory is the destination)
     else 
     {
       busWrite(addr, regs->a);
     }
+
     ctx->microState = 1;
     return;
   }
@@ -144,6 +152,12 @@ void opsLoadStep(void)
       u16 destAddr =  (ins->reg1 == RT_HL) ? cpuGetHL(regs) : 
                       (ins->reg1 == RT_BC) ? cpuGetBC(regs) : cpuGetDE(regs);
       busWrite(destAddr, *reg8Ptr(regs, ins->reg2));
+
+      // - - - Hanlde HL+/HL- (param is 1 or -1)
+      if (ins->reg1 == RT_HL && ins->param != 0)
+      {
+        cpuSetHL(regs, cpuGetHL(regs) + (i8)ins->param);
+      }
       cpuFinishInstruction();
       break;
 
@@ -157,6 +171,13 @@ void opsLoadStep(void)
       u16 srcAddr = (ins->reg2 == RT_HL) ? cpuGetHL(regs) : 
                     (ins->reg2 == RT_BC) ? cpuGetBC(regs) : cpuGetDE(regs);
       *reg8Ptr(regs, ins->reg1) = busRead(srcAddr);
+
+      // - - - Handle HL+/HL- (param is 1 or -1)
+      if (ins->reg2 == RT_HL && ins->param != 0)
+      {
+        cpuSetHL(regs, cpuGetHL(regs) + (i8)ins->param);
+      }
+
       cpuFinishInstruction();
       break;
 
