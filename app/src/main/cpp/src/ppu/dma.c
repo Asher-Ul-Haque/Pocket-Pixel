@@ -21,7 +21,7 @@ void dmaStart(u8 VALUE)
 bool dmaIsActive(void) 
 { return ctx.active; }
 
-void dmaTick(void) 
+void dmaStepMCycle(void) 
 {
   if (!ctx.active) return;
 

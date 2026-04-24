@@ -123,7 +123,9 @@ void ppuInit(void);
  * @brief Step the PPU by exactly ONE T-cycle. 
  * Must be called 4 times for every CPU M-cycle.
 */
-void ppuMTick(void);
+void ppuStepTCycle(void);
+
+void ppuStepMCycle(void);
 
 /**
  * @brief Read from PPU registers or VRAM/OAM based on current mode. 

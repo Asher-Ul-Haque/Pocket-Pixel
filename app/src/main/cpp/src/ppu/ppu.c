@@ -108,7 +108,7 @@ static void handleModeTransitions(void)
   }
 }
 
-void ppuMTick(void)
+void ppuStepTCycle(void)
 {
   // - - - if LCD is disabled, PPU does not advance
   if (!LCDC_ENABLED(&ctx)) return;
@@ -139,4 +139,9 @@ void ppuMTick(void)
 
   // - - - 3. Handle mode transitions and V-Blank timing
   handleModeTransitions();
+}
+
+void ppuStepMCycle(void)
+{
+  for (u8 i = 0; i < 4; i++)   ppuStepTCycle();
 }

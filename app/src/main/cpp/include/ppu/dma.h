@@ -31,7 +31,7 @@ void dmaStart(u8 source_byte);
  * @brief Tick the DMA controller by ONE M-cycle.
  * Should be called once per CPU M-cycle.
 */
-void dmaTick(void);
+void dmaStepMCycle(void);
 
 /// @brief Returns true if a DMA transfer is currently in progress.
 bool dmaIsActive(void);

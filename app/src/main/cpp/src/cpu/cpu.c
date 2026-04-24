@@ -103,7 +103,7 @@ void cpuInit(void)
 }
 
 
-void cpuTickMCycle(void)
+void cpuStepMCycle(void)
 {
   CpuContext* ctx = cpuGetContext();
 
@@ -151,7 +151,7 @@ void cpuTick(void)
 
   for (;;)
   {
-    cpuTickMCycle();
+    cpuStepMCycle();
 
     if      (ctx->state != CPU_STATE_FETCH) leftFetch = true;
     else if (leftFetch)                     break;

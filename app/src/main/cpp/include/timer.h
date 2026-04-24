@@ -22,9 +22,9 @@ typedef struct TimerContext
 TimerContext* timerGetContext(void);
 
 void timerInit(void);
-void timerTick(void);
+void timerStepMCycle(void);
 
-u8 timerRead(u16 ADDRESS);
+u8   timerRead(u16 ADDRESS);
 void timerWrite(u16 ADDRESS, u8 VALUE);
 
 #define DIV_REGISTER_ADDRESS  0xFF04

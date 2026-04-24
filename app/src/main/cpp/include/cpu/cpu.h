@@ -95,7 +95,7 @@ void cpuReset(void);
  * @brief Tick the CPU forward by exactly one M-cycle of work.
  * @note This function does NOT tick PPU/APU/timer/DMA. A higher-level scheduler must do that.
 */
-void cpuTickMCycle(void);
+void cpuStepMCycle(void);
 
 /**
  * @brief Executes a single CPU tick, which involves fetching, decoding, and executing the next instruction based on the current state of the CPU. This function should be called repeatedly in a loop to simulate the continuous operation of the CPU.

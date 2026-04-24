@@ -18,7 +18,7 @@ static const u16 BIT_SELECT_MASK[] =
 void timerInit(void) 
 { memset(&ctx, 0, sizeof(ctx)); }
 
-void timerTick(void) 
+void timerStepMCycle(void) 
 {
   u16 prevCounter = ctx.internalCounter;
   ctx.internalCounter++;
