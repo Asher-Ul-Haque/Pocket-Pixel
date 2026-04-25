@@ -29,18 +29,27 @@
 
 // - - - STAT: LCD Status (0xFF41) - -
 
-#define STAT_MODE2_INT(CTX)    BIT((CTX)->stat, 5) /// OAM Interrupt Enable
-#define STAT_MODE1_INT(CTX)    BIT((CTX)->stat, 4) /// V-Blank Interrupt Enable 
-#define STAT_MODE0_INT(CTX)    BIT((CTX)->stat, 3) /// H-Blank Interrupt Enable 
-#define STAT_LYC_FLAG(CTX)     BIT((CTX)->stat, 2) /// LYC=LY Comparison Signal
-#define STAT_LYC_INT(CTX)      BIT((CTX)->stat, 6) /// LYC=LY Interrupt Enable
-#define STAT_SET_LYC_FLAG(CTX)    ((CTX)->stat = (CTX)->stat | STAT_LYC_FLAG(CTX))
-#define STAT_CLEAR_LYC_FLAG(CTX)  ((CTX)->stat = (CTX)->stat & ~STAT_LYC_FLAG(CTX))
+// - - - Bit masks for specific bits
+#define STAT_BIT_LYC_FLAG  (1 << 2) /// Bit 2: LYC == LY
+#define STAT_BIT_MODE_0_IE (1 << 3) /// Bit 3: H-Blank Interrupt Enable
+#define STAT_BIT_MODE_1_IE (1 << 4) /// Bit 4: V-Blank Interrupt Enable
+#define STAT_BIT_MODE_2_IE (1 << 5) /// Bit 5: OAM Interrupt Enable
+#define STAT_BIT_LYC_IE    (1 << 6) /// Bit 6: LYC == LY Interrupt Enable
 
-// - - Mode bits 1-0 - - -
+// - - -  Helpers
+#define STAT_LYC_FLAG(CTX)    (!!((CTX)->stat & STAT_BIT_LYC_FLAG))
+#define STAT_MODE0_INT(CTX)   (!!((CTX)->stat & STAT_BIT_MODE_0_IE))
+#define STAT_MODE1_INT(CTX)   (!!((CTX)->stat & STAT_BIT_MODE_1_IE))
+#define STAT_MODE2_INT(CTX)   (!!((CTX)->stat & STAT_BIT_MODE_2_IE))
+#define STAT_LYC_INT(CTX)     (!!((CTX)->stat & STAT_BIT_LYC_IE))
 
+// - - - setters
+#define STAT_SET_LYC_FLAG(CTX)    ((CTX)->stat |= STAT_BIT_LYC_FLAG)
+#define STAT_CLEAR_LYC_FLAG(CTX)  ((CTX)->stat &= ~STAT_BIT_LYC_FLAG)
+
+// - - - Mode bits 1-0 
 #define STAT_GET_MODE(CTX)     ((CTX)->stat & 0x03)
-#define STAT_SET_MODE(CTX, M)  ((CTX)->stat = ((CTX)->stat & ~0x03) | (M))
+#define STAT_SET_MODE(CTX, M)  ((CTX)->stat = ((CTX)->stat & ~0x03) | ((M) & 0x03))
 
 
 // - - - CGB Palette Select (BCPS 0xFF68 / OCPS 0xFF6A) - - -

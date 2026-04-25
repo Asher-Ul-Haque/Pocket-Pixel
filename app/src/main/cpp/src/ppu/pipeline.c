@@ -3,6 +3,7 @@
 #include <ppu/ppuRegisters.h>
 #include <ppu/internal.h>
 #include <utils/bitwise.h>
+#include <ppu/oam.h>
 
 /**
  * @file ppuPipeline.c
@@ -144,9 +145,11 @@ static void fetcherStep(void)
 void ppuPipelineTick(void) 
 {
   PpuContext* ctx = ppuGetContext();
+  bool        dmg = (cartridgeGetContext()->mode == MODE_DMG_GAMEBOY);
 
-  // - - - 1. Advance the Fetcher
+  // - - - 1. Advance the Fetcher and check for sprites 
   fetcherStep();
+  ppuOverlayDelaySprites();
 
   // - - - 2. Window Check: Trigger window if LY matches WY and WX matches current X
   if (LCDC_WIN_ENABLED(ctx) && !ctx->windowTriggered) 
@@ -163,7 +166,7 @@ void ppuPipelineTick(void)
   // - - - 3. FIFO Pop & Pixel Push. The FIFO must contain more than 8 pixels to begin pushing to screen
   if (ctx->bgFifo.size > TILE_PIXEL_WIDTH) 
   {
-    PpuPixel p = fifoPop(&ctx->bgFifo);
+    PpuPixel bgPixel = fifoPop(&ctx->bgFifo);
 
     // - - - Fine SCX Scrolling: Discard pixels until alignment is reached
     if (ctx->scrollXFifoAdj > 0) 
@@ -173,9 +176,44 @@ void ppuPipelineTick(void)
     }
 
     // - - - Logic for DMG vs CGB color selection
-    u32 color;
-    if (cartridgeGetContext()->mode == MODE_DMG_GAMEBOY) color = ppuGetColorDMG(ctx->bgp, p.pixel);
-    else                                                 color = ppuGetColorCGB(p.palette, p.pixel, false);
+    u32      color    = 0;
+    PpuPixel objPixel = 
+      {
+        .pixel = 0 
+      };
+    bool hasSprite = false;
+
+    // - - - Pop a sprite pixel if available
+    if (ctx->objFifo.size > 0)
+    {
+      objPixel = fifoPop(&ctx->objFifo);
+      if (objPixel.pixel != 0 && LCDC_OBJ_ENABLED(ctx)) hasSprite = true;
+    }
+
+    /**
+      * Composition Rules
+      * 1. If no sprite pixel, use BG pixel color.
+      * 2. If sprite is present and BG pixel is color 0, use sprite pixel color.
+      * 3. If sprite is present and has higher priority than BG, use sprite pixel color.
+      * 4. Otherwise, use BG pixel color.
+    */
+    if (hasSprite && ((bgPixel.pixel == 0) || !objPixel.bgPriority))
+    {
+      if (dmg) 
+      {
+        u8 pal = (objPixel.palette == 0) ? ctx->obp0 : ctx->obp1;
+        color = ppuGetColorDMG(pal, objPixel.pixel);
+      }
+      else 
+      {
+        color = ppuGetColorCGB(objPixel.palette, objPixel.pixel, true);
+      }
+    }
+    else 
+    {
+      if (dmg)  color = ppuGetColorDMG(ctx->bgp, bgPixel.pixel);
+      else      color = ppuGetColorCGB(bgPixel.palette, bgPixel.pixel, false);
+    }
 
     // - - - Write to Frame Buffer
     ctx->frameBuffer[ctx->pixelsPushed + (ctx->ly * SCREEN_WIDTH)] = color;

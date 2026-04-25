@@ -145,7 +145,6 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[])
 
     // - - - B. Tick Components
     cpuStepMCycle();
-    ppuStepMCycle();
     dmaStepMCycle();
     timerStepMCycle();
     ppuStepMCycle();

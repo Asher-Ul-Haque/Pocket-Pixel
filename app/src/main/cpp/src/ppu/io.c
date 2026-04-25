@@ -111,7 +111,7 @@ void ppuWrite(u16 ADDRESS, u8 VALUE)
     case LCD_STATUS_REG: 
       {
         // - - - Bits 0-2 are read only
-        ctx->stat = (VALUE & 0x78) | (ctx->stat & 0x07);
+        ctx->stat = (VALUE & 0x78) | (ctx->stat & 0x07) | 0x80;
         break;
       }
 

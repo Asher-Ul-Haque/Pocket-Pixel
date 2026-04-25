@@ -307,7 +307,26 @@ void opsLoadStep(void)
       else if (ins->type == IN_POP)  opsPopStep();
       break;
 
+    case AM_MR_D8:
+      {
+        // - --  M2
+        if (ctx->microState == 0) 
+        { 
+          ctx->microState = 1; 
+          return; 
+        }
+
+        // - - - M3:
+        if (ctx->microState == 1)
+        {
+          busWrite(cpuGetHL(regs), ctx->imm8);
+        }
+        cpuFinishInstruction();
+        break;
+      }
+
     default:
+      FORGE_LOG_DEBUG("Unsupported addressing mode in opsLoadStep: %d", ins->mode);
       FORGE_ASSERT_DEBUG(false, "Unsupported addressing mode in opsLoadStep");
       break;
   }

@@ -59,7 +59,8 @@ u8 busReadRaw(u16 ADDRESS)
   if (ADDRESS >= BUS_ADDR_IO_START && ADDRESS <= BUS_ADDR_IO_END) 
   {
     // - - - Joypad 
-    if (ADDRESS == 0xFF00) TODO_COMMENT("Implement joypad input handling");
+    if (ADDRESS == 0xFF00)  return OPEN_BUS_VALUE;
+//ODO_COMMENT("Implement joypad input handling");
 
     // - - - Timer Registers (0xFF04 - 0xFF07)
     if (ADDRESS >= DIV_REGISTER_ADDRESS && ADDRESS <= TAC_REGISTER_ADDRESS) 

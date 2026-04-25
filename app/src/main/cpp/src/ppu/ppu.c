@@ -44,6 +44,8 @@ static void handleModeTransitions(void)
           ctx.fetcher.state     = FETCH_GET_TILE;
           ctx.fetcher.xOffset   = 0;
           ctx.bgFifo.size       = 0;
+          ctx.scrollXFifoAdj    = ctx.scx % TILE_PIXEL_WIDTH; // - - - Adjust FIFO for fine X scroll
+          ctx.fetcher.xOffset   = ctx.scx / TILE_PIXEL_WIDTH; // - - - Initial tile X offset based on SCX
           ppuOamResetSearch();
         }
         break;

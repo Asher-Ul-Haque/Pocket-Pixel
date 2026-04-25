@@ -18,8 +18,8 @@ static const u32 DMG_THEME[4] =
 static struct 
 {
   SDL_Window  *   window;
-  SDL_Renderer* renderer;
-  SDL_Texture *  texture;
+  SDL_Renderer*   renderer;
+  SDL_Texture *   texture;
 } sdlInternal;
 
 static PlatformContext ctx;
@@ -52,7 +52,7 @@ static void desktopInit(void)
   // - - - Create a 4x scaled window by default
   sdlInternal.window = SDL_CreateWindow(
     "Pocket Pixel Desktop",
-    160 * 4, 144 * 4,
+    160 * 2, 144 * 2,
     SDL_WINDOW_RESIZABLE
   );
 
@@ -84,10 +84,11 @@ static void desktopRenderFrame(const u32* FRAME_BUFFER, u32 WIDTH, u32 HEIGHT)
   (void) HEIGHT;
   
   u32 finalPixels[SCREEN_PIXELS_X * SCREEN_PIXELS_Y];
+  bool dmg = (cartridgeGetContext()->mode == MODE_DMG_GAMEBOY);
 
   for (i32 i = 0; i < SCREEN_WIDTH * SCREEN_HEIGHT; i++) 
   {
-    if (cartridgeGetContext()->mode == MODE_DMG_GAMEBOY) 
+    if (dmg) 
     {
       // - - - Core gives us 0-3, we map it to our theme
       finalPixels[i] = DMG_THEME[FRAME_BUFFER[i] & 0x03];
