@@ -171,3 +171,4 @@ u8   cpuStackReadLo (void);
 #define START_VALUE_DE_CGB 0xFF56u
 #define START_VALUE_HL_CGB 0x000Du
 
+#define SPEED_SWITCH_ADDR 0xFF4Du

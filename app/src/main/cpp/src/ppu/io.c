@@ -72,15 +72,28 @@ u8 ppuRead(u16 ADDRESS)
     case WINDOW_Y_REG           : return ctx->wy;
     case VBK_REG                : return (dmg) ? OPEN_BUS_VALUE : (ctx->vramBank | 0xFE);
     case OBJ_PALLETE_INDEX_REG  : return (dmg) ? OPEN_BUS_VALUE : ctx->objPaletteIndex;
-    case OBJ_PALLETE_DATA_REG   : return (dmg) ? OPEN_BUS_VALUE : ctx->objColorRam[ctx->objPaletteIndex & PALLETE_MASK];
+    case OBJ_PALLETE_DATA_REG   : {
+      if (dmg) return OPEN_BUS_VALUE;
+      u8 color = ctx->objColorRam[ctx->objPaletteIndex & PALLETE_MASK];
+      if (ctx->objPaletteAuto) {
+        u8 newIndex = (ctx->objPaletteIndex + 1) & PALLETE_MASK;
+        ctx->objPaletteIndex = (ctx->objPaletteIndex & 0x80) | newIndex;
+      }
+      return color;
+    }
     case BG_PALLETE_INDEX_REG   : return (dmg) ? OPEN_BUS_VALUE : ctx->bgPaletteIndex;
 
     case BG_PALLETE_DATA_REG    : 
       {
-        // - - - CGB Palette RAM is blocked in mode 3
         if (!dmg && STAT_GET_MODE(ctx) == PPU_MODE_DRAW) return OPEN_BUS_VALUE;
-        return (dmg) ? OPEN_BUS_VALUE : ctx->bgColorRam[ctx->bgPaletteIndex & PALLETE_MASK];
-        break;
+        if (dmg) return OPEN_BUS_VALUE;
+        
+        u8 color = ctx->bgColorRam[ctx->bgPaletteIndex & PALLETE_MASK];
+        if (ctx->bgPaletteAuto) {
+          u8 newIndex = (ctx->bgPaletteIndex + 1) & PALLETE_MASK;
+          ctx->bgPaletteIndex = (ctx->bgPaletteIndex & 0x80) | newIndex;
+        }
+        return color;
       }
 
     default:
@@ -125,9 +138,21 @@ void ppuWrite(u16 ADDRESS, u8 VALUE)
     case WINDOW_X_REG           : ctx->wx   = VALUE; break;
     case WINDOW_Y_REG           : ctx->wy   = VALUE; break;
     case VBK_REG                : if (!dmg) { ctx->vramBank = VALUE & 0x01; } break;
-    case OBJ_PALLETE_INDEX_REG  : if (!dmg) { ctx->objPaletteIndex = VALUE & PALLETE_MASK; } break;
-    case OBJ_PALLETE_DATA_REG   : if (!dmg) { ctx->objColorRam[ctx->objPaletteIndex & PALLETE_MASK] = VALUE; } break;
-    case BG_PALLETE_INDEX_REG   : if (!dmg) { ctx->bgPaletteIndex = VALUE; } break;
+    case OBJ_PALLETE_INDEX_REG  : if (!dmg) { 
+      ctx->objPaletteIndex = VALUE & 0x3F;  // Bits 0-5: index
+      ctx->objPaletteAuto = BIT(VALUE, 7);  // Bit 7: auto-increment
+    } break;
+    case OBJ_PALLETE_DATA_REG   : if (!dmg) { 
+      ctx->objColorRam[ctx->objPaletteIndex & PALLETE_MASK] = VALUE;
+      if (ctx->objPaletteAuto) {
+        u8 newIndex = (ctx->objPaletteIndex + 1) & PALLETE_MASK;
+        ctx->objPaletteIndex = (ctx->objPaletteIndex & 0x80) | newIndex;
+      }
+    } break;
+    case BG_PALLETE_INDEX_REG   : if (!dmg) { 
+      ctx->bgPaletteIndex = VALUE & 0x3F;  // Bits 0-5: index
+      ctx->bgPaletteAuto = BIT(VALUE, 7);  // Bit 7: auto-increment
+    } break;
     case BG_PALLETE_DATA_REG    : 
       {
         if (!dmg && STAT_GET_MODE(ctx) != PPU_MODE_DRAW)

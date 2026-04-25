@@ -154,12 +154,20 @@ void ppuPipelineTick(void)
   // - - - 2. Window Check: Trigger window if LY matches WY and WX matches current X
   if (LCDC_WIN_ENABLED(ctx) && !ctx->windowTriggered) 
   {
-    if (ctx->ly >= ctx->wy && (ctx->pixelsPushed + (TILE_PIXEL_WIDTH - 1)) >= ctx->wx) 
+    if (ctx->ly >= ctx->wy && (ctx->pixelsPushed + (TILE_PIXEL_WIDTH - 1)) >= (ctx->wx - WINDOW_X_REG_BIAS)) 
     {
       ctx->windowTriggered = true;
       ctx->fetcher.state   = FETCH_GET_TILE;  // - - - Reset fetcher for window tile
       ctx->fetcher.xOffset = 0;
       ctx->bgFifo.size     = 0;               // - - - Clear FIFO to restart with window pixels
+      
+      // Debug logging (remove in production)
+      static int windowTriggerCount = 0;
+      if (windowTriggerCount++ < 10)
+      {
+        FORGE_LOG_DEBUG("Window triggered at LY=%d, pixelsPushed=%d, WY=%d, WX=%d (adjusted: %d)", 
+                       ctx->ly, ctx->pixelsPushed, ctx->wy, ctx->wx, ctx->wx - WINDOW_X_REG_BIAS);
+      }
     }
   }
 
@@ -215,8 +223,17 @@ void ppuPipelineTick(void)
       else      color = ppuGetColorCGB(bgPixel.palette, bgPixel.pixel, false);
     }
 
-    // - - - Write to Frame Buffer
+     // - - - Write to Frame Buffer
     ctx->frameBuffer[ctx->pixelsPushed + (ctx->ly * SCREEN_WIDTH)] = color;
+    
+    // Debug logging for sprite rendering (first occurrence only)
+    static int spriteRenderCount = 0;
+    if (hasSprite && spriteRenderCount++ < 5)
+    {
+      FORGE_LOG_DEBUG("Sprite pixel rendered at LY=%d, X=%d, color=%d, bgPixel=%d, priority=%d", 
+                     ctx->ly, ctx->pixelsPushed, objPixel.pixel, bgPixel.pixel, objPixel.bgPriority);
+    }
+    
     ctx->pixelsPushed++;
   }
 }

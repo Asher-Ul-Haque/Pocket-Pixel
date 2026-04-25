@@ -9,6 +9,7 @@
 #include <ppu/dma.h>
 #include <cartridge/cartridge.h>
 #include <utils/logger.h>
+#include <debug.h>
 #include <SDL3/SDL.h>
 
 
@@ -134,6 +135,27 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[])
         running = false;
         break;
       }
+      // Handle debug key presses
+      if (event.type == SDL_EVENT_KEY_DOWN)
+      {
+        switch (event.key.key)
+        {
+          case SDLK_G:  // G = Grid toggle
+            debugToggleTileGrid();
+            FORGE_LOG_INFO("Tile grid debug: %s", debugIsTileGridEnabled() ? "ON" : "OFF");
+            break;
+          case SDLK_S:  // S = Sprites toggle
+            debugToggleSprites();
+            FORGE_LOG_INFO("Sprite debug: %s", debugIsSpritesEnabled() ? "ON" : "OFF");
+            break;
+          case SDLK_W:  // W = Window toggle
+            debugToggleWindow();
+            FORGE_LOG_INFO("Window debug: %s", debugIsWindowEnabled() ? "ON" : "OFF");
+            break;
+          default:
+            break;
+        }
+      }
     }
     
     if (cpu->mCycleInInstr == 1 && cpu->state != CPU_STATE_FETCH) 
@@ -155,6 +177,8 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[])
     // Trigger on the transition to V-Blank
     if (ppu->ly == 144 && last_ly == 143) 
     {
+      // Apply debug overlays before rendering
+      debugApplyOverlays(ppu->frameBuffer);
       platformGetContext()->rendering.renderFrame(ppu->frameBuffer, 160, 144);
     }
     last_ly = ppu->ly;

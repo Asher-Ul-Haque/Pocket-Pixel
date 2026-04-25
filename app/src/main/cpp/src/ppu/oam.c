@@ -73,7 +73,14 @@ void ppuOverlayDelaySprites(void)
       if (ATTR_V_FLIP(sprite->flags)) row = (spriteHeight - 1) - row; 
 
       u8 tileIndex = sprite->tileIndex;
-      if (spriteHeight == TILE_DATA_SIZE_BYTES) tileIndex &= 0xFE; // - - - Bit 0 is ignored in 8x16 mode
+      if (spriteHeight == TILE_DATA_SIZE_BYTES) {
+        // - - - 8x16 sprite mode: bit 0 is ignored, use two tiles (top/bottom)
+        tileIndex &= 0xFE;
+        if (row >= 8) {
+          row -= 8;
+          tileIndex++;
+        }
+      }
       
       u16 addr = VRAM_TILE_DATA_1_ADDR + (tileIndex * TILE_DATA_SIZE_BYTES) + (row * 2);
 

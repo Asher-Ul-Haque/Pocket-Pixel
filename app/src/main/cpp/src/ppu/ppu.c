@@ -70,6 +70,9 @@ static void handleModeTransitions(void)
           ctx.dotClock = 0;
           ctx.ly++;
       
+          // - - - Increment window line counter when transitioning to next line
+          if (ctx.windowTriggered) ctx.windowLineCounter++;
+      
           if (ctx.ly >= SCREEN_HEIGHT)
           {
             // - - - Entering V-Blank

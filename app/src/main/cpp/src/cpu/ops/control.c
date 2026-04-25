@@ -2,6 +2,7 @@
 #include <cpu/cpu.h>
 #include <cpu/ops.h>
 #include <cpu/instruction.h>
+#include <bus.h>
 
 /**
  * @file control.c
@@ -93,10 +94,20 @@ static void execHALT(CpuContext* CTX)
 
 static void execSTOP(CpuContext* CTX)
 {
-  (void)CTX;
-  CTX->stopped = true;
-  // - - - STOP behavior depends on KEY1 / speed switch / joypad and CGB mode. Implement later with IO integration.
-  TODO;
+  // - - - Check for CGB double-speed mode request (bit 0 of next byte after opcode)
+  u8 key1 = busRead(SPEED_SWITCH_ADDR);
+  if (key1 & 0x01)
+  {
+    CTX->doubleSpeed = !CTX->doubleSpeed;
+    busWrite(SPEED_SWITCH_ADDR, (CTX->doubleSpeed << 7));
+    FORGE_LOG_INFO("CGB Speed Swith: %s", CTX->doubleSpeed ? "Double" : "Normal");
+  }
+  else 
+  {
+    // - - - No speed switch: just enter STOP state
+    CTX->stopped = true;
+  }
+  cpuFinishInstruction();
 }
 
 static void execDAA(CpuContext* CTX)

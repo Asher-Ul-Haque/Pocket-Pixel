@@ -35,6 +35,24 @@ u32 ppuGetColorDMG(u8 PALETTE, u8 COLOR_ID)
  * @param IS_OBJ True if fetching from Object CRAM, false for Background.
  * @return The 32-bit ARGB color value corresponding to the specified palette and color index.
 */
+/**
+ * @brief Converts CGB 15-bit RGB555 color to 32-bit ARGB8888.
+ * CGB colors are stored as: BBBBBGGGGGRRRRR (15 bits)
+ * Output is ARGB8888: Alpha=FF (opaque), then B, G, R in 8 bits each.
+ * @param CGB_COLOR The 15-bit CGB color value.
+ * @return 32-bit ARGB color value suitable for display.
+ */
+u32 ppuColorToRGB32(u16 CGB_COLOR)
+{
+  // Extract 5-bit components and scale to 8-bit by left-shifting by 3
+  u32 r = ((CGB_COLOR >> 0) & 0x1F) << 3;   // Red: bits 0-4
+  u32 g = ((CGB_COLOR >> 5) & 0x1F) << 3;   // Green: bits 5-9
+  u32 b = ((CGB_COLOR >> 10) & 0x1F) << 3;  // Blue: bits 10-14
+  
+  // Combine into ARGB8888: 0xFF000000 | (B << 16) | (G << 8) | R
+  return 0xFF000000 | (b << 16) | (g << 8) | r;
+}
+
 u32 ppuGetColorCGB(u8 PALETTE_INDEX, u8 COLOR_ID, bool IS_OBJ) 
 {
   PpuContext* ctx = ppuGetContext();
@@ -43,5 +61,6 @@ u32 ppuGetColorCGB(u8 PALETTE_INDEX, u8 COLOR_ID, bool IS_OBJ)
   u8  baseAddr  = (PALETTE_INDEX * COLORS_PER_PALETTE * 2) + (COLOR_ID * 2);
   u8* cram      = IS_OBJ ? ctx->objColorRam : ctx->bgColorRam;
 
-  return cram[baseAddr] | (cram[baseAddr + 1] << 8);
+  u16 cgb_color = cram[baseAddr] | (cram[baseAddr + 1] << 8);
+  return ppuColorToRGB32(cgb_color);
 }
