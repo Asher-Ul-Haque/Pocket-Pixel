@@ -2,20 +2,21 @@
 
 #include <common.h>
 
-/**
- * @file debug.h
- * @brief Debug visualization utilities for emulator diagnostics.
- */
+#define SERIAL_BUFFER_SIZE 256
+typedef struct 
+{
+  u8  SB;
+  u8  SC;
+  u16 index;
+  char string[SERIAL_BUFFER_SIZE];
+} DebugContext;
 
-// Toggle debug overlays
-void debugToggleTileGrid(void);
-void debugToggleSprites(void);
-void debugToggleWindow(void);
+DebugContext* debugGetContext(void);
 
-// Query debug states
-bool debugIsTileGridEnabled(void);
-bool debugIsSpritesEnabled(void);
-bool debugIsWindowEnabled(void);
 
-// Apply overlays to frame buffer (call before rendering)
-void debugApplyOverlays(u32* frameBuffer);
+void serialInit(void);
+
+u8 serialRead(u16 ADDR);
+
+
+void serialWrite(u16 ADDR, u8 VALUE);

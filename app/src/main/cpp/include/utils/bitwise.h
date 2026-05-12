@@ -18,15 +18,20 @@
 #define BIT(a, n) ((a & (1 << n)) ? 1 : 0)
 
 /**
- * @brief Sets or clears the n-th bit of a.
- *
- * Modifies the value directly depending on `on`.
+ * @brief Sets the n-th bit of a.
  *
  * @param a Value whose bit will be modified.
  * @param n Bit index (starting from 0).
- * @param on If true the bit is set, otherwise it is cleared.
 */
-#define BIT_SET(a, n, on) { if (on) a |= (1 << n); else a &= ~(1 << n); }
+#define BIT_SET(a, n)   ((a) |=  (1U << (n)))
+
+/**
+ * @brief Clears the n-th bit of a.
+ *
+ * @param a Value whose bit will be modified.
+ * @param n Bit index (starting from 0).
+*/
+#define BIT_RESET(a, n) ((a) &= ~(1U << (n)))
 
 /**
  * @brief Checks whether a value lies within a closed interval.

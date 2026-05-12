@@ -1,3 +1,5 @@
+#include "utils/logger.h"
+#include <debug.h>
 #include <ppu/internal.h>
 #include <cartridge/cartridge.h>
 #include <ram.h>
@@ -26,6 +28,13 @@ void busWrite16(u16 ADDRESS, u16 VALUE)
 
 u8 busReadRaw(u16 ADDRESS) 
 {
+  // - - - 1. Serial
+  #ifdef DEBUG
+    if (ADDRESS == 0xFF01 || ADDRESS == 0xFF02)
+    {
+      return serialRead(ADDRESS);
+    }
+  #endif
 
   // - - - 2. ROM Range (0x0000 - 0x7FFF)
   if (ADDRESS <= BUS_ADDR_ROM_END) 
@@ -59,8 +68,10 @@ u8 busReadRaw(u16 ADDRESS)
   if (ADDRESS >= BUS_ADDR_IO_START && ADDRESS <= BUS_ADDR_IO_END) 
   {
     // - - - Joypad 
-    if (ADDRESS == 0xFF00)  return OPEN_BUS_VALUE;
-//ODO_COMMENT("Implement joypad input handling");
+    if (ADDRESS == 0xFF00) 
+    { return OPEN_BUS_VALUE;
+      // TODO_COMMENT("Implement joypad input handling");
+    }
 
     // - - - Timer Registers (0xFF04 - 0xFF07)
     if (ADDRESS >= DIV_REGISTER_ADDRESS && ADDRESS <= TAC_REGISTER_ADDRESS) 
@@ -102,6 +113,13 @@ u8 busRead(u16 ADDRESS)
 
 void busWrite(u16 ADDRESS, u8 VALUE) 
 {
+  #ifdef DEBUG
+    if (ADDRESS == 0xFF01 || ADDRESS == 0xFF02)
+    {
+      serialWrite(ADDRESS, VALUE);
+      return;
+    }
+  #endif
   // - - - 1. OAM DMA Lockout
   if (dmaIsActive()) 
   {

@@ -20,26 +20,31 @@ void timerInit(void)
 
 void timerStepMCycle(void) 
 {
-  u16 prevCounter = ctx.internalCounter;
-  ctx.internalCounter++;
-
-  // - - - Timer logic depends on TAC bit 2 (Timer Enable)
-  bool timerEnabled = (ctx.tac & 0x04) != 0;
-    
-  if (timerEnabled) 
+  // - - - In Game Boy, the internal counter increments every T-cycle (4MHz).
+  for (u8 i = 0; i < 4; i++) 
   {
-    u16 mask = BIT_SELECT_MASK[ctx.tac & 0x03];
-        
-    // - - - Falling Edge Detection: If the selected bit was 1 and is now 0, increment TIMA.
-    if ((prevCounter & mask) && !(ctx.internalCounter & mask)) 
+    u16 prevCounter = ctx.internalCounter;
+    ctx.internalCounter++;
+
+    u16  mask         = BIT_SELECT_MASK[ctx.tac & 0x03];
+    bool timerEnabled = (ctx.tac & 0x04) != 0;
+
+    // - - - The condition for the timer to "tick" TIMA
+    bool bitSetPrev = (timerEnabled && (prevCounter & mask));
+    bool bitSetCurr = (timerEnabled && (ctx.internalCounter & mask));
+
+    // - --  Falling edge detection
+    if (bitSetPrev && !bitSetCurr) 
     {
       ctx.tima++;
 
+      // - - - Overflow 
       if (ctx.tima == 0) 
-      { 
-        // - - - Overflow
-        ctx.tima = ctx.tma;                 // - - - Reset to modulo
-        cpuRequestInterrupt(CPU_INT_TIMER); // - - - Request Interrupt (Bit 2)
+      {
+        // - - - Note: Hardware actually has a 1-M-cycle delay before 
+        // - - - TIMA is loaded with TMA and the interrupt is fired.
+        ctx.tima = ctx.tma;
+        cpuRequestInterrupt(CPU_INT_TIMER);
       }
     }
   }
@@ -61,6 +66,10 @@ u8 timerRead(u16 ADDRESS)
 
 void timerWrite(u16 ADDRESS, u8 VALUE) 
 {
+  bool timerEnabled = (ctx.tac & 0x04) != 0;
+  u16  mask         = BIT_SELECT_MASK[ctx.tac & 0x03];
+  bool bitSetPrev   = timerEnabled && (ctx.internalCounter & mask);
+
   switch (ADDRESS) 
   {
     // - - - Any write to DIV resets the entire 16-bit counter to 0.
@@ -68,5 +77,20 @@ void timerWrite(u16 ADDRESS, u8 VALUE)
     case TIMA_REGISTER_ADDRESS: ctx.tima            = VALUE; break;
     case TMA_REGISTER_ADDRESS : ctx.tma             = VALUE; break;
     case TAC_REGISTER_ADDRESS : ctx.tac             = VALUE; break;
+  }
+
+  // - - - Check if the write caused a falling edge
+  bool  timerEnabledNow = (ctx.tac & 0x04) != 0;
+  u16   maskNow         = BIT_SELECT_MASK[ctx.tac & 0x03];
+  bool  bitSetNow       = timerEnabledNow && (ctx.internalCounter & maskNow);
+
+  if (bitSetPrev && !bitSetNow) 
+  {
+    ctx.tima++;
+    if (ctx.tima == 0) 
+    {
+      ctx.tima = ctx.tma;
+      cpuRequestInterrupt(CPU_INT_TIMER);
+    }
   }
 }

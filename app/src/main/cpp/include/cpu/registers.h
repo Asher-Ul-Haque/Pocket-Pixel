@@ -12,6 +12,7 @@
  * - This header intentionally does not include cpu.h to avoid circular deps.
  */
 
+#include <cpu/instruction.h>
 #include <common.h>
 /**
  * @brief CPU architectural register file.
@@ -60,6 +61,10 @@ typedef struct RegisterFile
 // - - - Mask for all valid flag bits.
 #define CPU_FLAG_VALID_MASK (0xF0u)
 
+#define FLAG_Z (1 << 7) // Zero Flag
+#define FLAG_N (1 << 6) // Subtract Flag (N)
+#define FLAG_H (1 << 5) // Half-Carry Flag (H)
+#define FLAG_C (1 << 4) // Carry Flag (C)
 
 // - - - 16-bit pack/unpack helpers - - - 
 
@@ -107,3 +112,11 @@ static inline void cpuSetC(RegisterFile* REGISTERS, bool ON) { cpuFlagSet(REGIST
 /// @brief Clear all flags (sets F=0).
 static inline void cpuClearFlags(RegisterFile* REGISTER_FILE)
 { REGISTER_FILE->f = 0; }
+
+
+// - - - 8 bit helpers 
+u8   cpuGetReg8(RegType REGISTER);
+void cpuSetReg8(RegType REGISTER, u8 VAL);
+
+u16   cpuGetReg16(RegType REGISTER);
+void  cpuSetReg16(RegType REGISTER, u16 VAL);

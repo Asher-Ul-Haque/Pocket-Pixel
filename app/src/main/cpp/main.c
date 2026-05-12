@@ -111,77 +111,19 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[])
     return 1;
   }
 
-  platformInit();
-  ppuInit();
-  dmaInit();
   cpuInit();
   timerInit();
 
 
   FORGE_LOG_INFO("%s", "--- POCKET PIXEL STARTING ---");
   bool running = true;
-  SDL_Event event;
-
-  CpuContext* cpu = cpuGetContext();
 
   while (running) 
   {
-    u16 pcAtStart = cpu->registers.programCounter;
-
-    while (SDL_PollEvent(&event)) 
-    {
-      if (event.type == SDL_EVENT_QUIT) 
-      {
-        running = false;
-        break;
-      }
-      // Handle debug key presses
-      if (event.type == SDL_EVENT_KEY_DOWN)
-      {
-        switch (event.key.key)
-        {
-          case SDLK_G:  // G = Grid toggle
-            debugToggleTileGrid();
-            FORGE_LOG_INFO("Tile grid debug: %s", debugIsTileGridEnabled() ? "ON" : "OFF");
-            break;
-          case SDLK_S:  // S = Sprites toggle
-            debugToggleSprites();
-            FORGE_LOG_INFO("Sprite debug: %s", debugIsSpritesEnabled() ? "ON" : "OFF");
-            break;
-          case SDLK_W:  // W = Window toggle
-            debugToggleWindow();
-            FORGE_LOG_INFO("Window debug: %s", debugIsWindowEnabled() ? "ON" : "OFF");
-            break;
-          default:
-            break;
-        }
-      }
-    }
-    
-    if (cpu->mCycleInInstr == 1 && cpu->state != CPU_STATE_FETCH) 
-    {
-      char debugInfo[256];
-      cpuTraceLineToString(pcAtStart, debugInfo, sizeof(debugInfo));
-      FORGE_LOG_DEBUG("%s", debugInfo);
-    }
-
-    // - - - B. Tick Components
-    cpuStepMCycle();
-    dmaStepMCycle();
+    cpuTick();
     timerStepMCycle();
-    ppuStepMCycle();
     
-    PpuContext* ppu = ppuGetContext();
-    static u8 last_ly = 0;
-        
-    // Trigger on the transition to V-Blank
-    if (ppu->ly == 144 && last_ly == 143) 
-    {
-      // Apply debug overlays before rendering
-      debugApplyOverlays(ppu->frameBuffer);
-      platformGetContext()->rendering.renderFrame(ppu->frameBuffer, 160, 144);
-    }
-    last_ly = ppu->ly;
+    // Optional: Only wait for input after a full instruction finishes
   }
   free(romData);
   return 0;

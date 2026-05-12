@@ -24,14 +24,15 @@ typedef enum CpuInterrupt
   CPU_INT_TIMER  = 2,
   CPU_INT_SERIAL = 3,
   CPU_INT_JOYPAD = 4,
+  CPUT_INT_NONE  = 0xFF
 } CpuInterrupt;
 
 // - - - Interrupt vectors
-#define CPU_INT_VEC_VBLANK (0x0040u)
-#define CPU_INT_VEC_LCD    (0x0048u)
-#define CPU_INT_VEC_TIMER  (0x0050u)
-#define CPU_INT_VEC_SERIAL (0x0058u)
-#define CPU_INT_VEC_JOYPAD (0x0060u)
+#define CPU_INT_VEC_VBLANK (0x40u)
+#define CPU_INT_VEC_LCD    (0x48u)
+#define CPU_INT_VEC_TIMER  (0x50u)
+#define CPU_INT_VEC_SERIAL (0x58u)
+#define CPU_INT_VEC_JOYPAD (0x60u)
 
 typedef struct InterruptContext
 {
@@ -49,13 +50,13 @@ InterruptContext* cpuInterruptGetContext(void);
  * - deciding whether HALT should wake
  * - deciding whether CPU should enter interrupt sequence when IME=1
 */
-bool cpuInterruptAnyPending(void);
+bool cpuInterruptPending(void);
 
 /**
  * @brief Returns the highest-priority pending interrupt bit (0..4), and true if found.
  * Priority: VBLANK, LCD, TIMER, SERIAL, JOYPAD.
 */
-bool cpuInterruptGetPending(CpuInterrupt* OUT_INT);
+CpuInterrupt cpuInterruptGetHighest(void);
 
 /**
  * @brief Acknowledge/clear a specific interrupt request bit in IF.
@@ -71,20 +72,6 @@ void cpuRequestInterrupt(CpuInterrupt INT);
 
 /// @brief Convert interrupt to vector address.
 u16 cpuInterruptVector(CpuInterrupt INT);
-
-/**
- * @brief Step the interrupt entry micro-sequence by one M-cycle.
- *
- * Expected sequence (DMG/CGB SM83 style):
- * - internal cycles
- * - push PC (hi then lo) to stack (one bus write per M-cycle)
- * - clear IF bit for chosen interrupt
- * - set PC to vector
- * - IME cleared
- *
- * This function is called when ctx->state == CPU_STATE_INTERRUPT_ENTRY.
-*/
-void cpuInterruptEntryStep(void);
 
 /**
  * @brief Read the interrupt flag or enable register (IE or IF) via the BUS's perspective.
