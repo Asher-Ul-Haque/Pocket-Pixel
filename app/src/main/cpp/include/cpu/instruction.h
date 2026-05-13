@@ -232,8 +232,8 @@ typedef enum Opcode
   OP_LOAD_HL_8_BIT_IMM = 0x36,
 
   // - - - store to and from A 
-  OP_LOAD_A_BC = 0x02,
-  OP_LOAD_BC_A = 0x0A,
+  OP_LOAD_BC_A = 0x02,
+  OP_LOAD_A_BC = 0x0A,
   OP_LOAD_DE_A = 0x12,
   OP_LOAD_A_DE = 0x1A,
 

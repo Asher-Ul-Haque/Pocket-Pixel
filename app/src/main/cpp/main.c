@@ -113,6 +113,9 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[])
 
   cpuInit();
   timerInit();
+  ppuInit();
+  dmaInit();
+  serialInit();
 
 
   FORGE_LOG_INFO("%s", "--- POCKET PIXEL STARTING ---");
@@ -120,8 +123,12 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[])
 
   while (running) 
   {
+    // - - - Core timing contract: one cpuTick() is one CPU M-cycle.
+    // - - - Step all M-cycle-coupled peripherals exactly once per tick.
     cpuTick();
     timerStepMCycle();
+    dmaStepMCycle();
+    ppuStepMCycle();
     
     // Optional: Only wait for input after a full instruction finishes
   }

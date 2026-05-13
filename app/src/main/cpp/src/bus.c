@@ -29,12 +29,10 @@ void busWrite16(u16 ADDRESS, u16 VALUE)
 u8 busReadRaw(u16 ADDRESS) 
 {
   // - - - 1. Serial
-  #ifdef DEBUG
-    if (ADDRESS == 0xFF01 || ADDRESS == 0xFF02)
-    {
-      return serialRead(ADDRESS);
-    }
-  #endif
+  if (ADDRESS == 0xFF01 || ADDRESS == 0xFF02)
+  {
+    return serialRead(ADDRESS);
+  }
 
   // - - - 2. ROM Range (0x0000 - 0x7FFF)
   if (ADDRESS <= BUS_ADDR_ROM_END) 
@@ -113,13 +111,11 @@ u8 busRead(u16 ADDRESS)
 
 void busWrite(u16 ADDRESS, u8 VALUE) 
 {
-  #ifdef DEBUG
-    if (ADDRESS == 0xFF01 || ADDRESS == 0xFF02)
-    {
-      serialWrite(ADDRESS, VALUE);
-      return;
-    }
-  #endif
+  if (ADDRESS == 0xFF01 || ADDRESS == 0xFF02)
+  {
+    serialWrite(ADDRESS, VALUE);
+    return;
+  }
   // - - - 1. OAM DMA Lockout
   if (dmaIsActive()) 
   {

@@ -203,14 +203,14 @@ ExecStatus instrCallConditional16BitImm(void)
   }
 
   // - - - M3: Alwys read MSB of target address 
-  if (ctx->mCycle == M2)
+  if (ctx->mCycle == M3)
   {
     u8 lsb = ctx->latchedVal8;
     u8 msb = busRead(ctx->registers.programCounter++);
     ctx->latchedAddr16 = (u16) ((msb << 8) | lsb);
 
     // - - - Check condition, if false, done in 3 cycles 
-    if (!cpuCheckCondition(instr->opcode)) return true;
+    if (!cpuCheckCondition(instr->opcode)) return EXEC_STATUS_DONE;
 
     return EXEC_STATUS_CONTINUE;
   }

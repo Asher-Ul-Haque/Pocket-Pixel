@@ -76,7 +76,7 @@ ExecStatus instrCbSraReg(void)
     u8 bit7 = BIT(val, 7);
 
     // - - - Shift right and mask / OR to ensure bit 7 stays the same 
-    u8 result = (val >> 1) | bit7;
+    u8 result = (val >> 1) | (bit7 << 7);
 
     cpuSetReg8(instr->reg1, result);
 
@@ -112,7 +112,7 @@ ExecStatus instrCbSraHL(void)
     u8 bit0 = BIT(data, 0);
     u8 bit7 = BIT(data, 7);
 
-    u8 result = (data >> 1) | bit7;
+    u8 result = (data >> 1) | (bit7 << 7);
 
     busWrite(addr, result);
 

@@ -205,7 +205,8 @@ ExecStatus instrSbcReg(void)
   AluResult8 res    = aluSub8(ctx->registers.a, valR, bIn);
   ctx->registers.a  = res.result;
 
-  // - - - Flags: Z, H, C depend on result; N is always set 
+  // - - - Flags: rebuild from scratch for SBC (N=1)
+  ctx->registers.f = FLAG_N;
   if (res.zero)       ctx->registers.f |= FLAG_Z;
   if (res.halfCarry)  ctx->registers.f |= FLAG_H;
   if (res.carry)      ctx->registers.f |= FLAG_C;
@@ -437,44 +438,36 @@ ExecStatus instrScf(void)
 
 ExecStatus instrDaa(void)
 {
-  CpuContext* ctx         = cpuGetContext();
-  u8          accumulator = ctx->registers.a;
-  u8          adj         = 0;
-  bool        setCarry    = false;
+  CpuContext* ctx      = cpuGetContext();
+  u8          a        = ctx->registers.a;
+  u8          adjust   = 0;
+  bool        isSub    = (ctx->registers.f & FLAG_N) != 0;
+  bool        halfIn   = (ctx->registers.f & FLAG_H) != 0;
+  bool        carryOut = (ctx->registers.f & FLAG_C) != 0;
 
-  // - - - if  the last operation was NOT  a subtraction 
-  if (!(ctx->registers.f & FLAG_N))
+  if (!isSub)
   {
-    // - - - - if lower nibble > 9 or Half carry was set, adjust the lower nibble 
-    if ((ctx->registers.f & FLAG_H) || (accumulator & 0x0F) > 0x09)
-    { adj |= 0x06; }
-
-    // - - - if upper nibble > 9 or Carry was set, adjust upper nibble 
-    if ((ctx->registers.f & FLAG_C) || accumulator > 0x99)
+    if (halfIn || (a & 0x0F) > 0x09) adjust |= 0x06;
+    if (carryOut || a > 0x99)
     {
-      adj       |= 0x60;
-      setCarry   = true;
+      adjust   |= 0x60;
+      carryOut = true;
     }
-
-    ctx->registers.a += adj;
+    a += adjust;
+  }
+  else
+  {
+    if (halfIn)   adjust |= 0x06;
+    if (carryOut) adjust |= 0x60;
+    a -= adjust;
   }
 
-  // - - - If the last operation WAS  a subtraction 
-  else 
-  {
-    if (ctx->registers.f & FLAG_H) adj |= 0x06;
-    if (ctx->registers.f & FLAG_C) 
-    {
-      adj      |= 0x60;
-      setCarry  = true;
-    }
-    ctx->registers.a -= adj;
-  }
+  ctx->registers.a = a;
 
-  // - - - Update flags 
-  ctx->registers.f &= ~(FLAG_H | FLAG_Z);
-  if (setCarry)               ctx->registers.f |= FLAG_C;
-  if (ctx->registers.a == 0)  ctx->registers.f |= FLAG_Z;
+  // - - - DAA: N preserved, H cleared, Z from final A, C explicit.
+  ctx->registers.f &= FLAG_N;
+  if (ctx->registers.a == 0) ctx->registers.f |= FLAG_Z;
+  if (carryOut)              ctx->registers.f |= FLAG_C;
 
   return EXEC_STATUS_DONE_IMMEDIATE;
 }

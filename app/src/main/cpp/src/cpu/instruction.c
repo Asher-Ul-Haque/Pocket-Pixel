@@ -319,10 +319,10 @@ static Instruction opTable[INSTRUCTION_COUNT] =
 
     // - - - Return 
     [OP_RETURN]           = { .handler = instrReturn,                  .mode = AM_IMPLIED, .opcode = OP_RETURN,           .flags = FLAGPACK_MAKE(FB_KEEP, FB_KEEP, FB_KEEP, FB_KEEP) },
-    [OP_RETURN_NZ]        = { .handler = instrCallConditional16BitImm, .mode = AM_IMPLIED, .opcode = OP_RETURN_NZ,        .flags = FLAGPACK_MAKE(FB_KEEP, FB_KEEP, FB_KEEP, FB_KEEP) },
-    [OP_RETURN_Z]         = { .handler = instrCallConditional16BitImm, .mode = AM_IMPLIED, .opcode = OP_RETURN_Z,         .flags = FLAGPACK_MAKE(FB_KEEP, FB_KEEP, FB_KEEP, FB_KEEP) },
-    [OP_RETURN_NC]        = { .handler = instrCallConditional16BitImm, .mode = AM_IMPLIED, .opcode = OP_RETURN_NC,        .flags = FLAGPACK_MAKE(FB_KEEP, FB_KEEP, FB_KEEP, FB_KEEP) },
-    [OP_RETURN_C]         = { .handler = instrCallConditional16BitImm, .mode = AM_IMPLIED, .opcode = OP_RETURN_C,         .flags = FLAGPACK_MAKE(FB_KEEP, FB_KEEP, FB_KEEP, FB_KEEP) },
+    [OP_RETURN_NZ]        = { .handler = instrReturnConditional,       .mode = AM_IMPLIED, .opcode = OP_RETURN_NZ,        .flags = FLAGPACK_MAKE(FB_KEEP, FB_KEEP, FB_KEEP, FB_KEEP) },
+    [OP_RETURN_Z]         = { .handler = instrReturnConditional,       .mode = AM_IMPLIED, .opcode = OP_RETURN_Z,         .flags = FLAGPACK_MAKE(FB_KEEP, FB_KEEP, FB_KEEP, FB_KEEP) },
+    [OP_RETURN_NC]        = { .handler = instrReturnConditional,       .mode = AM_IMPLIED, .opcode = OP_RETURN_NC,        .flags = FLAGPACK_MAKE(FB_KEEP, FB_KEEP, FB_KEEP, FB_KEEP) },
+    [OP_RETURN_C]         = { .handler = instrReturnConditional,       .mode = AM_IMPLIED, .opcode = OP_RETURN_C,         .flags = FLAGPACK_MAKE(FB_KEEP, FB_KEEP, FB_KEEP, FB_KEEP) },
     [OP_RETURN_INTERRUPT] = { .handler = instrReturnInterrupt,         .mode = AM_IMPLIED, .opcode = OP_RETURN_INTERRUPT, .flags = FLAGPACK_MAKE(FB_KEEP, FB_KEEP, FB_KEEP, FB_KEEP) },
 
     [OP_RESTART_00] = { .handler = instrRestart, .mode = AM_IMPLIED, .opcode = OP_RESTART_00, .param = 0x00, .flags = FLAGPACK_MAKE(FB_KEEP, FB_KEEP, FB_KEEP, FB_KEEP) },

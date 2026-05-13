@@ -17,6 +17,8 @@ typedef struct TimerContext
   u8  tima;              /// Timer Counter (0xFF05)                       
   u8  tma;               /// Timer Modulo (0xFF06)                    
   u8  tac;               /// Timer Control (0xFF07) 
+  u8  timaReloadDelay;   /// T-cycles until TIMA reload after overflow
+  bool timaReloadPending;
 } TimerContext;
 
 TimerContext* timerGetContext(void);
