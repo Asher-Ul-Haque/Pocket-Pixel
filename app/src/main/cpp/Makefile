@@ -36,7 +36,7 @@ MAIN_OBJ := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(MAIN_SRC))
 MAIN_OBJ := $(patsubst %.c,$(BUILD_DIR)/%.o,$(MAIN_OBJ))
 
 # - - - Application sources (excluding main)
-SRC_FILES_C    := $(shell find $(SRC_DIR) -name "*.c")
+SRC_FILES_C    := $(shell find $(SRC_DIR) -name "*.c" ! -path "$(SRC_DIR)/cpu/ops/instruction.c")
 SRC_FILES_CPP  := $(shell find $(SRC_DIR) -name "*.cpp")
 OBJ_FILES_C    := $(patsubst $(SRC_DIR)/%.c,  $(BUILD_DIR)/%.o, $(SRC_FILES_C))
 OBJ_FILES_CPP  := $(patsubst $(SRC_DIR)/%.cpp,$(BUILD_DIR)/%.o, $(SRC_FILES_CPP))
