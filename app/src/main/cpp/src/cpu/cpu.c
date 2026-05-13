@@ -77,8 +77,8 @@ static bool handleInterruptServiceRoutine(void)
       return false;
 
     case M5: // - - - M5: Set PC to vector and finish
-      ctx.registers.programCounter = cpuInterruptGetHighest();
       cpuInterruptAcknowledge(ctx.servicingInt);
+      ctx.registers.programCounter = cpuInterruptVector(ctx.servicingInt);
       ctx.ime = false;
       return true;
 
@@ -106,6 +106,7 @@ void cpuTick(void)
     if (ctx->ime && cpuInterruptPending())
     {
       ctx->servicingInt = cpuInterruptGetHighest();
+      ctx->ime          = false;
       ctx->mCycle       = M2;
     }
     
@@ -125,6 +126,13 @@ void cpuTick(void)
   {
     bool isrFinished = handleInterruptServiceRoutine();
     status = isrFinished ? EXEC_STATUS_DONE : EXEC_STATUS_CONTINUE;
+
+    if (status == EXEC_STATUS_DONE)
+    {
+      ctx->servicingInt = CPUT_INT_NONE;
+      ctx->mCycle       = M1;
+    }
+    else ctx->mCycle++;
   }
 
   else if (ctx->mCycle == M1)
@@ -137,15 +145,21 @@ void cpuTick(void)
     if (!ctx->haltBug)  ctx->registers.programCounter++;
     else                ctx->haltBug = false;
 
-    // - - - Handle CB bug
+    /**
+     * CB contract:
+     * M1 fetches 0xCB prefix only 
+     * M2 fetches / dispatches the CB opcode and runs first handler stage
+    */
     if (!ctx->isCB && opcodeByte == OP_CB_PREFIX)
     {
-      ctx->isCB = true;
+      ctx->isCB               = true;
+      ctx->currentInstruction = NULL;
+      ctx->mCycle             = M2;
       ctx->totalMCycles++;
       return;
     }
 
-    ctx->currentOpcode = ctx->isCB ? (opcodeByte + CB_OFFSET) : opcodeByte;
+    ctx->currentOpcode = opcodeByte;
 
     // - - - Lookup metadata
     ctx->currentInstruction = ctx->isCB ? 
@@ -165,18 +179,28 @@ void cpuTick(void)
     {
       ctx->mCycle = M2;
     }
-  
   }
 
   // - - - Multicycle execution phase 
   else 
   {
-    status = ctx->currentInstruction->handler();
+    // - - - CB second byte fetch and first execution stage
+    // - - - BUG: You might be wondering why stay in M2, reason being that I made CB handlers to expect M2, and I can either change every single one of them, or I can just stay in M2 here.
+
+    if (ctx->isCB && ctx->currentInstruction == NULL && ctx->mCycle == M2)
+    {
+      u8 cbOpcode             = busRead(ctx->registers.programCounter++);
+      ctx->currentOpcode      = (Opcode) (cbOpcode + CB_OFFSET);
+      ctx->currentInstruction = instructionGetByCBOpcode(ctx->currentOpcode);
+      status                  = ctx->currentInstruction->handler();
+    }
+    else status = ctx->currentInstruction->handler();
 
     if (status == EXEC_STATUS_DONE)
     {
-      ctx->mCycle = M1;
-      ctx->isCB   = false;
+      ctx->mCycle             = M1;
+      ctx->isCB               = false;
+      ctx->currentInstruction = NULL;
     }
     else ctx->mCycle++;
   }

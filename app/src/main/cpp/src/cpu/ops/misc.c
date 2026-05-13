@@ -15,7 +15,7 @@ ExecStatus instrEnableInterrupt(void)
 {
   CpuContext* ctx = cpuGetContext();
   ctx->imeDelay   = true;
-  return EXEC_STATUS_DONE;
+  return EXEC_STATUS_DONE_IMMEDIATE;
 }
 
 ExecStatus instrNop(void) { return EXEC_STATUS_DONE_IMMEDIATE; }

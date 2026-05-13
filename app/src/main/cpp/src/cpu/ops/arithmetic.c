@@ -206,6 +206,7 @@ ExecStatus instrSbcReg(void)
   ctx->registers.a  = res.result;
 
   // - - - Flags: Z, H, C depend on result; N is always set 
+  ctx->registers.f = FLAG_N;
   if (res.zero)       ctx->registers.f |= FLAG_Z;
   if (res.halfCarry)  ctx->registers.f |= FLAG_H;
   if (res.carry)      ctx->registers.f |= FLAG_C;
@@ -440,41 +441,35 @@ ExecStatus instrDaa(void)
   CpuContext* ctx         = cpuGetContext();
   u8          accumulator = ctx->registers.a;
   u8          adj         = 0;
-  bool        setCarry    = false;
+
+  bool isSub    = (ctx->registers.f & FLAG_N) != 0;
+  bool halfIn   = (ctx->registers.f & FLAG_H) != 0;
+  bool carryOut = (ctx->registers.f & FLAG_C) != 0;
 
   // - - - if  the last operation was NOT  a subtraction 
-  if (!(ctx->registers.f & FLAG_N))
+  if (!isSub)
   {
-    // - - - - if lower nibble > 9 or Half carry was set, adjust the lower nibble 
-    if ((ctx->registers.f & FLAG_H) || (accumulator & 0x0F) > 0x09)
-    { adj |= 0x06; }
-
-    // - - - if upper nibble > 9 or Carry was set, adjust upper nibble 
-    if ((ctx->registers.f & FLAG_C) || accumulator > 0x99)
+    if (halfIn || (accumulator & 0x0F) > 0x09) adj |= 0x06;
+    if (carryOut || accumulator > 0x99)
     {
       adj       |= 0x60;
-      setCarry   = true;
+      carryOut   = true;
     }
-
-    ctx->registers.a += adj;
+    accumulator += adj;
   }
-
-  // - - - If the last operation WAS  a subtraction 
   else 
   {
-    if (ctx->registers.f & FLAG_H) adj |= 0x06;
-    if (ctx->registers.f & FLAG_C) 
-    {
-      adj      |= 0x60;
-      setCarry  = true;
-    }
-    ctx->registers.a -= adj;
+    if (halfIn)   adj |= 0x06;
+    if (carryOut) adj |= 0x60;
+    accumulator -= adj;
   }
 
-  // - - - Update flags 
-  ctx->registers.f &= ~(FLAG_H | FLAG_Z);
-  if (setCarry)               ctx->registers.f |= FLAG_C;
+  ctx->registers.a = accumulator;
+
+  // - - - DAA: N preserved, H cleared, Z from final A, C explicit 
+  ctx->registers.f &= FLAG_N;
   if (ctx->registers.a == 0)  ctx->registers.f |= FLAG_Z;
+  if (carryOut)               ctx->registers.f |= FLAG_C;
 
   return EXEC_STATUS_DONE_IMMEDIATE;
 }
@@ -574,6 +569,7 @@ ExecStatus instrAddSpE8(void)
     if (res.halfCarry)  ctx->registers.f |= FLAG_H;
     if (res.carry)      ctx->registers.f |= FLAG_C;
 
+    ctx->registers.stackPointer = res.result;
     return EXEC_STATUS_DONE;
   }
 

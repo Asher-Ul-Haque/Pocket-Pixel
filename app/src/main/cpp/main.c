@@ -113,6 +113,7 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[])
 
   cpuInit();
   timerInit();
+  serialInit();
 
 
   FORGE_LOG_INFO("%s", "--- POCKET PIXEL STARTING ---");

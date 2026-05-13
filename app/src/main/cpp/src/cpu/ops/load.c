@@ -75,7 +75,7 @@ ExecStatus instrLoadHL8bitImm(void)
   if (ctx->mCycle == M2)
   {
     ctx->latchedVal8 = busRead(ctx->registers.programCounter++);
-    return EXEC_STATUS_DONE;
+    return EXEC_STATUS_CONTINUE;
   }
 
   // - - - M3: Write the latched byte to [HL] 
@@ -236,11 +236,11 @@ ExecStatus instrLoadHigh8BitImmA(void)
     return EXEC_STATUS_CONTINUE;
   }
 
-  // - - - M3: Address Bus = 0xFF00 + Z, Data bus = A <= mem 
+  // - - - M3: Address Bus = 0xFF00 + Z, Data bus = mem <= A
   if (ctx->mCycle == M3)
   {
     u16 addr = 0xFF00 | ctx->latchedVal8;
-    ctx->registers.a = busRead(addr);
+    busWrite(addr, ctx->registers.a);
     return EXEC_STATUS_DONE;
   }
 

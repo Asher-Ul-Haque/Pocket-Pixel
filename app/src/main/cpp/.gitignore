@@ -3,7 +3,8 @@
 *.docs/
 
 # Test Roms
-*testRoms/
+testRoms/PokeCrystal.gbc
+testRoms/SuperMarioLand.gb
 
 # Build
 /build/

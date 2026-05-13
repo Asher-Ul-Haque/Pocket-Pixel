@@ -42,7 +42,7 @@ ExecStatus instrCbBitHL(void)
     u8    testBit = instr->param;
     bool  isSet   = BIT(val, testBit);
 
-    if (isSet) ctx->registers.f |= FLAG_Z;
+    if (!isSet) ctx->registers.f |= FLAG_Z;
 
     return EXEC_STATUS_DONE;
   }
