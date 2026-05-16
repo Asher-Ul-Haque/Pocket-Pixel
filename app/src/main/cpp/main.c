@@ -6,12 +6,18 @@
 #include <platform.h>
 #include <cpu/cpu.h>
 #include <ppu/ppu.h>
-#include <ppu/dma.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <common.h>
+#include <timer.h>
+#include <platform.h>
+#include <cpu/cpu.h>
+#include <ppu/ppu.h>
 #include <cartridge/cartridge.h>
 #include <utils/logger.h>
 #include <debug.h>
 #include <SDL3/SDL.h>
-
 
 // - - - Static Platform Helpers - - -
 
@@ -64,6 +70,7 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[])
   }
 
   const char* romPath = ARGUMENT_VECTOR[1];
+  FORGE_LOG_DEBUG("Attempting to open ROM: %s", romPath);
 
   // - - - 1. Read ROM file into memory
   FILE* f = fopen(romPath, "rb");
@@ -76,6 +83,7 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[])
   fseek(f, 0, SEEK_END);
   u64 romSize = ftell(f);
   fseek(f, 0, SEEK_SET);
+  FORGE_LOG_DEBUG("ROM size calculated: %llu bytes", romSize);
 
   u8* romData = (u8*)malloc(romSize);
   if (!romData) 
@@ -93,6 +101,7 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[])
     return 1;
   }
   fclose(f);
+  FORGE_LOG_DEBUG("%s", "ROM read successfully.");
 
   snprintf(savePath, sizeof(savePath), "%s.sav", romPath);
 
@@ -104,6 +113,7 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[])
   };
 
   // - - - 2. Initialize Core Components
+  FORGE_LOG_DEBUG("%s", "Initializing Cartridge structure...");
   if (!cartridgeInit(&fileIO, romData, (u32)romSize)) 
   {
     FORGE_LOG_FATAL("%s", "Failed to initialize cartridge");
@@ -111,21 +121,51 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[])
     return 1;
   }
 
+  FORGE_LOG_DEBUG("%s", "Initializing Platform Harness...");
+  platformInit();
+
+  FORGE_LOG_DEBUG("%s", "Initializing Subsystems...");
   cpuInit();
+  ppuInit();
   timerInit();
   serialInit();
 
-
   FORGE_LOG_INFO("%s", "--- POCKET PIXEL STARTING ---");
   bool running = true;
+  PlatformContext* platform = platformGetContext();
+  PpuContext* ppu = ppuGetContext();
 
+  FORGE_LOG_DEBUG("%s", "Entering main execution loop...");
   while (running) 
   {
-    cpuTick();
-    timerStepMCycle();
-    
-    // Optional: Only wait for input after a full instruction finishes
+    for (u32 frame_cycles = 0; frame_cycles < 70224; ) 
+    {
+      cpuTick(); 
+      timerStepMCycle();
+      ppuTick(4); 
+      frame_cycles += 4;
+    }
+
+    SDL_Event event;
+    while (SDL_PollEvent(&event)) 
+    {
+      if (event.type == SDL_EVENT_QUIT) 
+      {
+        running = false;
+      }
+    }
+
+    // Protection guards for debug rendering pointers
+    if (platform && ppu) 
+    {
+      platform->rendering.drawTileView(ppu->vram[0], ppu->vram[1]);
+      platform->rendering.drawMapView(ppu->vram[0], ppu->vram[1], 0);
+      platform->rendering.present();
+    }
   }
+
+  FORGE_LOG_DEBUG("%s", "Shutting down harness...");
+  platform->rendering.cleanup();
   free(romData);
   return 0;
 }

@@ -1,152 +1,163 @@
+#include "bus.h"
+#include "platform.h"
 #include <ppu/ppu.h>
-#include <ppu/internal.h>
-#include <ppu/oam.h>
-#include <ppu/dma.h>
-#include <ppu/ppuRegisters.h>
-#include <cpu/interrupts.h>
-
-/**
- * @file ppu.c
- * @brief Main PPU logic, including mode transitions, LY/LYC handling, and interrupt triggering.
- * This file orchestrates the overall PPU behavior and timing, coordinating the fetcher, OAM search, and pixel pushing to the screen.
- * It also handles the critical timing of mode transitions and the triggering of STAT interrupts based on LY/LYC comparisons and mode changes.
-*/
+#include <cartridge/cartridge.h>
+#include <string.h>
 
 static PpuContext ctx;
+static u8         frameCounter = 0;
+
 PpuContext* ppuGetContext(void) { return &ctx; }
 
 void ppuInit(void)
 {
-  memset(&ctx, 0, sizeof(ctx));
+  memset(&ctx, 0, sizeof(PpuContext));
+  ctx.mode = PPU_MODE_OAM_SCAN;
 
-  // - - - Hardware defaults
-  ctx.lcdc = DEFAULT_LCDC;
-  ctx.stat = DEFAULT_STAT;
-  STAT_SET_MODE(&ctx, PPU_MODE_OAM);
+  // - - - default hardware register values on bootup 
+  ctx.registers.lcdc = 0x91;
+  ctx.registers.stat = 0x85;
+  ctx.registers.bgp  = 0xFC;
+  ctx.registers.obp0 = 0xFF;
+  ctx.registers.obp1 = 0xFF;
 }
 
-static void handleModeTransitions(void)
+u8 ppuRead(u16 ADDRESS)
 {
-  PpuMode currentMode = STAT_GET_MODE(&ctx);
-
-  switch (currentMode)
+  // - - - 1. VRAM Reading 
+  if (ADDRESS >= 0x8000 && ADDRESS <= 0x9FFF)
   {
-    case PPU_MODE_OAM:
-      {
-        // - - - Mode 2 always takes 80 cycles
-        if (ctx.dotClock >= T_CYCLES_MODE_2)
-        {
-          STAT_SET_MODE(&ctx, PPU_MODE_DRAW);
+    return ctx.vram[0][ADDRESS - 0x8000];
+  }
 
-          // - - - Reset pipeline for Mode 3
-          ctx.pixelsPushed      = 0;
-          ctx.windowTriggered   = false;
-          ctx.fetcher.state     = FETCH_GET_TILE;
-          ctx.fetcher.xOffset   = 0;
-          ctx.bgFifo.size       = 0;
-          ctx.scrollXFifoAdj    = ctx.scx % TILE_PIXEL_WIDTH; // - - - Adjust FIFO for fine X scroll
-          ctx.fetcher.xOffset   = ctx.scx / TILE_PIXEL_WIDTH; // - - - Initial tile X offset based on SCX
-          ppuOamResetSearch();
-        }
-        break;
-      }
+  // - - - 2. OAM Reading
+  if (ADDRESS >= 0xFE00 && ADDRESS <= 0xFE9F)
+  { return ctx.oam[ADDRESS - 0xFE00]; }
 
-    case PPU_MODE_DRAW:
+  switch (ADDRESS)
+  {
+    case LCDC  : return ctx.registers.lcdc;
+    case STAT  : return ctx.registers.stat;
+    case SCY   : return ctx.registers.scy;
+    case SCX   : return ctx.registers.scx;
+    case LY    : return ctx.registers.ly;
+    case LYC   : return ctx.registers.lyc;
+    case DMA   : return ctx.registers.dma;
+    case BGP   : return ctx.registers.bgp;
+    case OBP_0 : return ctx.registers.obp0;
+    case OBP_1 : return ctx.registers.obp1;
+    case WY    : return ctx.registers.wy;
+    case WX    : return ctx.registers.wx;
+
+    default: break;
+  }
+
+  return OPEN_BUS_VALUE;
+}
+
+void ppuWrite(u16 ADDRESS, u8 VALUE)
+{
+  // - - - 1. vram writing 
+  if (ADDRESS >= BUS_ADDR_VRAM_START && ADDRESS <= BUS_ADDR_VRAM_END)
+  {
+    ctx.vram[0][ADDRESS - BUS_ADDR_VRAM_START] = VALUE;
+    return;
+  }
+
+  // - - - 2. OAM writing 
+  if (ADDRESS >= BUS_ADDR_OAM_START && ADDRESS <= BUS_ADDR_OAM_END)
+  {
+    ctx.oam[ADDRESS - BUS_ADDR_OAM_START] = VALUE;
+    return;
+  }
+
+  // - - - 3. Register Encoding Range 
+  switch (ADDRESS)
+  {
+    case LCDC   : ctx.registers.lcdc = VALUE;                                         break;
+    case STAT   : ctx.registers.stat = (ctx.registers.stat & 0x07) | (VALUE & 0xF8);  break;
+    case SCY    : ctx.registers.scy  = VALUE;                                         break;
+    case SCX    : ctx.registers.scx  = VALUE;                                         break;
+    case LY     :                                                                     break; // - - - read only 
+    case LYC    : ctx.registers.lyc  = VALUE;                                         break;
+    case DMA    : ctx.registers.dma  = VALUE;                                         break;
+    case BGP    : ctx.registers.bgp  = VALUE;                                         break;
+    case OBP_0  : ctx.registers.obp0 = VALUE;                                         break;
+    case OBP_1  : ctx.registers.obp1 = VALUE;                                         break;
+    case WX     : ctx.registers.wx   = VALUE;                                         break;
+    case WY     : ctx.registers.wy   = VALUE;                                         break;
+
+    default: break;
+  }
+}
+
+void ppuTick(u32 DOTS)
+{
+  ctx.dotCount += DOTS;
+
+  switch (ctx.mode)
+  {
+    case PPU_MODE_OAM_SCAN:
+      if (ctx.dotCount >= 80)
       {
-        // - - - Logic handled by pipeline
-        if (ctx.pixelsPushed >= SCREEN_PIXELS_X)
-        {
-          STAT_SET_MODE(&ctx, PPU_MODE_HBLANK);
-          if (STAT_MODE0_INT(&ctx)) cpuRequestInterrupt(CPU_INT_LCD);
-        }
-        break;
+        ctx.dotCount -= 80;
+        ctx.mode      = PPU_MODE_DRAWING;
       }
+      break;
+
+    case PPU_MODE_DRAWING:
+      if (ctx.dotCount >= 172)
+      {
+        ctx.dotCount -= 172;
+        ctx.mode      = PPU_MODE_HBLANK;
+      }
+      break;
 
     case PPU_MODE_HBLANK:
+      if (ctx.dotCount >= 204)
       {
-        // = = = A full line (MOdes 2 + 3 + 0) takes 456 cycles
-        if (ctx.dotClock >= T_CYCLES_SCANLINE)
+        ctx.dotCount -= 204;
+        ctx.registers.ly++;
+
+        if (ctx.registers.ly == 144)
         {
-          ctx.dotClock = 0;
-          ctx.ly++;
-      
-          // - - - Increment window line counter when transitioning to next line
-          if (ctx.windowTriggered) ctx.windowLineCounter++;
-      
-          if (ctx.ly >= SCREEN_HEIGHT)
+          ctx.mode = PPU_MODE_VBLANK;
+
+          // - - - Verification
+          frameCounter++;
+          ctx.currentFrame.palettes.dmg.bgp   = ctx.registers.bgp;
+          ctx.currentFrame.palettes.dmg.obp0  = ctx.registers.obp0;
+          ctx.currentFrame.palettes.dmg.obp1  = ctx.registers.obp1;
+
+          for (i32 y = 0; y < HEIGHT; ++y)
           {
-            // - - - Entering V-Blank
-            STAT_SET_MODE(&ctx, PPU_MODE_VBLANK);
-            cpuRequestInterrupt(CPU_INT_VBLANK);
-        
-            if (STAT_MODE1_INT(&ctx)) cpuRequestInterrupt(CPU_INT_LCD);
-    
-            // - - - Reset window line counter for next frame 
-            ctx.windowLineCounter = 0;
+            for (i32 x = 0; x < WIDTH; ++x)
+            {
+              i32 index = y * WIDTH + x;
+              ctx.currentFrame.pixels[index].bits.colorIndex  = (u8) (((x + y + frameCounter) / 8) % 4);
+              ctx.currentFrame.pixels[index].bits.paletteId   = 0;
+              ctx.currentFrame.pixels[index].bits.layer       = 0;
+            }
           }
-          else 
-          {
-            STAT_SET_MODE(&ctx, PPU_MODE_OAM);
-            if (STAT_MODE2_INT(&ctx)) cpuRequestInterrupt(CPU_INT_LCD);
-          }
+
+          platformGetContext()->rendering.renderFrame(&ctx.currentFrame);
         }
-        break;
+        else ctx.mode = PPU_MODE_OAM_SCAN;
       }
+      break;
 
     case PPU_MODE_VBLANK:
+      if (ctx.dotCount >= 456)
       {
-        if (ctx.dotClock >= T_CYCLES_SCANLINE)
+        ctx.dotCount -= 456;
+        ctx.registers.ly++;
+
+        if (ctx.registers.ly > 153)
         {
-          ctx.dotClock = 0;
-          ctx.ly++;
-
-          // - - - Line 153 logic 
-          if (ctx.ly > VBLANK_END_LINE)
-          {
-            ctx.ly = 0;
-            STAT_SET_MODE(&ctx, PPU_MODE_OAM);
-            if (STAT_MODE2_INT(&ctx)) cpuRequestInterrupt(CPU_INT_LCD);
-          }
+          ctx.registers.ly  = 0;
+          ctx.mode          = PPU_MODE_OAM_SCAN;
         }
-        break;
       }
+      break;
   }
-}
-
-void ppuStepTCycle(void)
-{
-  // - - - if LCD is disabled, PPU does not advance
-  if (!LCDC_ENABLED(&ctx)) return;
-
-  // - - - advances cycles 
-  ctx.dotClock++;
-  ctx.frameClock++;
-
-  // - - - 1. Precise LY=LYC Comparison 
-  if (ctx.ly == ctx.lyc)
-  {
-    STAT_SET_LYC_FLAG(&ctx);
-    if (STAT_LYC_INT(&ctx)) cpuRequestInterrupt(CPU_INT_LCD);
-  }
-  else
-  {
-    STAT_CLEAR_LYC_FLAG(&ctx);
-  }
-
-  // - - - 2. Delegate sub logic based on current mode and timing
-  PpuMode mode = STAT_GET_MODE(&ctx);
-  switch (mode)
-  {
-    case PPU_MODE_OAM:   ppuOamSearchTick(); break;
-    case PPU_MODE_DRAW:  ppuPipelineTick(); break;
-    default: break; // - - - Mode transitions and V-Blank logic handled separately
-  }
-
-  // - - - 3. Handle mode transitions and V-Blank timing
-  handleModeTransitions();
-}
-
-void ppuStepMCycle(void)
-{
-  for (u8 i = 0; i < 4; i++)   ppuStepTCycle();
 }

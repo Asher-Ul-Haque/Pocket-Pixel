@@ -1,13 +1,10 @@
-#include "utils/logger.h"
 #include <debug.h>
-#include <ppu/internal.h>
 #include <cartridge/cartridge.h>
 #include <ram.h>
 #include <bus.h>
 #include <timer.h>
 #include <cpu/interrupts.h>
 #include <ppu/ppu.h>
-#include <ppu/dma.h>
 
 u16 busRead16(u16 ADDRESS)
 {
@@ -42,7 +39,7 @@ u8 busReadRaw(u16 ADDRESS)
 
   // - - - 3. VRAM Range (0x8000 - 0x9FFF) - Mode dependent
   if (ADDRESS >= BUS_ADDR_VRAM_START && ADDRESS <= BUS_ADDR_VRAM_END) 
-  { return ppuVRAMRead(ADDRESS); }
+  { return ppuRead(ADDRESS); }
 
   // - - - 4. External Cartridge RAM (0xA000 - 0xBFFF)
   if (ADDRESS >= BUS_ADDR_CART_RAM_START && ADDRESS <= BUS_ADDR_CART_RAM_END) 
@@ -58,7 +55,7 @@ u8 busReadRaw(u16 ADDRESS)
 
   // - - - 7. OAM (0xFE00 - 0xFE9F) - Mode dependent
   if (ADDRESS >= BUS_ADDR_OAM_START && ADDRESS <= BUS_ADDR_OAM_END) 
-  { return ppuOAMRead(ADDRESS); }
+  { return ppuRead(ADDRESS); }
 
   // - - - 8. Unusable Area (0xFEA0 - 0xFEFF)
   if (ADDRESS >= BUS_ADDR_UNUSED_START && ADDRESS <= BUS_ADDR_UNUSED_END) 
@@ -73,16 +70,16 @@ u8 busReadRaw(u16 ADDRESS)
       // TODO_COMMENT("Implement joypad input handling");
     }
 
+    // - - - PPU Io 
+    if (ADDRESS >= LCDC && ADDRESS <= WX)
+    { return ppuRead(ADDRESS); }
+
     // - - - Timer Registers (0xFF04 - 0xFF07)
     if (ADDRESS >= DIV_REGISTER_ADDRESS && ADDRESS <= TAC_REGISTER_ADDRESS) 
     { return timerRead(ADDRESS); }
 
     // - - - Interrupt Flag (0xFF0F)
     if (ADDRESS == ADDR_IF) return cpuReadInterrupt(ADDRESS);
-
-    // - - - PPU Registers (0xFF40 - 0xFF6B)
-    if (ADDRESS >= LCD_CONTROL_REG && ADDRESS <= OBJ_PALLETE_DATA_REG) 
-    { return ppuRead(ADDRESS); }
 
     return OPEN_BUS_VALUE;
   }
@@ -100,13 +97,6 @@ u8 busReadRaw(u16 ADDRESS)
 
 u8 busRead(u16 ADDRESS)
 {
-  // - - - 1. OAM DMA Lockout: Only HRAM is accessible during DMA
-  if (dmaIsActive()) 
-  {
-    if (ADDRESS >= BUS_ADDR_HRAM_START && ADDRESS <= BUS_ADDR_HRAM_END) 
-    { return ramRead(ADDRESS); }
-    return OPEN_BUS_VALUE;
-  }
 
   return busReadRaw(ADDRESS);
 }
@@ -121,12 +111,6 @@ void busWrite(u16 ADDRESS, u8 VALUE)
     }
   #endif
   // - - - 1. OAM DMA Lockout
-  if (dmaIsActive()) 
-  {
-    if (ADDRESS >= BUS_ADDR_HRAM_START && ADDRESS <= BUS_ADDR_HRAM_END) 
-    { ramWrite(ADDRESS, VALUE); }
-    return;
-  }
 
   // - - - 2. ROM Range (Mapper writes)
   if (ADDRESS <= BUS_ADDR_ROM_END) 
@@ -138,7 +122,7 @@ void busWrite(u16 ADDRESS, u8 VALUE)
   // - - - 3. VRAM Range
   if (ADDRESS >= BUS_ADDR_VRAM_START && ADDRESS <= BUS_ADDR_VRAM_END) 
   {
-    ppuVRAMWrite(ADDRESS, VALUE);
+    ppuWrite(ADDRESS, VALUE);
     return;
   }
 
@@ -166,7 +150,7 @@ void busWrite(u16 ADDRESS, u8 VALUE)
   // - - - 7. OAM 
   if (ADDRESS >= BUS_ADDR_OAM_START && ADDRESS <= BUS_ADDR_OAM_END) 
   {
-    ppuOAMWrite(ADDRESS, VALUE);
+    ppuWrite(ADDRESS, VALUE);
     return;
   }
 
@@ -189,11 +173,12 @@ void busWrite(u16 ADDRESS, u8 VALUE)
       return;
     }
 
-    if (ADDRESS >= LCD_CONTROL_REG && ADDRESS <= OBJ_PALLETE_DATA_REG) 
+    if (ADDRESS >= LCDC && ADDRESS <= WX)
     {
       ppuWrite(ADDRESS, VALUE);
       return;
     }
+
     return;
   }
 

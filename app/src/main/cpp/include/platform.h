@@ -12,6 +12,7 @@
  * - `NETWORKING`: Support for network communication.
 */
 
+#include <ppu/ppu.h>
 #include <common.h>
 
 /**
@@ -51,9 +52,15 @@ typedef struct CartridgeFileIO
 
 typedef struct Renderer
 {
-  void (*init)(void);
-  void (*renderFrame)(const u32* FRAME_BUFFER, u32 WIDTH, u32 HEIGHT);
-  void (*cleanup)(void);
+  void (*init)(void);   ///< Set up renderer 
+
+  void (*renderFrame) (const PpuFrame* FRAME); ///< The main screen 
+
+  void (*drawTileView) (const u8* VRAM_BANK_0, const u8* VRAM_BANK_1);
+  void (*drawMapView)  (const u8* VRAM_BANK_0, const u8* VRAM_BANK_1, u8 MAP_SELECT);
+
+  void (*present) (void);
+  void (*cleanup) (void);
 } Renderer;
 
 typedef struct InputHandler
