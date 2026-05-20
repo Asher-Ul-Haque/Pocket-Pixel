@@ -25,7 +25,8 @@
 
 #define DOT_OAM_SCAN        80
 #define DOTS_DRAWING        172
-#define DOTS_HBLANK         (PPU_DOTS_PER_SCANLINE - DOT_OAM_SCAN - DOTS_DRAWING)
+#define DOTS_HBLANK_DURATION (PPU_DOTS_PER_SCANLINE - DOT_OAM_SCAN - DOTS_DRAWING)
+#define DOTS_HBLANK          DOTS_HBLANK_DURATION
 #define DOTS_TRANSFER_START DOT_OAM_SCAN
 #define DOTS_HBLANK_START   (DOT_OAM_SCAN + DOTS_DRAWING)
 
@@ -182,11 +183,11 @@ void  ppuDmaTrigger(u8 SOURCE_HIGH_BYTE);
 PpuContext* ppuGetContext(void);
 
 // - - - Internal modular helpers (shared across ppu/*.c)
-void ppuSetMode(PpuMode MODE);
+void ppuSetMode(PpuMode mode);
 void ppuUpdateStatLycFlag(void);
-void ppuHandleLycCompareEdge(bool PREVIOUS_MATCH, bool CURRENT_MATCH);
-void ppuHandleModeInterrupt(PpuMode MODE);
-void ppuHandleLcdStateChange(u8 PREVIOUS_LCDC, u8 NEW_LCDC);
+void ppuHandleLycCompareEdge(bool previousMatch, bool currentMatch);
+void ppuHandleModeInterrupt(PpuMode mode);
+void ppuHandleLcdStateChange(u8 previousLcdc, u8 newLcdc);
 bool ppuIsLcdEnabled(void);
 
 void ppuRenderFrame(void);

@@ -40,23 +40,17 @@ static void ppuStepScanlineDot(void)
     return;
   }
 
-  if (ctx->registers.ly == 0)
-  {
-    ppuSetMode(PPU_MODE_OAM_SCAN);
-    return;
-  }
-
   ppuSetMode(PPU_MODE_VBLANK);
 }
 
-void ppuTick(u32 DOTS)
+void ppuTick(u32 dots)
 {
   PpuContext* ctx = ppuGetContext();
   ctx->frameReady = false;
 
   if (!ppuIsLcdEnabled()) return;
 
-  for (u32 dot = 0; dot < DOTS; ++dot)
+  for (u32 dot = 0; dot < dots; ++dot)
   {
     ppuStepScanlineDot();
   }

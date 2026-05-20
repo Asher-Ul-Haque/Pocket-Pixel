@@ -29,7 +29,7 @@ u8 ppuRead(u16 ADDRESS)
       {
         u8 statValue = STAT_UNUSED_HIGH_BIT;
         statValue |= (ctx->registers.stat & STAT_WRITABLE_BITS_MASK);
-        statValue |= (ctx->mode & STAT_MODE_BITS_MASK);
+        statValue |= ctx->mode;
         if (ctx->registers.ly == ctx->registers.lyc) statValue |= STAT_LYC_EQUALS_MASK;
         return statValue;
       }
@@ -138,7 +138,6 @@ void ppuWrite(u16 ADDRESS, u8 VALUE)
     case REG_BG_PALETTE_DATA:
       {
         if (ctx->mode == PPU_MODE_DRAWING) break;
-
         u8 index = ctx->registers.bgPaletteIndex & PALETTE_DATA_MASK;
         ctx->bgPaletteRam[index] = VALUE;
 
@@ -160,7 +159,6 @@ void ppuWrite(u16 ADDRESS, u8 VALUE)
     case REG_OBJ_PALETTE_DATA :
       {
         if (ctx->mode == PPU_MODE_DRAWING) break;
-
         u8 index = ctx->registers.objPaletteIndex & PALETTE_DATA_MASK;
         ctx->objPaletteRam[index] = VALUE;
 

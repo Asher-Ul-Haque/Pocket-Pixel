@@ -8,36 +8,36 @@
 #define DEFAULT_BG_PALETTE       0
 #define DEFAULT_LAYER_BACKGROUND 0
 
-static u16 getBgMapBase(const PpuContext* CTX)
+static u16 getBgMapBase(const PpuContext* ctx)
 {
-  return (CTX->registers.lcdc & LCDC_BG_TILE_MAP_MASK) ? BG_MAP_1_OFFSET : BG_MAP_0_OFFSET;
+  return (ctx->registers.lcdc & LCDC_BG_TILE_MAP_MASK) ? BG_MAP_1_OFFSET : BG_MAP_0_OFFSET;
 }
 
-static u16 getTileDataAddress(const PpuContext* CTX, u8 TILE_ID, u8 TILE_LINE)
+static u16 getTileDataAddress(const PpuContext* ctx, u8 tileId, u8 tileLine)
 {
-  if (CTX->registers.lcdc & LCDC_BG_WIN_DATA_MASK)
+  if (ctx->registers.lcdc & LCDC_BG_WIN_DATA_MASK)
   {
-    return (u16)(TILE_DATA_8000 + (TILE_ID * TILE_BYTES) + (TILE_LINE * TILE_LINE_BYTES));
+    return (u16)(TILE_DATA_8000 + (tileId * TILE_BYTES) + (tileLine * TILE_LINE_BYTES));
   }
 
-  const i16 signedTile = (i8) TILE_ID;
-  return (u16)(TILE_DATA_8800 + (signedTile * TILE_BYTES) + (TILE_LINE * TILE_LINE_BYTES));
+  const i16 signedTile = (i8) tileId;
+  return (u16)(TILE_DATA_8800 + (signedTile * TILE_BYTES) + (tileLine * TILE_LINE_BYTES));
 }
 
-static u8 sampleBgColor(const PpuContext* CTX, i32 X, i32 Y)
+static u8 sampleBgColor(const PpuContext* ctx, i32 x, i32 y)
 {
-  const u16 mapBase = getBgMapBase(CTX);
-  const u8 bgX = (u8)(X + CTX->registers.scx);
-  const u8 bgY = (u8)(Y + CTX->registers.scy);
+  const u16 mapBase = getBgMapBase(ctx);
+  const u8 bgX = (u8)(x + ctx->registers.scx);
+  const u8 bgY = (u8)(y + ctx->registers.scy);
   const u8 tileX = (u8)((bgX >> 3) & TILE_MAP_MASK);
   const u8 tileY = (u8)((bgY >> 3) & TILE_MAP_MASK);
   const u16 mapIndex = (u16)(tileY * TILE_MAP_WIDTH + tileX);
-  const u8 tileId = CTX->vram[0][mapBase + mapIndex];
+  const u8 tileId = ctx->vram[0][mapBase + mapIndex];
   const u8 tileLine = (u8)(bgY & (PIXELS_PER_TILE - 1));
-  const u16 tileDataAddress = getTileDataAddress(CTX, tileId, tileLine);
+  const u16 tileDataAddress = getTileDataAddress(ctx, tileId, tileLine);
 
-  const u8 dataLow = CTX->vram[0][tileDataAddress];
-  const u8 dataHigh = CTX->vram[0][tileDataAddress + 1];
+  const u8 dataLow = ctx->vram[0][tileDataAddress];
+  const u8 dataHigh = ctx->vram[0][tileDataAddress + 1];
   const u8 bit = (u8)(7 - (bgX & (PIXELS_PER_TILE - 1)));
 
   return (u8)((((dataHigh >> bit) & PIXEL_COLOR_MASK) << 1) | ((dataLow >> bit) & PIXEL_COLOR_MASK));

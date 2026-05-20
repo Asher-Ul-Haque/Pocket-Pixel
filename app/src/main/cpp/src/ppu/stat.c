@@ -16,23 +16,23 @@ void ppuUpdateStatLycFlag(void)
   else          ctx->registers.stat &= (u8)(~STAT_LYC_EQUALS_MASK);
 }
 
-void ppuHandleLycCompareEdge(bool PREVIOUS_MATCH, bool CURRENT_MATCH)
+void ppuHandleLycCompareEdge(bool previousMatch, bool currentMatch)
 {
   PpuContext* ctx = ppuGetContext();
 
-  if (!PREVIOUS_MATCH &&
-      CURRENT_MATCH &&
+  if (!previousMatch &&
+      currentMatch &&
       (ctx->registers.stat & STAT_LYC_INT_MASK))
   {
     cpuRequestInterrupt(CPU_INT_LCD);
   }
 }
 
-void ppuHandleModeInterrupt(PpuMode MODE)
+void ppuHandleModeInterrupt(PpuMode mode)
 {
   PpuContext* ctx = ppuGetContext();
 
-  switch (MODE)
+  switch (mode)
   {
     case PPU_MODE_HBLANK:
       if (ctx->registers.stat & STAT_HBLANK_INT_MASK) cpuRequestInterrupt(CPU_INT_LCD);
@@ -49,21 +49,23 @@ void ppuHandleModeInterrupt(PpuMode MODE)
   }
 }
 
-void ppuSetMode(PpuMode MODE)
+void ppuSetMode(PpuMode mode)
 {
   PpuContext* ctx = ppuGetContext();
-  if (ctx->mode == MODE) return;
+  if (ctx->mode == mode) return;
 
-  ctx->mode = MODE;
+  ctx->mode = mode;
+  ctx->registers.stat &= (u8) ~STAT_MODE_BITS_MASK;
+  ctx->registers.stat |= (u8) mode;
 
-  if (ppuIsLcdEnabled()) ppuHandleModeInterrupt(MODE);
+  if (ppuIsLcdEnabled()) ppuHandleModeInterrupt(mode);
 }
 
-void ppuHandleLcdStateChange(u8 PREVIOUS_LCDC, u8 NEW_LCDC)
+void ppuHandleLcdStateChange(u8 previousLcdc, u8 newLcdc)
 {
   PpuContext* ctx = ppuGetContext();
-  const bool oldEnabled = (PREVIOUS_LCDC & LCDC_ENABLE_MASK) != 0;
-  const bool newEnabled = (NEW_LCDC & LCDC_ENABLE_MASK) != 0;
+  const bool oldEnabled = (previousLcdc & LCDC_ENABLE_MASK) != 0;
+  const bool newEnabled = (newLcdc & LCDC_ENABLE_MASK) != 0;
 
   if (oldEnabled == newEnabled) return;
 
@@ -72,7 +74,9 @@ void ppuHandleLcdStateChange(u8 PREVIOUS_LCDC, u8 NEW_LCDC)
     ctx->dotCount      = 0;
     ctx->registers.ly  = 0;
     ctx->frameReady    = false;
-    ctx->mode          = PPU_MODE_HBLANK;
+    ctx->mode = PPU_MODE_HBLANK;
+    ctx->registers.stat &= (u8) ~STAT_MODE_BITS_MASK;
+    ctx->registers.stat |= (u8) PPU_MODE_HBLANK;
     ppuUpdateStatLycFlag();
     return;
   }
@@ -80,8 +84,7 @@ void ppuHandleLcdStateChange(u8 PREVIOUS_LCDC, u8 NEW_LCDC)
   ctx->dotCount      = 0;
   ctx->registers.ly  = 0;
   ctx->frameReady    = false;
-  ctx->mode          = PPU_MODE_OAM_SCAN;
+  ppuSetMode(PPU_MODE_OAM_SCAN);
 
   ppuUpdateStatLycFlag();
-  ppuHandleModeInterrupt(PPU_MODE_OAM_SCAN);
 }
