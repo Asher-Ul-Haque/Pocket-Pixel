@@ -27,10 +27,9 @@ u8 ppuRead(u16 ADDRESS)
     case REG_LCDC : return ctx->registers.lcdc;
     case REG_STAT :
       {
-        u8 statValue = STAT_UNUSED_HIGH_BIT;
-        statValue |= (ctx->registers.stat & STAT_WRITABLE_BITS_MASK);
-        statValue |= ctx->mode;
-        if (ctx->registers.ly == ctx->registers.lyc) statValue |= STAT_LYC_EQUALS_MASK;
+        u8 statValue = (ctx->registers.stat & (STAT_WRITABLE_BITS_MASK | STAT_LYC_EQUALS_MASK));
+        statValue |= (ctx->mode & STAT_MODE_BITS_MASK);
+        statValue |= STAT_UNUSED_HIGH_BIT;
         return statValue;
       }
     case REG_SCY  : return ctx->registers.scy;

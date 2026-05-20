@@ -63,7 +63,7 @@
 #define STAT_READONLY_BITS_MASK  (STAT_MODE_BITS_MASK | STAT_LYC_EQUALS_MASK | STAT_UNUSED_HIGH_BIT)
 
 #define WINDOW_X_OFFSET         7
-#define WINDOW_X_MAX            166
+#define WINDOW_WX_MAX           166
 
 #define SPRITE_COUNT              40
 #define SPRITE_OAM_ENTRY_BYTES    4

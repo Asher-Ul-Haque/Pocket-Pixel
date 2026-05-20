@@ -75,9 +75,8 @@ static SpriteSample selectSpriteForPixel(const PpuContext* ctx, u8 x, u8 y)
     const i16 spriteX = (i16)ctx->oam[base + OAM_X_OFFSET] - SPRITE_X_OFFSET;
 
     if (!isSpriteOnScanline(y, spriteY, spriteHeight)) continue;
-
+    if (spritesOnLine >= SPRITE_MAX_PER_SCANLINE) break;
     spritesOnLine++;
-    if (spritesOnLine > SPRITE_MAX_PER_SCANLINE) continue;
 
     if (x < spriteX || x >= (spriteX + SPRITE_WIDTH)) continue;
 

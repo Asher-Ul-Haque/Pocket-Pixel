@@ -39,7 +39,7 @@ void ppuRenderWindowLayer(void)
   const bool windowEnabled = (ctx->registers.lcdc & LCDC_WIN_ENABLE_MASK) != 0;
 
   if (!bgEnabled || !windowEnabled) return;
-  if (ctx->registers.wx > WINDOW_X_MAX || ctx->registers.wy >= HEIGHT) return;
+  if (ctx->registers.wx > WINDOW_WX_MAX || ctx->registers.wy >= HEIGHT) return;
 
   const i16 windowLeft = (i16)ctx->registers.wx - WINDOW_X_OFFSET;
   const u16 windowMapBase = (ctx->registers.lcdc & LCDC_WIN_TILE_MAP_MASK) ? BG_MAP_1_OFFSET : BG_MAP_0_OFFSET;
