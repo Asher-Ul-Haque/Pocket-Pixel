@@ -25,7 +25,14 @@ u8 ppuRead(u16 ADDRESS)
   switch (ADDRESS)
   {
     case REG_LCDC : return ctx->registers.lcdc;
-    case REG_STAT : return (ctx->registers.stat & 0xF8) | (ctx->mode & 0x03);
+    case REG_STAT :
+      {
+        u8 statValue = STAT_UNUSED_HIGH_BIT;
+        statValue |= (ctx->registers.stat & STAT_WRITABLE_BITS_MASK);
+        statValue |= (ctx->mode & STAT_MODE_BITS_MASK);
+        if (ctx->registers.ly == ctx->registers.lyc) statValue |= STAT_LYC_EQUALS_MASK;
+        return statValue;
+      }
     case REG_SCY  : return ctx->registers.scy;
     case REG_SCX  : return ctx->registers.scx;
     case REG_LY   : return ctx->registers.ly;
@@ -44,6 +51,7 @@ u8 ppuRead(u16 ADDRESS)
     case REG_BG_PALETTE_INDEX: return ctx->registers.bgPaletteIndex;
     case REG_BG_PALETTE_DATA :
       {
+        if (ctx->mode == PPU_MODE_DRAWING) return OPEN_BUS_VALUE;
         u8 index = ctx->registers.bgPaletteIndex & PALETTE_DATA_MASK;
         return ctx->bgPaletteRam[index];
       }
@@ -52,6 +60,7 @@ u8 ppuRead(u16 ADDRESS)
     case REG_OBJ_PALETTE_INDEX: return ctx->registers.objPaletteIndex;
     case REG_OBJ_PALETTE_DATA :
       {
+        if (ctx->mode == PPU_MODE_DRAWING) return OPEN_BUS_VALUE;
         u8 index = ctx->registers.objPaletteIndex & PALETTE_DATA_MASK;
         return ctx->objPaletteRam[index];
       }
@@ -82,12 +91,35 @@ void ppuWrite(u16 ADDRESS, u8 VALUE)
 
   switch (ADDRESS)
   {
-    case REG_LCDC: ctx->registers.lcdc = VALUE; break;
-    case REG_STAT: ctx->registers.stat = (ctx->registers.stat & 0x07) | (VALUE & 0xF8); break;
+    case REG_LCDC:
+      {
+        const u8 previousLcdc = ctx->registers.lcdc;
+        ctx->registers.lcdc = VALUE;
+        ppuHandleLcdStateChange(previousLcdc, VALUE);
+        break;
+      }
+
+    case REG_STAT:
+      {
+        ctx->registers.stat &= (u8) ~STAT_WRITABLE_BITS_MASK;
+        ctx->registers.stat |= (VALUE & STAT_WRITABLE_BITS_MASK);
+        ctx->registers.stat |= STAT_UNUSED_HIGH_BIT;
+        ppuUpdateStatLycFlag();
+        break;
+      }
+
     case REG_SCY : ctx->registers.scy  = VALUE; break;
     case REG_SCX : ctx->registers.scx  = VALUE; break;
     case REG_LY  : break;
-    case REG_LYC : ctx->registers.lyc = VALUE; break;
+    case REG_LYC :
+      {
+        const bool previousMatch = ctx->registers.ly == ctx->registers.lyc;
+        ctx->registers.lyc = VALUE;
+        const bool currentMatch = ctx->registers.ly == ctx->registers.lyc;
+        ppuUpdateStatLycFlag();
+        ppuHandleLycCompareEdge(previousMatch, currentMatch);
+        break;
+      }
     case REG_DMA :
       ctx->registers.dma = VALUE;
       ppuDmaTrigger(VALUE);
@@ -105,6 +137,8 @@ void ppuWrite(u16 ADDRESS, u8 VALUE)
     case REG_BG_PALETTE_INDEX: ctx->registers.bgPaletteIndex = VALUE; break;
     case REG_BG_PALETTE_DATA:
       {
+        if (ctx->mode == PPU_MODE_DRAWING) break;
+
         u8 index = ctx->registers.bgPaletteIndex & PALETTE_DATA_MASK;
         ctx->bgPaletteRam[index] = VALUE;
 
@@ -125,6 +159,8 @@ void ppuWrite(u16 ADDRESS, u8 VALUE)
     case REG_OBJ_PALETTE_INDEX: ctx->registers.objPaletteIndex = VALUE; break;
     case REG_OBJ_PALETTE_DATA :
       {
+        if (ctx->mode == PPU_MODE_DRAWING) break;
+
         u8 index = ctx->registers.objPaletteIndex & PALETTE_DATA_MASK;
         ctx->objPaletteRam[index] = VALUE;
 

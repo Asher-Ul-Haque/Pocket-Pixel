@@ -20,13 +20,45 @@
 #define TILE_COUNT_X  16
 #define TILE_COUNT_Y  24
 
-#define DOT_OAM_SCAN  80
-#define DOTS_DRAWING  172
-#define DOTS_HBLANK   204
-#define DOTS_VBLANK   456
+#define PPU_DOTS_PER_SCANLINE 456
+#define PPU_DOTS_PER_FRAME    70224
+
+#define DOT_OAM_SCAN        80
+#define DOTS_DRAWING        172
+#define DOTS_HBLANK         (PPU_DOTS_PER_SCANLINE - DOT_OAM_SCAN - DOTS_DRAWING)
+#define DOTS_TRANSFER_START DOT_OAM_SCAN
+#define DOTS_HBLANK_START   (DOT_OAM_SCAN + DOTS_DRAWING)
 
 #define LY_VBLANK_START 144 
 #define LY_MAX          153
+#define LY_PER_FRAME    154
+
+#define BG_MAP_0_OFFSET 0x1800
+#define BG_MAP_1_OFFSET 0x1C00
+#define TILE_DATA_8000  0x0000
+#define TILE_DATA_8800  0x1000
+#define TILE_BYTES      16
+#define TILE_MAP_WIDTH  32
+#define TILE_MAP_MASK   0x1F
+
+#define LCDC_BG_WIN_ENABLE_MASK 0x01
+#define LCDC_OBJ_ENABLE_MASK    0x02
+#define LCDC_OBJ_SIZE_MASK      0x04
+#define LCDC_BG_TILE_MAP_MASK   0x08
+#define LCDC_BG_WIN_DATA_MASK   0x10
+#define LCDC_WIN_ENABLE_MASK    0x20
+#define LCDC_WIN_TILE_MAP_MASK  0x40
+#define LCDC_ENABLE_MASK        0x80
+
+#define STAT_MODE_BITS_MASK      0x03
+#define STAT_LYC_EQUALS_MASK     0x04
+#define STAT_HBLANK_INT_MASK     0x08
+#define STAT_VBLANK_INT_MASK     0x10
+#define STAT_OAM_INT_MASK        0x20
+#define STAT_LYC_INT_MASK        0x40
+#define STAT_UNUSED_HIGH_BIT     0x80
+#define STAT_WRITABLE_BITS_MASK  (STAT_HBLANK_INT_MASK | STAT_VBLANK_INT_MASK | STAT_OAM_INT_MASK | STAT_LYC_INT_MASK)
+#define STAT_READONLY_BITS_MASK  (STAT_MODE_BITS_MASK | STAT_LYC_EQUALS_MASK | STAT_UNUSED_HIGH_BIT)
 
 #define BOOT_LCDC 0x91
 #define BOOT_STAT 0x85
@@ -135,10 +167,10 @@ typedef struct PpuContext
 
   // - - - State Machine 
   PpuMode   mode;
-  u32       dotCount;         ///< Cycles within the current scanline 
+  u32       dotCount;         ///< Dot within current scanline
   PpuFrame  currentFrame;     ///< The one being filled right now
   u8        vramBankSelect;   ///< Internal tracker for FF4F
-  u8        testPatternFrame;
+  bool      frameReady;
 } PpuContext;
 
 void  ppuInit(void);
@@ -148,3 +180,13 @@ void  ppuWrite(u16 ADDR, u8 VALUE);
 void  ppuDmaTrigger(u8 SOURCE_HIGH_BYTE);
 
 PpuContext* ppuGetContext(void);
+
+// - - - Internal modular helpers (shared across ppu/*.c)
+void ppuSetMode(PpuMode MODE);
+void ppuUpdateStatLycFlag(void);
+void ppuHandleLycCompareEdge(bool PREVIOUS_MATCH, bool CURRENT_MATCH);
+void ppuHandleModeInterrupt(PpuMode MODE);
+void ppuHandleLcdStateChange(u8 PREVIOUS_LCDC, u8 NEW_LCDC);
+bool ppuIsLcdEnabled(void);
+
+void ppuRenderFrame(void);
