@@ -23,7 +23,7 @@ void busWrite16(u16 ADDRESS, u16 VALUE)
   busWrite((u16)(ADDRESS + 1), hi);
 }
 
-u8 busReadRaw(u16 ADDRESS) 
+u8 busRead(u16 ADDRESS) 
 {
   // - - - 1. Serial
   #ifdef DEBUG
@@ -71,7 +71,15 @@ u8 busReadRaw(u16 ADDRESS)
     }
 
     // - - - PPU Io 
-    if (ADDRESS >= LCDC && ADDRESS <= WX)
+    if (ADDRESS >= REG_LCDC && ADDRESS <= REG_WX)
+    { return ppuRead(ADDRESS); }
+
+    // - - - CGB specific Hardware Register Ports (VBK, BGPD, OBJPD)
+    if (ADDRESS == REG_VRAM_BANK         ||
+        ADDRESS == REG_BG_PALETTE_INDEX  ||
+        ADDRESS == REG_BG_PALETTE_DATA   ||
+        ADDRESS == REG_OBJ_PALETTE_INDEX ||
+        ADDRESS == REG_OBJ_PALETTE_DATA)
     { return ppuRead(ADDRESS); }
 
     // - - - Timer Registers (0xFF04 - 0xFF07)
@@ -93,12 +101,6 @@ u8 busReadRaw(u16 ADDRESS)
   { return cpuReadInterrupt(ADDRESS); }
 
   return OPEN_BUS_VALUE;
-}
-
-u8 busRead(u16 ADDRESS)
-{
-
-  return busReadRaw(ADDRESS);
 }
 
 void busWrite(u16 ADDRESS, u8 VALUE) 
@@ -173,7 +175,17 @@ void busWrite(u16 ADDRESS, u8 VALUE)
       return;
     }
 
-    if (ADDRESS >= LCDC && ADDRESS <= WX)
+    if (ADDRESS >= REG_LCDC && ADDRESS <= REG_WX)
+    {
+      ppuWrite(ADDRESS, VALUE);
+      return;
+    }
+
+    if (ADDRESS == REG_VRAM_BANK          ||
+        ADDRESS == REG_BG_PALETTE_INDEX   ||
+        ADDRESS == REG_BG_PALETTE_DATA    ||
+        ADDRESS == REG_OBJ_PALETTE_INDEX  ||
+        ADDRESS == REG_OBJ_PALETTE_DATA)
     {
       ppuWrite(ADDRESS, VALUE);
       return;

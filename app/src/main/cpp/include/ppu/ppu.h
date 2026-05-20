@@ -12,13 +12,29 @@
 #define VRAM_BANK_COUNT 2 
 #define OAM_SIZE        160
 
-#define PALETTE_RAM_SIZE 64
+#define PALETTE_RAM_SIZE            64
+#define PALETTE_DATA_MASK           0x3F
+#define PALETTE_AUTO_INCREMENT_BIT  0x80
 
 #define TILE_SIDE     8
 #define TILE_COUNT_X  16
 #define TILE_COUNT_Y  24
 
-/// @brief Pixel Metadata bit-field for Approach A
+#define DOT_OAM_SCAN  80
+#define DOTS_DRAWING  172
+#define DOTS_HBLANK   204
+#define DOTS_VBLANK   456
+
+#define LY_VBLANK_START 144 
+#define LY_MAX          153
+
+#define BOOT_LCDC 0x91
+#define BOOT_STAT 0x85
+#define BOOT_BGP  0xFC
+#define BOOT_OBP0 0xFF
+#define BOOT_OBP1 0xFF
+
+/// @brief Pixel Metadata bit-field
 typedef struct 
 {
   u8 colorIndex : 2; ///< 0-3 index
@@ -86,20 +102,23 @@ typedef struct PpuRegisters
 
 typedef enum PpuRegisterAddr 
 {
-  LCDC              = 0xFF40,
-  STAT              = 0xFF41,
-  SCY               = 0xFF42,
-  SCX               = 0xFF43,
-  LY                = 0xFF44,
-  LYC               = 0xFF45,
-  DMA               = 0xFF46,
-  BGP               = 0xFF47,
-  OBP_0             = 0xFF48,
-  OBP_1             = 0xFF49,
-  WY                = 0xFF4A,
-  WX                = 0xFF4B,
-  BG_PALETTE_INDEX  = 0xFF68,
-  OBJ_PALETTE_INDEX = 0xFF6A
+  REG_LCDC              = 0xFF40,
+  REG_STAT              = 0xFF41,
+  REG_SCY               = 0xFF42,
+  REG_SCX               = 0xFF43,
+  REG_LY                = 0xFF44,
+  REG_LYC               = 0xFF45,
+  REG_DMA               = 0xFF46,
+  REG_BGP               = 0xFF47,
+  REG_OBP_0             = 0xFF48,
+  REG_OBP_1             = 0xFF49,
+  REG_WY                = 0xFF4A,
+  REG_WX                = 0xFF4B,
+  REG_VRAM_BANK         = 0xFF4F,
+  REG_BG_PALETTE_INDEX  = 0xFF68,
+  REG_BG_PALETTE_DATA   = 0xFF69,
+  REG_OBJ_PALETTE_INDEX = 0xFF6A,
+  REG_OBJ_PALETTE_DATA  = 0xFF6B
 } PpuRegisterAddr;
 
 typedef struct PpuContext 
@@ -111,18 +130,21 @@ typedef struct PpuContext
   PpuRegisters registers;
 
   // - - - CGB Palette Ram 
-  u8 bgPaletteRam[PALETTE_RAM_SIZE];
+  u8 bgPaletteRam [PALETTE_RAM_SIZE];
   u8 objPaletteRam[PALETTE_RAM_SIZE];
 
   // - - - State Machine 
   PpuMode   mode;
-  u32       dotCount;     ///< Cycles within the current scanline 
-  PpuFrame  currentFrame; ///< The one being filled right now
+  u32       dotCount;         ///< Cycles within the current scanline 
+  PpuFrame  currentFrame;     ///< The one being filled right now
+  u8        vramBankSelect;   ///< Internal tracker for FF4F
+  u8        testPatternFrame;
 } PpuContext;
 
 void  ppuInit(void);
 void  ppuTick(u32 DOTS);
 u8    ppuRead(u16 ADDR);
 void  ppuWrite(u16 ADDR, u8 VALUE);
+void  ppuDmaTrigger(u8 SOURCE_HIGH_BYTE);
 
 PpuContext* ppuGetContext(void);

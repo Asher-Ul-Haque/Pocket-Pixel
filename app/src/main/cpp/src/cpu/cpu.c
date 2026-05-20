@@ -22,8 +22,8 @@ void cpuInit(void)
   FORGE_ASSERT_DEBUG(cart->initialized, "Must load cartridge before initializing CPU");
 
   // - - - Baseline DMG/CGB post-BIOS register values
-  ctx->registers.programCounter = START_VALUE_PROGRAM_COUNTER;
-  ctx->registers.stackPointer   = START_VALUE_STACK_POINTER;
+  ctx->registers.programCounter  = START_VALUE_PROGRAM_COUNTER;
+  ctx->registers.stackPointer    = START_VALUE_STACK_POINTER;
 
   if (cart->mode == MODE_DMG_GAMEBOY)
   {
@@ -56,12 +56,12 @@ void cpuInit(void)
 }
 
 /**
- * @brief Handles the 5-M-cycle interrupt service routine sequence.
- * This is hardcoded to ensure exact bus timing as per technical reference.
+  * @brief Handles the 5-M-cycle interrupt service routine sequence.
+  * This is hardcoded to ensure exact bus timing as per technical reference.
 */
-static bool handleInterruptServiceRoutine(void) 
+static bool handleInterruptServiceRoutine(void)
 {
-  switch (ctx.mCycle) 
+  switch (ctx.mCycle)
   {
     case M2: // - - - M2: Internal delay 1
       return false;
@@ -71,15 +71,15 @@ static bool handleInterruptServiceRoutine(void)
       busWrite(ctx.registers.stackPointer, (u8)(ctx.registers.programCounter >> 8));
       return false;
 
-    case M4: // - - - M4: Push PC Low 
+    case M4: // - - - M4: Push PC Low 
       ctx.registers.stackPointer--;
       busWrite(ctx.registers.stackPointer, (u8)(ctx.registers.programCounter & 0xFF));
       return false;
 
     case M5: // - - - M5: Set PC to vector and finish
       cpuInterruptAcknowledge(ctx.servicingInt);
-      ctx.registers.programCounter = cpuInterruptVector(ctx.servicingInt);
-      ctx.ime = false;
+      ctx.registers.programCounter  = cpuInterruptVector(ctx.servicingInt);
+      ctx.ime                       = false;
       return true;
 
     default:
@@ -89,10 +89,10 @@ static bool handleInterruptServiceRoutine(void)
 
 
 void cpuTick(void)
-{ 
+{
   CpuContext* ctx = cpuGetContext();
 
-  // - - - 1. If Halted, just wait for interrupts 
+  // - - - 1. If Halted, just wait for interrupts 
   if (ctx->halted)
   {
     ctx->totalMCycles++;
@@ -109,7 +109,7 @@ void cpuTick(void)
       ctx->ime          = false;
       ctx->mCycle       = M2;
     }
-    
+
     // - - - EI delay logic: IME Is enabled one instruction after EI
     if (ctx->imeDelay)
     {
@@ -118,14 +118,14 @@ void cpuTick(void)
     }
   }
 
-  // - - - 3. Fetch or Execute 
+  // - - - 3. Fetch or Execute 
   ExecStatus status = EXEC_STATUS_CONTINUE;
 
-  // - - - Run a 5 cycle interrupt routine 
+  // - - - Run a 5 cycle interrupt routine 
   if (ctx->servicingInt != CPUT_INT_NONE)
   {
-    bool isrFinished = handleInterruptServiceRoutine();
-    status = isrFinished ? EXEC_STATUS_DONE : EXEC_STATUS_CONTINUE;
+    bool isrFinished  = handleInterruptServiceRoutine();
+    status            = isrFinished ? EXEC_STATUS_DONE : EXEC_STATUS_CONTINUE;
 
     if (status == EXEC_STATUS_DONE)
     {
@@ -137,18 +137,18 @@ void cpuTick(void)
 
   else if (ctx->mCycle == M1)
   {
-    // - - - M1: Fetch opcode 
+    // - - - M1: Fetch opcode 
     ctx->pcAtFetch = ctx->registers.programCounter;
 
     // - - - Handle HALT bug: PC does not increment if latch is set
     u8 opcodeByte = busRead(ctx->registers.programCounter);
-    if (!ctx->haltBug)  ctx->registers.programCounter++;
-    else                ctx->haltBug = false;
+    if (!ctx->haltBug) ctx->registers.programCounter++;
+    else               ctx->haltBug = false;
 
     /**
-     * CB contract:
-     * M1 fetches 0xCB prefix only 
-     * M2 fetches / dispatches the CB opcode and runs first handler stage
+      * CB contract:
+      * M1 fetches 0xCB prefix only 
+      * M2 fetches / dispatches the CB opcode and runs first handler stage
     */
     if (!ctx->isCB && opcodeByte == OP_CB_PREFIX)
     {
@@ -162,27 +162,27 @@ void cpuTick(void)
     ctx->currentOpcode = opcodeByte;
 
     // - - - Lookup metadata
-    ctx->currentInstruction = ctx->isCB ? 
-      instructionGetByCBOpcode(ctx->currentOpcode) : 
-      instructionGetByOpcode(ctx->currentOpcode);
-    
-    // - - - Transition and run the first m cycle of the instruction 
+    ctx->currentInstruction = ctx->isCB ?
+    instructionGetByCBOpcode(ctx->currentOpcode) :
+    instructionGetByOpcode(ctx->currentOpcode);
+
+    // - - - Transition and run the first m cycle of the instruction
     status = ctx->currentInstruction->handler();
 
-    // - - - single m cycle instruction 
+    // - - - single m cycle instruction
     if (status == EXEC_STATUS_DONE_IMMEDIATE)
     {
       ctx->mCycle = M1;
       ctx->isCB   = false;
     }
-    else 
+    else
     {
       ctx->mCycle = M2;
     }
   }
 
-  // - - - Multicycle execution phase 
-  else 
+  // - - - Multicycle execution phase 
+  else
   {
     // - - - CB second byte fetch and first execution stage
     // - - - BUG: You might be wondering why stay in M2, reason being that I made CB handlers to expect M2, and I can either change every single one of them, or I can just stay in M2 here.
@@ -208,11 +208,11 @@ void cpuTick(void)
   ctx->totalMCycles++;
 }
 
-void cpuTraceLineToString(char* OUT, u32 OUT_SIZE) 
+void cpuTraceLineToString(char* OUT, u32 OUT_SIZE)
 {
   CpuContext* ctx = cpuGetContext();
   u8 f = ctx->registers.f;
-  
+
   char flags[5] = {
     (f & FLAG_Z) ? 'Z' : '-',
     (f & FLAG_N) ? 'N' : '-',
@@ -229,7 +229,7 @@ void cpuTraceLineToString(char* OUT, u32 OUT_SIZE)
   u8 b1 = busRead(pc + 1);
   u8 b2 = busRead(pc + 2);
 
-  snprintf(OUT, OUT_SIZE, 
+  snprintf(OUT, OUT_SIZE,
     "A:%02X F:%s BC:%04X DE:%04X HL:%04X SP:%04X PC:%04X | Op:%02X %02X %02X (%s)",
     ctx->registers.a,
     flags,

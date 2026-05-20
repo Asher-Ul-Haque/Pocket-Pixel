@@ -1,11 +1,10 @@
-#include "bus.h"
-#include "platform.h"
+#include <bus.h>
+#include <platform.h>
 #include <ppu/ppu.h>
 #include <cartridge/cartridge.h>
 #include <string.h>
 
 static PpuContext ctx;
-static u8         frameCounter = 0;
 
 PpuContext* ppuGetContext(void) { return &ctx; }
 
@@ -15,80 +14,11 @@ void ppuInit(void)
   ctx.mode = PPU_MODE_OAM_SCAN;
 
   // - - - default hardware register values on bootup 
-  ctx.registers.lcdc = 0x91;
-  ctx.registers.stat = 0x85;
-  ctx.registers.bgp  = 0xFC;
-  ctx.registers.obp0 = 0xFF;
-  ctx.registers.obp1 = 0xFF;
-}
-
-u8 ppuRead(u16 ADDRESS)
-{
-  // - - - 1. VRAM Reading 
-  if (ADDRESS >= 0x8000 && ADDRESS <= 0x9FFF)
-  {
-    return ctx.vram[0][ADDRESS - 0x8000];
-  }
-
-  // - - - 2. OAM Reading
-  if (ADDRESS >= 0xFE00 && ADDRESS <= 0xFE9F)
-  { return ctx.oam[ADDRESS - 0xFE00]; }
-
-  switch (ADDRESS)
-  {
-    case LCDC  : return ctx.registers.lcdc;
-    case STAT  : return ctx.registers.stat;
-    case SCY   : return ctx.registers.scy;
-    case SCX   : return ctx.registers.scx;
-    case LY    : return ctx.registers.ly;
-    case LYC   : return ctx.registers.lyc;
-    case DMA   : return ctx.registers.dma;
-    case BGP   : return ctx.registers.bgp;
-    case OBP_0 : return ctx.registers.obp0;
-    case OBP_1 : return ctx.registers.obp1;
-    case WY    : return ctx.registers.wy;
-    case WX    : return ctx.registers.wx;
-
-    default: break;
-  }
-
-  return OPEN_BUS_VALUE;
-}
-
-void ppuWrite(u16 ADDRESS, u8 VALUE)
-{
-  // - - - 1. vram writing 
-  if (ADDRESS >= BUS_ADDR_VRAM_START && ADDRESS <= BUS_ADDR_VRAM_END)
-  {
-    ctx.vram[0][ADDRESS - BUS_ADDR_VRAM_START] = VALUE;
-    return;
-  }
-
-  // - - - 2. OAM writing 
-  if (ADDRESS >= BUS_ADDR_OAM_START && ADDRESS <= BUS_ADDR_OAM_END)
-  {
-    ctx.oam[ADDRESS - BUS_ADDR_OAM_START] = VALUE;
-    return;
-  }
-
-  // - - - 3. Register Encoding Range 
-  switch (ADDRESS)
-  {
-    case LCDC   : ctx.registers.lcdc = VALUE;                                         break;
-    case STAT   : ctx.registers.stat = (ctx.registers.stat & 0x07) | (VALUE & 0xF8);  break;
-    case SCY    : ctx.registers.scy  = VALUE;                                         break;
-    case SCX    : ctx.registers.scx  = VALUE;                                         break;
-    case LY     :                                                                     break; // - - - read only 
-    case LYC    : ctx.registers.lyc  = VALUE;                                         break;
-    case DMA    : ctx.registers.dma  = VALUE;                                         break;
-    case BGP    : ctx.registers.bgp  = VALUE;                                         break;
-    case OBP_0  : ctx.registers.obp0 = VALUE;                                         break;
-    case OBP_1  : ctx.registers.obp1 = VALUE;                                         break;
-    case WX     : ctx.registers.wx   = VALUE;                                         break;
-    case WY     : ctx.registers.wy   = VALUE;                                         break;
-
-    default: break;
-  }
+  ctx.registers.lcdc = BOOT_LCDC;
+  ctx.registers.stat = BOOT_STAT;
+  ctx.registers.bgp  = BOOT_BGP;
+  ctx.registers.obp0 = BOOT_OBP0;
+  ctx.registers.obp1 = BOOT_OBP1;
 }
 
 void ppuTick(u32 DOTS)
@@ -98,33 +28,33 @@ void ppuTick(u32 DOTS)
   switch (ctx.mode)
   {
     case PPU_MODE_OAM_SCAN:
-      if (ctx.dotCount >= 80)
+      if (ctx.dotCount >= DOT_OAM_SCAN)
       {
-        ctx.dotCount -= 80;
+        ctx.dotCount -= DOT_OAM_SCAN;
         ctx.mode      = PPU_MODE_DRAWING;
       }
       break;
 
     case PPU_MODE_DRAWING:
-      if (ctx.dotCount >= 172)
+      if (ctx.dotCount >= DOTS_DRAWING)
       {
-        ctx.dotCount -= 172;
+        ctx.dotCount -= DOTS_DRAWING;
         ctx.mode      = PPU_MODE_HBLANK;
       }
       break;
 
     case PPU_MODE_HBLANK:
-      if (ctx.dotCount >= 204)
+      if (ctx.dotCount >= DOTS_HBLANK)
       {
-        ctx.dotCount -= 204;
+        ctx.dotCount -= DOTS_HBLANK;
         ctx.registers.ly++;
 
-        if (ctx.registers.ly == 144)
+        if (ctx.registers.ly == LY_VBLANK_START)
         {
           ctx.mode = PPU_MODE_VBLANK;
 
           // - - - Verification
-          frameCounter++;
+          ctx.testPatternFrame++;
           ctx.currentFrame.palettes.dmg.bgp   = ctx.registers.bgp;
           ctx.currentFrame.palettes.dmg.obp0  = ctx.registers.obp0;
           ctx.currentFrame.palettes.dmg.obp1  = ctx.registers.obp1;
@@ -134,7 +64,7 @@ void ppuTick(u32 DOTS)
             for (i32 x = 0; x < WIDTH; ++x)
             {
               i32 index = y * WIDTH + x;
-              ctx.currentFrame.pixels[index].bits.colorIndex  = (u8) (((x + y + frameCounter) / 8) % 4);
+              ctx.currentFrame.pixels[index].bits.colorIndex = (u8)(((x + y + ctx.testPatternFrame) / 8) % 4);
               ctx.currentFrame.pixels[index].bits.paletteId   = 0;
               ctx.currentFrame.pixels[index].bits.layer       = 0;
             }
@@ -147,12 +77,12 @@ void ppuTick(u32 DOTS)
       break;
 
     case PPU_MODE_VBLANK:
-      if (ctx.dotCount >= 456)
+      if (ctx.dotCount >= DOTS_VBLANK)
       {
-        ctx.dotCount -= 456;
+        ctx.dotCount -= DOTS_VBLANK;
         ctx.registers.ly++;
 
-        if (ctx.registers.ly > 153)
+        if (ctx.registers.ly > LY_MAX)
         {
           ctx.registers.ly  = 0;
           ctx.mode          = PPU_MODE_OAM_SCAN;

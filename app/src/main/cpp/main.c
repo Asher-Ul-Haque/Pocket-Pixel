@@ -19,7 +19,21 @@
 #include <debug.h>
 #include <SDL3/SDL.h>
 
-// - - - Static Platform Helpers - - -
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <common.h>
+#include <timer.h>
+#include <platform.h>
+#include <cpu/cpu.h>
+#include <ppu/ppu.h>
+#include <cartridge/cartridge.h>
+#include <utils/logger.h>
+#include <debug.h>
+#include <SDL3/SDL.h>
+
+#define DOTS_PER_FRAME  70224
+#define DOTS_PER_MCYCLE 4
 
 static char savePath[1024];
 
@@ -72,7 +86,6 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[])
   const char* romPath = ARGUMENT_VECTOR[1];
   FORGE_LOG_DEBUG("Attempting to open ROM: %s", romPath);
 
-  // - - - 1. Read ROM file into memory
   FILE* f = fopen(romPath, "rb");
   if (!f) 
   {
@@ -112,8 +125,6 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[])
     .getExpectedSaveSize = fileGetExpectedSaveSize
   };
 
-  // - - - 2. Initialize Core Components
-  FORGE_LOG_DEBUG("%s", "Initializing Cartridge structure...");
   if (!cartridgeInit(&fileIO, romData, (u32)romSize)) 
   {
     FORGE_LOG_FATAL("%s", "Failed to initialize cartridge");
@@ -121,10 +132,7 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[])
     return 1;
   }
 
-  FORGE_LOG_DEBUG("%s", "Initializing Platform Harness...");
   platformInit();
-
-  FORGE_LOG_DEBUG("%s", "Initializing Subsystems...");
   cpuInit();
   ppuInit();
   timerInit();
@@ -135,16 +143,21 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[])
   PlatformContext* platform = platformGetContext();
   PpuContext* ppu = ppuGetContext();
 
-  FORGE_LOG_DEBUG("%s", "Entering main execution loop...");
   while (running) 
   {
-    for (u32 frame_cycles = 0; frame_cycles < 70224; ) 
+    // Emulate exactly one hardware frame interval
+    for (u32 frame_cycles = 0; frame_cycles < DOTS_PER_FRAME; ) 
     {
       cpuTick(); 
       timerStepMCycle();
-      ppuTick(4); 
-      frame_cycles += 4;
+      
+      // Step the PPU by 1 M-Cycle worth of active clock dots
+      ppuTick(DOTS_PER_MCYCLE); 
+      frame_cycles += DOTS_PER_MCYCLE;
     }
+
+    static u32 drawn_frames = 0;
+    FORGE_LOG_DEBUG("Presenting Frame: %u", ++drawn_frames);
 
     SDL_Event event;
     while (SDL_PollEvent(&event)) 
@@ -155,16 +168,14 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[])
       }
     }
 
-    // Protection guards for debug rendering pointers
-    if (platform && ppu) 
-    {
-      platform->rendering.drawTileView(ppu->vram[0], ppu->vram[1]);
-      platform->rendering.drawMapView(ppu->vram[0], ppu->vram[1], 0);
-      platform->rendering.present();
+    // Refresh display matrix panels dynamically using encapsulated pointers
+    if (platform && ppu) {
+        platform->rendering.drawTileView(ppu->vram[0], ppu->vram[1]);
+        platform->rendering.drawMapView(ppu->vram[0], ppu->vram[1], 0);
+        platform->rendering.present();
     }
   }
 
-  FORGE_LOG_DEBUG("%s", "Shutting down harness...");
   platform->rendering.cleanup();
   free(romData);
   return 0;
