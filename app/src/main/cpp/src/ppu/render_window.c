@@ -42,21 +42,28 @@ void ppuRenderWindowLayer(void)
   if (ctx->registers.wx > WINDOW_WX_MAX || ctx->registers.wy >= HEIGHT) return;
 
   const i16 windowLeft = (i16)ctx->registers.wx - WINDOW_X_OFFSET;
-  const u16 windowMapBase = (ctx->registers.lcdc & LCDC_WIN_TILE_MAP_MASK) ? BG_MAP_1_OFFSET : BG_MAP_0_OFFSET;
+  const bool windowHasVisiblePixels = windowLeft < WIDTH;
+  if (!windowHasVisiblePixels) return;
 
-  for (i32 y = ctx->registers.wy; y < HEIGHT; ++y)
+  const u16 windowMapBase = (ctx->registers.lcdc & LCDC_WIN_TILE_MAP_MASK) ? BG_MAP_1_OFFSET : BG_MAP_0_OFFSET;
+  u8 windowLine = 0;
+
+  for (i32 y = 0; y < HEIGHT; ++y)
   {
+    if (y < ctx->registers.wy) continue;
+
     for (i32 x = 0; x < WIDTH; ++x)
     {
       if (x < windowLeft) continue;
 
       const u8 windowX = (u8)(x - windowLeft);
-      const u8 windowY = (u8)(y - ctx->registers.wy);
-      const u8 color = sampleWindowColor(ctx, windowMapBase, windowX, windowY);
+      const u8 color = sampleWindowColor(ctx, windowMapBase, windowX, windowLine);
       const i32 index = (y * WIDTH) + x;
       ctx->currentFrame.pixels[index].bits.colorIndex = color;
       ctx->currentFrame.pixels[index].bits.layer = 0;
       ctx->currentFrame.pixels[index].bits.paletteId = 0;
     }
+
+    windowLine++;
   }
 }
