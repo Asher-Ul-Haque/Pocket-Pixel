@@ -5,6 +5,7 @@
 #include <timer.h>
 #include <cpu/interrupts.h>
 #include <ppu/ppu.h>
+#include <input/joypad.h>
 
 u16 busRead16(u16 ADDRESS)
 {
@@ -65,10 +66,8 @@ u8 busRead(u16 ADDRESS)
   if (ADDRESS >= BUS_ADDR_IO_START && ADDRESS <= BUS_ADDR_IO_END) 
   {
     // - - - Joypad 
-    if (ADDRESS == 0xFF00) 
-    { return OPEN_BUS_VALUE;
-      // TODO_COMMENT("Implement joypad input handling");
-    }
+    if (ADDRESS == JOYP_REGISTER_ADDRESS) 
+    { return joypadRead(); }
 
     // - - - PPU Io 
     if (ADDRESS >= REG_LCDC && ADDRESS <= REG_WX)
@@ -166,6 +165,12 @@ void busWrite(u16 ADDRESS, u8 VALUE)
     if (ADDRESS >= DIV_REGISTER_ADDRESS && ADDRESS <= TAC_REGISTER_ADDRESS) 
     {
       timerWrite(ADDRESS, VALUE);
+      return;
+    }
+
+    if (ADDRESS == JOYP_REGISTER_ADDRESS)
+    {
+      joypadWrite(VALUE);
       return;
     }
 

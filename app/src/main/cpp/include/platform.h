@@ -65,7 +65,8 @@ typedef struct Renderer
 
 typedef struct InputHandler
 {
-  u8 empty; /// TODO
+  void (*poll)         (bool* RUNNING);
+  void (*printKeybinds)(void);
 } InputHandler;
 
 typedef struct AudioSystem
