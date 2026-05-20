@@ -97,7 +97,8 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[])
     return 1;
   }
 
-  if (fread(romData, 1, romSize, file) != romSize)
+  const u64 bytesRead = (u64)fread(romData, 1, (size_t)romSize, file);
+  if (bytesRead != romSize)
   {
     FORGE_LOG_ERROR("%s", "Failed to read ROM data");
     free(romData);
