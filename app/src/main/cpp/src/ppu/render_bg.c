@@ -48,9 +48,11 @@ void ppuRenderBgLayer(void)
       PpuPixel* pixel = &ctx->currentFrame.pixels[index];
       pixel->bits.layer = DEFAULT_LAYER_BACKGROUND;
       pixel->bits.paletteId = DEFAULT_BG_PALETTE;
-      pixel->bits.colorIndex = EMPTY_PIXEL_COLOR;
-
-      if (!bgEnabled) continue;
+      if (!bgEnabled)
+      {
+        pixel->bits.colorIndex = EMPTY_PIXEL_COLOR;
+        continue;
+      }
 
       const u8 bgX = (u8)(x + ctx->registers.scx);
       const u8 bgY = (u8)(y + ctx->registers.scy);
