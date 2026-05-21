@@ -136,9 +136,3 @@ bool ppuIsLcdEnabled(void);
 
 void ppuRenderFrame(void);
 void ppuRenderScanline(u8 SCANLINE_Y);
-
-void ppuRenderBgLayer(void);
-
-void ppuRenderWindowLayer(void);
-
-void ppuRenderObjLayer(void);

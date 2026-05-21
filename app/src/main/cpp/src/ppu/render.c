@@ -17,7 +17,7 @@ typedef struct BgSample
   bool  priority;
 } BgSample;
 
-static bool isCgbMode(void)
+static bool isCgbHardware(void)
 {
   return cartridgeGetContext()->mode != MODE_DMG_GAMEBOY;
 }
@@ -66,7 +66,7 @@ static u8 sampleTileColor(const PpuContext* CTX, u8 TILE_ID, u8 TILE_LINE, u8 PI
   if (ATTRIBUTES & BG_ATTR_X_FLIP_MASK) localX = (u8)(TILE_PIXEL_MASK - localX);
   if (ATTRIBUTES & BG_ATTR_Y_FLIP_MASK) localY = (u8)(TILE_PIXEL_MASK - localY);
 
-  const u8  vramBank    = ((ATTRIBUTES & BG_ATTR_VRAM_BANK_MASK) && isCgbMode()) ? 1 : DEFAULT_VRAM_BANK;
+  const u8  vramBank    = ((ATTRIBUTES & BG_ATTR_VRAM_BANK_MASK) && isCgbHardware()) ? 1 : DEFAULT_VRAM_BANK;
   const u16 tileAddress = getTileDataAddress(CTX, TILE_ID, localY);
   const u8  dataLow     = CTX->vram[vramBank][tileAddress];
   const u8  dataHigh    = CTX->vram[vramBank][tileAddress + 1];
@@ -84,7 +84,7 @@ static BgSample sampleBgOrWindow(const PpuContext* CTX, u8 X, u8 Y)
     .priority  = false
   };
 
-  const bool cgb = isCgbMode();
+  const bool cgb = isCgbHardware();
   const bool bgMasterEnable = (CTX->registers.lcdc & LCDC_BG_WIN_ENABLE_MASK) != 0;
   if (!bgMasterEnable) return sample;
 
@@ -150,7 +150,7 @@ static u8 sampleSpriteColor(
     }
   }
 
-  const u8  vramBank    = (isCgbMode() && (ATTRIBUTES & OBJ_ATTR_VRAM_BANK_MASK)) ? 1 : DEFAULT_VRAM_BANK;
+  const u8  vramBank    = (isCgbHardware() && (ATTRIBUTES & OBJ_ATTR_VRAM_BANK_MASK)) ? 1 : DEFAULT_VRAM_BANK;
   const u16 tileAddress = (u16)(TILE_DATA_8000 + (TILE_ID * TILE_BYTES) + (LOCAL_Y * TILE_LINE_BYTES));
   const u8  dataLow     = CTX->vram[vramBank][tileAddress];
   const u8  dataHigh    = CTX->vram[vramBank][tileAddress + 1];
@@ -161,7 +161,7 @@ static u8 sampleSpriteColor(
 
 static SpriteSample selectSpriteForPixel(const PpuContext* CTX, u8 X, u8 Y)
 {
-  const bool dmg = !isCgbMode();
+  const bool dmg = !isCgbHardware();
   SpriteSample best =
   {
     .valid       = false,
@@ -230,7 +230,7 @@ void ppuRenderScanline(u8 SCANLINE_Y)
   if (SCANLINE_Y >= HEIGHT) return;
 
   PpuContext* ctx = ppuGetContext();
-  const bool cgb = isCgbMode();
+  const bool cgb = isCgbHardware();
   const bool objEnabled = (ctx->registers.lcdc & LCDC_OBJ_ENABLE_MASK) != 0;
 
   for (u8 x = 0; x < WIDTH; ++x)
@@ -280,7 +280,3 @@ void ppuRenderFrame(void)
   ctx->currentFrame.palettes.dmg.obp0 = ctx->registers.obp0;
   ctx->currentFrame.palettes.dmg.obp1 = ctx->registers.obp1;
 }
-
-void ppuRenderBgLayer(void) { }
-void ppuRenderWindowLayer(void) { }
-void ppuRenderObjLayer(void) { }
