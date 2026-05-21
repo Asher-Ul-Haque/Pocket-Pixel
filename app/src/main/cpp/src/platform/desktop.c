@@ -64,11 +64,13 @@ void sdlInit(void)
 
 void renderFrame(const PpuFrame* FRAME)
 {
+  static u32 renderCalls = 0;
   void* pixels; i32 pitch;
   if (SDL_LockTexture(rendererCTX.gameTexture, NULL, &pixels, &pitch) != 0) return;
 
   u8* destBase = (u8*)pixels;
   const u8 mode = cartridgeGetContext()->mode;
+  u32 checksum = 0;
 
   for (i32 y = 0; y < HEIGHT; ++y)
   {
@@ -76,6 +78,7 @@ void renderFrame(const PpuFrame* FRAME)
     for (i32 x = 0; x < WIDTH; ++x)
     {
       const i32 index = (y * WIDTH) + x;
+      checksum ^= (u32)(FRAME->resolvedColor[index] + (u16)index);
       if (mode == MODE_DMG_GAMEBOY)
       {
         row[x] = rendererCTX.dmgColors[FRAME->resolvedColor[index] & 0x03];
@@ -88,6 +91,19 @@ void renderFrame(const PpuFrame* FRAME)
     }
   }
   SDL_UnlockTexture(rendererCTX.gameTexture);
+
+  renderCalls++;
+  if ((renderCalls % 120) == 0)
+  {
+    FORGE_LOG_INFO(
+      "[SDL] renderFrame calls=%u mode=%u checksum=0x%08X firstPx=0x%04X pitch=%d",
+      renderCalls,
+      (u32)mode,
+      checksum,
+      FRAME->resolvedColor[0],
+      pitch
+    );
+  }
 }
 
 void drawTileView(const u8* VRAM_BANK_0, const u8* VRAM_BANK_1)
@@ -223,20 +239,55 @@ void printKeybinds(void)
 
 void present(void)
 {
+  static u32 presentCalls = 0;
+  static bool layoutLogged = false;
   if (!rendererCTX.renderer) return;
 
   SDL_SetRenderDrawColor(rendererCTX.renderer, 20, 20, 20, 255);
   SDL_RenderClear(rendererCTX.renderer);
 
-  SDL_FRect rGame = { 30,  50, 160 * 3, 144 * 3 };
-  SDL_FRect rTile = { 550, 50, 128 * 2, 192 * 2 };
-  SDL_FRect rMap  = { 850, 50, 256 * 1.5f, 256 * 1.5f };
+  i32 windowW = DESIGN_WIDTH;
+  i32 windowH = DESIGN_HEIGHT;
+  SDL_GetWindowSize(rendererCTX.window, &windowW, &windowH);
+
+  const float margin = 20.0f;
+  SDL_FRect rGame = { margin, margin, WIDTH * 3.0f, HEIGHT * 3.0f };
+  SDL_FRect rTile = { rGame.x + rGame.w + margin, margin, 128.0f * 2.0f, 192.0f * 2.0f };
+  SDL_FRect rMap  = { rTile.x + rTile.w + margin, margin, 256.0f * 1.5f, 256.0f * 1.5f };
+
+  if ((rMap.x + rMap.w) > (windowW - margin))
+  {
+    rMap.x = margin;
+    rMap.y = rGame.y + rGame.h + margin;
+  }
+  if ((rTile.x + rTile.w) > (windowW - margin))
+  {
+    rTile.x = margin;
+    rTile.y = rMap.y + rMap.h + margin;
+  }
+
+  if (!layoutLogged)
+  {
+    FORGE_LOG_INFO(
+      "[SDL] window=%dx%d game=(%.0f,%.0f,%.0f,%.0f) tile=(%.0f,%.0f,%.0f,%.0f) map=(%.0f,%.0f,%.0f,%.0f)",
+      windowW, windowH,
+      rGame.x, rGame.y, rGame.w, rGame.h,
+      rTile.x, rTile.y, rTile.w, rTile.h,
+      rMap.x, rMap.y, rMap.w, rMap.h
+    );
+    layoutLogged = true;
+  }
 
   SDL_RenderTexture(rendererCTX.renderer, rendererCTX.gameTexture, NULL, &rGame);
   SDL_RenderTexture(rendererCTX.renderer, rendererCTX.tileTexture, NULL, &rTile);
   SDL_RenderTexture(rendererCTX.renderer, rendererCTX.mapTexture,  NULL, &rMap);
 
   SDL_RenderPresent(rendererCTX.renderer);
+  presentCalls++;
+  if ((presentCalls % 120) == 0)
+  {
+    FORGE_LOG_INFO("[SDL] present calls=%u", presentCalls);
+  }
 }
 
 void cleanup(void)

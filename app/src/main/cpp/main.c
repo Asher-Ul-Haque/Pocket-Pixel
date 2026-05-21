@@ -138,6 +138,8 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[])
 
   bool running = true;
   PpuContext* ppu = ppuGetContext();
+  u32 presentedFrames = 0;
+  u32 stalledIterations = 0;
 
   while (running)
   {
@@ -153,7 +155,23 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[])
       frameDots += DOTS_PER_MCYCLE;
     }
 
-    if (!ppu->frameReady) continue;
+    if (!ppu->frameReady)
+    {
+      stalledIterations++;
+      if ((stalledIterations % 120) == 0)
+      {
+        FORGE_LOG_WARNING(
+          "[RENDER] frameReady not reached: lcdEnabled=%d ly=%u mode=%u dot=%u lcdc=0x%02X",
+          ppuIsLcdEnabled() ? 1 : 0,
+          ppu->registers.ly,
+          (u32)ppu->mode,
+          ppu->dotCount,
+          ppu->registers.lcdc
+        );
+      }
+      continue;
+    }
+    stalledIterations = 0;
     ppuRenderFrame();
 
     if (platform && platform->rendering.renderFrame) platform->rendering.renderFrame(&ppu->currentFrame);
@@ -161,6 +179,17 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[])
     if (platform && platform->rendering.drawMapView)  platform->rendering.drawMapView(ppu->vram[0], ppu->vram[1], 0);
     if (platform && platform->rendering.present)      platform->rendering.present();
 
+    presentedFrames++;
+    if ((presentedFrames % 120) == 0)
+    {
+      FORGE_LOG_INFO(
+        "[RENDER] presentedFrames=%u lcdEnabled=%d ly=%u mode=%u",
+        presentedFrames,
+        ppuIsLcdEnabled() ? 1 : 0,
+        ppu->registers.ly,
+        (u32)ppu->mode
+      );
+    }
     ppu->frameReady = false;
   }
 

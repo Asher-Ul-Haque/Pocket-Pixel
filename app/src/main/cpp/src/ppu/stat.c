@@ -73,7 +73,12 @@ void ppuHandleLcdStateChange(u8 PREVIOUS_LCDC, u8 NEW_LCDC)
   {
     ctx->dotCount        = 0;
     ctx->registers.ly    = 0;
-    ctx->frameReady      = false;
+    for (u32 i = 0; i < (WIDTH * HEIGHT); ++i)
+    {
+      ctx->currentFrame.resolvedColor[i] = 0x7FFF;
+      ctx->currentFrame.pixels[i].raw = 0;
+    }
+    ctx->frameReady      = true;
     ctx->mode            = PPU_MODE_HBLANK;
     ctx->registers.stat &= (u8) ~STAT_MODE_BITS_MASK;
     ctx->registers.stat |= (u8) PPU_MODE_HBLANK;
