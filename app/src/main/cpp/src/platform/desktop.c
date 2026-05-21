@@ -96,7 +96,7 @@ void renderFrame(const PpuFrame* FRAME)
         const u16 color555 = FRAME->resolvedColor[index] & 0x7FFF;
         framePixels[index] = colorConvert555To8888(color555);
       }
-      if ((framePixels[index] & 0xFFFFFF00u) != 0) nonBlack++;
+      if ((framePixels[index] & 0x00FFFFFFu) != 0) nonBlack++;
     }
   }
   if (!uploadTextureRGBA8888(rendererCTX.gameTexture, framePixels, WIDTH, HEIGHT, "gameTexture")) return;
@@ -113,6 +113,7 @@ void renderFrame(const PpuFrame* FRAME)
       framePixels[0],
       nonBlack
     );
+    if (nonBlack == 0) FORGE_LOG_WARNING("%s", "[SDL] renderFrame output is fully black (RGB)");
   }
 }
 
@@ -135,7 +136,7 @@ void drawTileView(const u8* VRAM_BANK_0, const u8* VRAM_BANK_1)
         u8 color = (((b2 >> (7 - x)) & 0x01) << 1) | ((b1 >> (7 - x)) & 0x01);
         const i32 index = (rowY * 128) + ((tile % 16) * 8) + x;
         tilePixels[index] = rendererCTX.dmgColors[color];
-        if ((tilePixels[index] & 0xFFFFFF00u) != 0) nonBlack++;
+        if ((tilePixels[index] & 0x00FFFFFFu) != 0) nonBlack++;
       }
     }
   }
@@ -145,6 +146,7 @@ void drawTileView(const u8* VRAM_BANK_0, const u8* VRAM_BANK_1)
   if ((tileCalls % 120) == 0)
   {
     FORGE_LOG_INFO("[SDL] drawTileView calls=%u nonBlack=%u firstPx=0x%08X", tileCalls, nonBlack, tilePixels[0]);
+    if (nonBlack == 0) FORGE_LOG_WARNING("%s", "[SDL] tile texture output is fully black (RGB)");
   }
 }
 
@@ -172,7 +174,7 @@ void drawMapView(const u8* VRAM_BANK_0, const u8* VRAM_BANK_1, u8 MAP_SELECT)
           u8 color = (((b2 >> (7 - x)) & 0x01) << 1) | ((b1 >> (7 - x)) & 0x01);
           const i32 index = (rowY * 256) + (tx * 8) + x;
           mapPixels[index] = rendererCTX.dmgColors[color];
-          if ((mapPixels[index] & 0xFFFFFF00u) != 0) nonBlack++;
+          if ((mapPixels[index] & 0x00FFFFFFu) != 0) nonBlack++;
         }
       }
     }
@@ -183,6 +185,7 @@ void drawMapView(const u8* VRAM_BANK_0, const u8* VRAM_BANK_1, u8 MAP_SELECT)
   if ((mapCalls % 120) == 0)
   {
     FORGE_LOG_INFO("[SDL] drawMapView calls=%u nonBlack=%u firstPx=0x%08X", mapCalls, nonBlack, mapPixels[0]);
+    if (nonBlack == 0) FORGE_LOG_WARNING("%s", "[SDL] map texture output is fully black (RGB)");
   }
 }
 
