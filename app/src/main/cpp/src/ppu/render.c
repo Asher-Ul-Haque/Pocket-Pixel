@@ -86,7 +86,7 @@ static BgSample sampleBgOrWindow(const PpuContext* CTX, u8 X, u8 Y)
 
   const bool cgb = isCgbHardware();
   const bool bgMasterEnable = (CTX->registers.lcdc & LCDC_BG_WIN_ENABLE_MASK) != 0;
-  if (!bgMasterEnable) return sample;
+  if (!cgb && !bgMasterEnable) return sample;
 
   const bool windowEnabled = (CTX->registers.lcdc & LCDC_WIN_ENABLE_MASK) != 0;
   const i16  windowLeft    = (i16)CTX->registers.wx - WINDOW_X_OFFSET;
@@ -232,6 +232,9 @@ void ppuRenderScanline(u8 SCANLINE_Y)
   PpuContext* ctx = ppuGetContext();
   const bool cgb = isCgbHardware();
   const bool objEnabled = (ctx->registers.lcdc & LCDC_OBJ_ENABLE_MASK) != 0;
+  
+  // In CGB mode, this bit determines if priority flags are respected
+  const bool bgMasterPriority = (ctx->registers.lcdc & LCDC_BG_WIN_ENABLE_MASK) != 0;
 
   for (u8 x = 0; x < WIDTH; ++x)
   {
@@ -248,13 +251,35 @@ void ppuRenderScanline(u8 SCANLINE_Y)
       if (sprite.valid)
       {
         const bool bgVisible = bg.color != 0;
-        bool objBehindBg = (sprite.attributes & OBJ_ATTR_BG_PRIORITY_MASK) && bgVisible;
+        bool objBehindBg = false;
 
-        if (cgb && bg.priority && bgVisible)
+        if (cgb)
         {
-          objBehindBg = true;
+          if (!bgMasterPriority)
+          {
+            // CGB LCDC.0 is CLEAR: Sprites unconditionally render on top of the BG.
+            objBehindBg = false;
+          }
+          else
+          {
+            // CGB LCDC.0 is SET: Priority is decided by the tile and sprite attributes.
+            // If the BG pixel is visible AND either the BG tile or Sprite requested priority, the BG wins.
+            if (bgVisible && (bg.priority || (sprite.attributes & OBJ_ATTR_BG_PRIORITY_MASK)))
+            {
+              objBehindBg = true;
+            }
+          }
+        }
+        else
+        {
+          // DMG Rules: Sprite attribute dictates priority.
+          if (bgVisible && (sprite.attributes & OBJ_ATTR_BG_PRIORITY_MASK))
+          {
+            objBehindBg = true;
+          }
         }
 
+        // Apply the sprite pixel if it won the priority check
         if (!objBehindBg)
         {
           finalColor = sprite.color;
@@ -268,6 +293,7 @@ void ppuRenderScanline(u8 SCANLINE_Y)
     ctx->currentFrame.pixels[index].bits.colorIndex = finalColor;
     ctx->currentFrame.pixels[index].bits.paletteId  = finalPalette;
     ctx->currentFrame.pixels[index].bits.layer      = finalLayer;
+    
     if (cgb) ctx->currentFrame.resolvedColor[index] = resolveCgbColor555(ctx, finalLayer, finalColor, finalPalette);
     else     ctx->currentFrame.resolvedColor[index] = resolveDmgShade(ctx, finalLayer, finalColor, finalPalette);
   }

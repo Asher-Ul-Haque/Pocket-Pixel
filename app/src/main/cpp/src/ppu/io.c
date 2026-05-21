@@ -64,6 +64,12 @@ u8 ppuRead(u16 ADDRESS)
         return ctx->objPaletteRam[index];
       }
 
+    case REG_HDMA1 : return ctx->registers.hdma1;
+    case REG_HDMA2 : return ctx->registers.hdma2;
+    case REG_HDMA3 : return ctx->registers.hdma3;
+    case REG_HDMA4 : return ctx->registers.hdma4;
+    case REG_HDMA5 : return ctx->registers.hdma5;
+
     default: break;
   }
 
@@ -174,6 +180,15 @@ void ppuWrite(u16 ADDRESS, u8 VALUE)
         }
         break;
       }
+
+    case REG_HDMA1: ctx->registers.hdma1 = VALUE; break;
+    case REG_HDMA2: ctx->registers.hdma2 = VALUE; break;
+    case REG_HDMA3: ctx->registers.hdma3 = VALUE; break;
+    case REG_HDMA4: ctx->registers.hdma4 = VALUE; break;
+    case REG_HDMA5:
+      ctx->registers.hdma5 = VALUE;
+      ppuHdmaTrigger(VALUE); 
+      break;
 
     default: break;
   }

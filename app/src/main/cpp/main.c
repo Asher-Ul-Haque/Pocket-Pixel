@@ -1,3 +1,5 @@
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_timer.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -57,7 +59,10 @@ bool fileLoadRam(u8* RAM_DATA, u32 RAM_SIZE)
   FILE* file = fopen(savePath, "rb");
   if (!file)
   {
-    FORGE_LOG_ERROR("Failed to open save file for reading: %s. Starting with empty RAM.", savePath);
+    FORGE_LOG_ERROR(
+      "Failed to open save file for reading: %s. Starting with empty RAM.",
+      savePath
+    );
     return false;
   }
 
@@ -66,7 +71,10 @@ bool fileLoadRam(u8* RAM_DATA, u32 RAM_SIZE)
   return read == RAM_SIZE;
 }
 
-u32 fileGetExpectedSaveSize(void) { return 0; }
+u32 fileGetExpectedSaveSize(void)
+{
+  return 0;
+}
 
 i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[])
 {
@@ -77,6 +85,7 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[])
   }
 
   const char* romPath = ARGUMENT_VECTOR[1];
+
   FILE* file = fopen(romPath, "rb");
   if (!file)
   {
@@ -106,6 +115,7 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[])
   }
 
   fclose(file);
+
   snprintf(savePath, sizeof(savePath), "%s.sav", romPath);
 
   CartridgeFileIO fileIO =
@@ -134,66 +144,178 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[])
   FORGE_LOG_INFO("%s", "--- POCKET PIXEL STARTING ---");
   FORGE_LOG_INFO("Game: %s", cartridgeGetTitle());
   FORGE_LOG_INFO("Mode: %s", getModeName(cartridgeGetContext()->mode));
-  if (platform && platform->input.printKeybinds) platform->input.printKeybinds();
+
+  if (platform && platform->input.printKeybinds)
+  {
+    platform->input.printKeybinds();
+  }
+
+  FORGE_LOG_INFO("%s", "Hotkeys:");
+  FORGE_LOG_INFO("%s", "P = Pause/Resume");
+  FORGE_LOG_INFO("%s", "F = Toggle 2x Speed (120 FPS)");
 
   bool running = true;
+  bool paused = false;
+  bool doubleSpeed = false;
+
+  bool pKeyHeld = false;
+  bool fKeyHeld = false;
+
   PpuContext* ppu = ppuGetContext();
-  u32 presentedFrames = 0;
+
+  #define TARGET_FRAME_MS_60FPS 16
+  #define TARGET_FRAME_MS_120FPS 8
+
   u32 stalledIterations = 0;
 
   while (running)
   {
-    if (platform && platform->input.poll) platform->input.poll(&running);
-    if (!running) break;
+    u64 frameStartMs = SDL_GetTicks();
 
-    u32 frameDots = 0;
-    while (running && !ppu->frameReady && frameDots < PPU_DOTS_PER_FRAME)
+    // Poll platform input
+    if (platform && platform->input.poll)
     {
-      cpuTick();
-      timerStepMCycle();
-      ppuTick(DOTS_PER_MCYCLE);
-      frameDots += DOTS_PER_MCYCLE;
+      platform->input.poll(&running);
     }
 
-    if (!ppu->frameReady)
+    if (!running)
     {
-      stalledIterations++;
-      if ((stalledIterations % 120) == 0)
-      {
-        FORGE_LOG_WARNING(
-          "[RENDER] frameReady not reached: lcdEnabled=%d ly=%u mode=%u dot=%u lcdc=0x%02X",
-          ppuIsLcdEnabled() ? 1 : 0,
-          ppu->registers.ly,
-          (u32)ppu->mode,
-          ppu->dotCount,
-          ppu->registers.lcdc
-        );
-      }
-      continue;
+      break;
     }
-    stalledIterations = 0;
-    ppuRenderFrame();
 
-    if (platform && platform->rendering.renderFrame) platform->rendering.renderFrame(&ppu->currentFrame);
-    if (platform && platform->rendering.drawTileView) platform->rendering.drawTileView(ppu->vram[0], ppu->vram[1]);
-    if (platform && platform->rendering.drawMapView)  platform->rendering.drawMapView(ppu->vram[0], ppu->vram[1], 0);
-    if (platform && platform->rendering.present)      platform->rendering.present();
+    // Keyboard state
+    const bool* keyboard = SDL_GetKeyboardState(NULL);
 
-    presentedFrames++;
-    if ((presentedFrames % 120) == 0)
+    // Toggle Pause (P)
+    bool pPressed = keyboard[SDL_SCANCODE_P];
+    if (pPressed && !pKeyHeld)
     {
+      paused = !paused;
+
       FORGE_LOG_INFO(
-        "[RENDER] presentedFrames=%u lcdEnabled=%d ly=%u mode=%u",
-        presentedFrames,
-        ppuIsLcdEnabled() ? 1 : 0,
-        ppu->registers.ly,
-        (u32)ppu->mode
+        "Emulation %s",
+        paused ? "PAUSED" : "RESUMED"
       );
     }
-    ppu->frameReady = false;
+    pKeyHeld = pPressed;
+
+    // Toggle Double Speed (F)
+    bool fPressed = keyboard[SDL_SCANCODE_F];
+    if (fPressed && !fKeyHeld)
+    {
+      doubleSpeed = !doubleSpeed;
+
+      FORGE_LOG_INFO(
+        "Speed Mode: %s",
+        doubleSpeed ? "2x (120 FPS)" : "Normal (60 FPS)"
+      );
+    }
+    fKeyHeld = fPressed;
+
+    // ----------------------------------------
+    // Emulation Step
+    // ----------------------------------------
+    if (!paused)
+    {
+      u32 frameDots = 0;
+
+      while (
+        running &&
+        !ppu->frameReady &&
+        frameDots < PPU_DOTS_PER_FRAME
+      )
+      {
+        cpuTick();
+        timerStepMCycle();
+        ppuTick(DOTS_PER_MCYCLE);
+
+        frameDots += DOTS_PER_MCYCLE;
+      }
+
+      if (!ppu->frameReady)
+      {
+        stalledIterations++;
+
+        if ((stalledIterations % 120) == 0)
+        {
+          FORGE_LOG_WARNING(
+            "[RENDER] frameReady not reached: "
+            "lcdEnabled=%d ly=%u mode=%u dot=%u lcdc=0x%02X",
+            ppuIsLcdEnabled() ? 1 : 0,
+            ppu->registers.ly,
+            (u32)ppu->mode,
+            ppu->dotCount,
+            ppu->registers.lcdc
+          );
+        }
+
+        continue;
+      }
+
+      stalledIterations = 0;
+
+      // Build completed frame
+      ppuRenderFrame();
+      ppu->frameReady = false;
+    }
+
+    // ----------------------------------------
+    // Presentation Phase
+    // Still renders while paused
+    // ----------------------------------------
+    if (platform)
+    {
+      if (platform->rendering.renderFrame)
+      {
+        platform->rendering.renderFrame(&ppu->currentFrame);
+      }
+
+      if (platform->rendering.drawTileView)
+      {
+        platform->rendering.drawTileView(
+          ppu->vram[0],
+          ppu->vram[1]
+        );
+      }
+
+      if (platform->rendering.drawMapView)
+      {
+        platform->rendering.drawMapView(
+          ppu->vram[0],
+          ppu->vram[1],
+          0
+        );
+      }
+
+      if (platform->rendering.present)
+      {
+        platform->rendering.present();
+      }
+    }
+
+    // ----------------------------------------
+    // FPS Cap
+    // ----------------------------------------
+    const u32 targetFrameMs =
+      doubleSpeed
+      ? TARGET_FRAME_MS_120FPS
+      : TARGET_FRAME_MS_60FPS;
+
+    u64 frameEndMs = SDL_GetTicks();
+    u64 frameDurationMs = frameEndMs - frameStartMs;
+
+    if (frameDurationMs < targetFrameMs)
+    {
+      SDL_Delay((u32)(targetFrameMs - frameDurationMs));
+    }
   }
 
-  if (platform && platform->rendering.cleanup) platform->rendering.cleanup();
+  if (platform && platform->rendering.cleanup)
+  {
+    platform->rendering.cleanup();
+  }
+
   free(romData);
+
   return 0;
 }

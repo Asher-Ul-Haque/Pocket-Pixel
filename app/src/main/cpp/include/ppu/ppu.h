@@ -67,6 +67,11 @@ typedef struct PpuRegisters
   u8 wx;              ///< 0xFF4B
   u8 bgPaletteIndex;  ///< 0xFF68
   u8 objPaletteIndex; ///< 0xFF6A
+  u8 hdma1;           ///< 0xFF51 (Source High)
+  u8 hdma2;           ///< 0xFF52 (Source Low)
+  u8 hdma3;           ///< 0xFF53 (Dest High)
+  u8 hdma4;           ///< 0xFF54 (Dest Low)
+  u8 hdma5;           ///< 0xFF55 (Length/Mode/Start)
 } PpuRegisters;
 
 typedef enum PpuRegisterAddr 
@@ -87,7 +92,12 @@ typedef enum PpuRegisterAddr
   REG_BG_PALETTE_INDEX  = 0xFF68,
   REG_BG_PALETTE_DATA   = 0xFF69,
   REG_OBJ_PALETTE_INDEX = 0xFF6A,
-  REG_OBJ_PALETTE_DATA  = 0xFF6B
+  REG_OBJ_PALETTE_DATA  = 0xFF6B,
+  REG_HDMA1             = 0xFF51,
+  REG_HDMA2             = 0xFF52,
+  REG_HDMA3             = 0xFF53,
+  REG_HDMA4             = 0xFF54,
+  REG_HDMA5             = 0xFF55,
 } PpuRegisterAddr;
 
 typedef struct PpuContext 
@@ -135,4 +145,7 @@ void ppuHandleLcdStateChange(u8 PREVIOUS_LCDC, u8 NEW_LCDC);
 bool ppuIsLcdEnabled(void);
 
 void ppuRenderFrame(void);
+
 void ppuRenderScanline(u8 SCANLINE_Y);
+
+void ppuHdmaTrigger(u8 VALUE);
