@@ -83,6 +83,12 @@
 #define OBJ_ATTR_VRAM_BANK_MASK     0x08
 #define OBJ_ATTR_CGB_PALETTE_MASK   0x07
 
+#define BG_ATTR_PRIORITY_MASK       0x80
+#define BG_ATTR_Y_FLIP_MASK         0x40
+#define BG_ATTR_X_FLIP_MASK         0x20
+#define BG_ATTR_VRAM_BANK_MASK      0x08
+#define BG_ATTR_CGB_PALETTE_MASK    0x07
+
 #define BOOT_LCDC 0x91
 #define BOOT_STAT 0x85
 #define BOOT_BGP  0xFC

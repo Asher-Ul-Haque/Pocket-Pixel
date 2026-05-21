@@ -67,23 +67,24 @@ void renderFrame(const PpuFrame* FRAME)
   void* pixels; i32 pitch;
   if (SDL_LockTexture(rendererCTX.gameTexture, NULL, &pixels, &pitch) != 0) return;
 
-  u32* dest = (u32*)pixels;
+  u8* destBase = (u8*)pixels;
   const u8 mode = cartridgeGetContext()->mode;
 
-  for (i32 i = 0; i < WIDTH * HEIGHT; ++i)
+  for (i32 y = 0; y < HEIGHT; ++y)
   {
-    PpuPixel pixel = FRAME->pixels[i];
-    if (mode == MODE_DMG_GAMEBOY)
+    u32* row = (u32*)(destBase + (y * pitch));
+    for (i32 x = 0; x < WIDTH; ++x)
     {
-      const u8 paletteReg = (pixel.bits.layer == 0) ? FRAME->palettes.dmg.bgp : 
-                            ((pixel.bits.paletteId == 0) ? FRAME->palettes.dmg.obp0 : FRAME->palettes.dmg.obp1);
-      dest[i] = rendererCTX.dmgColors[(paletteReg >> (pixel.bits.colorIndex * 2)) & 0x03];
-    }
-    else
-    {
-      const u16 color555 = (pixel.bits.layer == 0) ? FRAME->palettes.cgb.bg[(pixel.bits.paletteId * 4) + pixel.bits.colorIndex] : 
-                                                    FRAME->palettes.cgb.obj[(pixel.bits.paletteId * 4) + pixel.bits.colorIndex];
-      dest[i] = colorConvert555To8888(color555);
+      const i32 index = (y * WIDTH) + x;
+      if (mode == MODE_DMG_GAMEBOY)
+      {
+        row[x] = rendererCTX.dmgColors[FRAME->resolvedColor[index] & 0x03];
+      }
+      else
+      {
+        const u16 color555 = FRAME->resolvedColor[index] & 0x7FFF;
+        row[x] = colorConvert555To8888(color555);
+      }
     }
   }
   SDL_UnlockTexture(rendererCTX.gameTexture);
@@ -96,17 +97,18 @@ void drawTileView(const u8* VRAM_BANK_0, const u8* VRAM_BANK_1)
   void* pixels; i32 pitch;
   if (SDL_LockTexture(rendererCTX.tileTexture, NULL, &pixels, &pitch) != 0) return;
   
-  u32* dest = (u32*)pixels;
   for (i32 tile = 0; tile < 384; ++tile)
   {
     for (i32 y = 0; y < 8; ++y)
     {
       u8 b1 = VRAM_BANK_0[tile * 16 + y * 2];
       u8 b2 = VRAM_BANK_0[tile * 16 + y * 2 + 1];
+      const i32 rowY = (tile / 16) * 8 + y;
+      u32* row = (u32*)((u8*)pixels + (rowY * pitch));
       for (i32 x = 0; x < 8; ++x)
       {
         u8 color = (((b2 >> (7 - x)) & 0x01) << 1) | ((b1 >> (7 - x)) & 0x01);
-        dest[((tile / 16) * 8 + y) * 128 + ((tile % 16) * 8 + x)] = rendererCTX.dmgColors[color];
+        row[((tile % 16) * 8) + x] = rendererCTX.dmgColors[color];
       }
     }
   }
@@ -120,7 +122,6 @@ void drawMapView(const u8* VRAM_BANK_0, const u8* VRAM_BANK_1, u8 MAP_SELECT)
   void* pixels; i32 pitch;
   if (SDL_LockTexture(rendererCTX.mapTexture, NULL, &pixels, &pitch) != 0) return;
 
-  u32* dest = (u32*)pixels;
   u16 mapOffset = (MAP_SELECT == 0) ? 0x1800 : 0x1C00;
 
   for (i32 ty = 0; ty < 32; ++ty)
@@ -132,10 +133,12 @@ void drawMapView(const u8* VRAM_BANK_0, const u8* VRAM_BANK_1, u8 MAP_SELECT)
       {
         u8 b1 = VRAM_BANK_0[tileId * 16 + y * 2];
         u8 b2 = VRAM_BANK_0[tileId * 16 + y * 2 + 1];
+        const i32 rowY = (ty * 8) + y;
+        u32* row = (u32*)((u8*)pixels + (rowY * pitch));
         for (i32 x = 0; x < 8; ++x)
         {
           u8 color = (((b2 >> (7 - x)) & 0x01) << 1) | ((b1 >> (7 - x)) & 0x01);
-          dest[(ty * 8 + y) * 256 + (tx * 8 + x)] = rendererCTX.dmgColors[color];
+          row[(tx * 8) + x] = rendererCTX.dmgColors[color];
         }
       }
     }

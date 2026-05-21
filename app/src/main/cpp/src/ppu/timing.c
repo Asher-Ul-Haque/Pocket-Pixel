@@ -10,7 +10,11 @@ static void ppuStepScanlineDot(void)
   if (ctx->registers.ly < LY_VBLANK_START)
   {
     if (ctx->dotCount == DOTS_TRANSFER_START) ppuSetMode(PPU_MODE_DRAWING);
-    if (ctx->dotCount == DOTS_HBLANK_START)   ppuSetMode(PPU_MODE_HBLANK);
+    if (ctx->dotCount == DOTS_HBLANK_START)
+    {
+      ppuSetMode(PPU_MODE_HBLANK);
+      ppuRenderScanline(ctx->registers.ly);
+    }
   }
 
   if (ctx->dotCount < PPU_DOTS_PER_SCANLINE) return;
@@ -28,8 +32,6 @@ static void ppuStepScanlineDot(void)
   {
     ppuSetMode(PPU_MODE_VBLANK);
     cpuRequestInterrupt(CPU_INT_VBLANK);
-    ppuRenderFrame();
-    platformGetContext()->rendering.renderFrame(&ctx->currentFrame);
     ctx->frameReady = true;
     return;
   }
