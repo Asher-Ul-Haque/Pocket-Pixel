@@ -65,6 +65,7 @@ typedef struct PpuRegisters
   u8 obp1;            ///< 0xFF49
   u8 wy;              ///< 0xFF4A
   u8 wx;              ///< 0xFF4B
+  u8 doubleSpeed;     ///< 0xFF4D
   u8 bgPaletteIndex;  ///< 0xFF68
   u8 objPaletteIndex; ///< 0xFF6A
   u8 hdma1;           ///< 0xFF51 (Source High)
@@ -88,6 +89,7 @@ typedef enum PpuRegisterAddr
   REG_OBP_1             = 0xFF49,
   REG_WY                = 0xFF4A,
   REG_WX                = 0xFF4B,
+  REG_KEY_1             = 0xFF4D,
   REG_VRAM_BANK         = 0xFF4F,
   REG_BG_PALETTE_INDEX  = 0xFF68,
   REG_BG_PALETTE_DATA   = 0xFF69,
@@ -118,10 +120,12 @@ typedef struct PpuContext
   PpuFrame  currentFrame;     ///< The one being filled right now
   u8        vramBankSelect;   ///< Internal tracker for FF4F
   bool      frameReady;
+
+  bool statLineState; ///< Tracks the state of the shared hardware STAT or gate
 } PpuContext;
 
 void  ppuInit(void);
-void  ppuTick(u32 DOTS);
+void  ppuTick(void);
 u8    ppuRead(u16 ADDR);
 void  ppuWrite(u16 ADDR, u8 VALUE);
 void  ppuDmaTrigger(u8 SOURCE_HIGH_BYTE);
@@ -149,3 +153,5 @@ void ppuRenderFrame(void);
 void ppuRenderScanline(u8 SCANLINE_Y);
 
 void ppuHdmaTrigger(u8 VALUE);
+
+void ppuExecuteSpeedSwitch(void);

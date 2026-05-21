@@ -181,10 +181,14 @@ static SpriteSample selectSpriteForPixel(const PpuContext* CTX, u8 X, u8 Y)
     const i16 spriteX = (i16)CTX->oam[base + OAM_X_OFFSET] - SPRITE_X_OFFSET;
     const i16 xPos    = (i16)X;
 
+    // First check if the sprite is vertically present on this line
     if (!isSpriteOnScanline(Y, spriteY, spriteHeight)) continue;
+    
+    // Increment scanline sprite counter and enforce the hardware 10-sprite limit
     if (spritesOnLine >= SPRITE_MAX_PER_SCANLINE) break;
     spritesOnLine++;
 
+    // Now check if this specific sprite handles the current pixel X coordinate
     if (xPos < spriteX || xPos >= (spriteX + SPRITE_WIDTH)) continue;
 
     const u8 attributes = CTX->oam[base + OAM_ATTR_OFFSET];
@@ -232,9 +236,11 @@ void ppuRenderScanline(u8 SCANLINE_Y)
   PpuContext* ctx = ppuGetContext();
   const bool cgb = isCgbHardware();
   const bool objEnabled = (ctx->registers.lcdc & LCDC_OBJ_ENABLE_MASK) != 0;
-  
-  // In CGB mode, this bit determines if priority flags are respected
   const bool bgMasterPriority = (ctx->registers.lcdc & LCDC_BG_WIN_ENABLE_MASK) != 0;
+
+  // Static tracking counter to limit log flooding to once every few seconds
+  static u32 frameLogCounter = 0;
+  bool shouldLogThisFrame = (SCANLINE_Y == 72) && ((frameLogCounter++ % 180) == 0);
 
   for (u8 x = 0; x < WIDTH; ++x)
   {
@@ -251,35 +257,24 @@ void ppuRenderScanline(u8 SCANLINE_Y)
       if (sprite.valid)
       {
         const bool bgVisible = bg.color != 0;
-        bool objBehindBg = false;
+        bool objBehindBg = (sprite.attributes & OBJ_ATTR_BG_PRIORITY_MASK) && bgVisible;
 
-        if (cgb)
+        if (cgb && bg.priority && bgVisible)
         {
-          if (!bgMasterPriority)
-          {
-            // CGB LCDC.0 is CLEAR: Sprites unconditionally render on top of the BG.
-            objBehindBg = false;
-          }
-          else
-          {
-            // CGB LCDC.0 is SET: Priority is decided by the tile and sprite attributes.
-            // If the BG pixel is visible AND either the BG tile or Sprite requested priority, the BG wins.
-            if (bgVisible && (bg.priority || (sprite.attributes & OBJ_ATTR_BG_PRIORITY_MASK)))
-            {
-              objBehindBg = true;
-            }
-          }
-        }
-        else
-        {
-          // DMG Rules: Sprite attribute dictates priority.
-          if (bgVisible && (sprite.attributes & OBJ_ATTR_BG_PRIORITY_MASK))
-          {
-            objBehindBg = true;
-          }
+          objBehindBg = true;
         }
 
-        // Apply the sprite pixel if it won the priority check
+        // --- DEBUG LINE INTERCEPT ---
+        if (shouldLogThisFrame && (x >= 75 && x <= 85))
+        {
+          FORGE_LOG_INFO(
+            "[PPU_COMP] x=%u y=%u | BG: color=%u prio=%d masterPrio=%d | OBJ: color=%u attr_prio=%d | WINNER: %s",
+            x, SCANLINE_Y, bg.color, bg.priority, bgMasterPriority,
+            sprite.color, (sprite.attributes & OBJ_ATTR_BG_PRIORITY_MASK) ? 1 : 0,
+            objBehindBg ? "BACKGROUND" : "SPRITE"
+          );
+        }
+
         if (!objBehindBg)
         {
           finalColor = sprite.color;

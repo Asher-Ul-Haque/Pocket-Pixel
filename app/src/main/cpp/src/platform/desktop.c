@@ -29,10 +29,10 @@ static SdlInternalContext rendererCTX;
 static bool uploadTextureRGBA8888(SDL_Texture* TEXTURE, const u32* PIXELS, i32 WIDTH_PX, i32 HEIGHT_PX, const char* LABEL)
 {
   (void) HEIGHT_PX;
+  (void) LABEL;
   const i32 pitch = WIDTH_PX * (i32)sizeof(u32);
   if (SDL_UpdateTexture(TEXTURE, NULL, PIXELS, pitch) != 0)
   {
-    FORGE_LOG_ERROR("[SDL] SDL_UpdateTexture failed for %s: %s", LABEL, SDL_GetError());
     return false;
   }
   return true;

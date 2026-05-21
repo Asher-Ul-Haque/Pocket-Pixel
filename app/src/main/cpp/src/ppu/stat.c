@@ -14,39 +14,39 @@ void ppuUpdateStatLycFlag(void)
 
   if (lycMatch) ctx->registers.stat |= STAT_LYC_EQUALS_MASK;
   else          ctx->registers.stat &= (u8)(~STAT_LYC_EQUALS_MASK);
+
+  ppuHandleModeInterrupt(ctx->mode);
 }
 
 void ppuHandleLycCompareEdge(bool PREVIOUS_MATCH, bool CURRENT_MATCH)
 {
-  PpuContext* ctx = ppuGetContext();
-
-  if (!PREVIOUS_MATCH &&
-      CURRENT_MATCH &&
-      (ctx->registers.stat & STAT_LYC_INT_MASK))
-  {
-    cpuRequestInterrupt(CPU_INT_LCD);
-  }
+  (void) PREVIOUS_MATCH;
+  (void) CURRENT_MATCH;
 }
 
 void ppuHandleModeInterrupt(PpuMode MODE)
 {
   PpuContext* ctx = ppuGetContext();
 
-  switch (MODE)
+  bool hblankInt  = (ctx->registers.stat & STAT_HBLANK_INT_MASK) && (MODE == PPU_MODE_HBLANK);
+  bool vblankInt  = (ctx->registers.stat & STAT_VBLANK_INT_MASK) && (MODE == PPU_MODE_VBLANK);
+  bool oamScanInt = (ctx->registers.stat & STAT_OAM_INT_MASK)    && (MODE == PPU_MODE_OAM_SCAN);
+  bool lycInt     = (ctx->registers.stat & STAT_LYC_INT_MASK)    && (ctx->registers.ly == ctx->registers.lyc);
+
+  // - - - The final hardware line is high if ANY source condition matches
+  bool currentLineState = hblankInt || vblankInt || oamScanInt || lycInt;
+
+  // - - - An interrupt can ONLY be sent to the CPU on a RISING EDGE (0 to 1 transition)
+  if (!ctx->statLineState && currentLineState)
   {
-    case PPU_MODE_HBLANK:
-      if (ctx->registers.stat & STAT_HBLANK_INT_MASK) cpuRequestInterrupt(CPU_INT_LCD);
-      break;
-    case PPU_MODE_VBLANK:
-      if (ctx->registers.stat & STAT_VBLANK_INT_MASK) cpuRequestInterrupt(CPU_INT_LCD);
-      break;
-    case PPU_MODE_OAM_SCAN:
-      if (ctx->registers.stat & STAT_OAM_INT_MASK) cpuRequestInterrupt(CPU_INT_LCD);
-      break;
-    case PPU_MODE_DRAWING:
-    default:
-      break;
+    if (ppuIsLcdEnabled())
+    {
+      cpuRequestInterrupt(CPU_INT_LCD);
+    }
   }
+
+  // - - - Preserve the state of the line for subsequent transitions
+  ctx->statLineState = currentLineState;
 }
 
 void ppuSetMode(PpuMode MODE)
@@ -58,7 +58,7 @@ void ppuSetMode(PpuMode MODE)
   ctx->registers.stat &= (u8) ~STAT_MODE_BITS_MASK;
   ctx->registers.stat |= (u8) MODE;
 
-  if (ppuIsLcdEnabled()) ppuHandleModeInterrupt(MODE);
+  ppuHandleModeInterrupt(MODE);
 }
 
 void ppuHandleLcdStateChange(u8 PREVIOUS_LCDC, u8 NEW_LCDC)

@@ -187,11 +187,12 @@ void busWrite(u16 ADDRESS, u8 VALUE)
       return;
     }
 
-    if (ADDRESS == REG_VRAM_BANK         ||
-        ADDRESS == REG_BG_PALETTE_INDEX  ||
-        ADDRESS == REG_BG_PALETTE_DATA   ||
-        ADDRESS == REG_OBJ_PALETTE_INDEX ||
-        ADDRESS == REG_OBJ_PALETTE_DATA  ||
+    if (ADDRESS == REG_VRAM_BANK          ||
+        ADDRESS == REG_BG_PALETTE_INDEX   ||
+        ADDRESS == REG_BG_PALETTE_DATA    ||
+        ADDRESS == REG_OBJ_PALETTE_INDEX  ||
+        ADDRESS == REG_OBJ_PALETTE_DATA   ||
+        ADDRESS == REG_KEY_1              ||
         (ADDRESS >= REG_HDMA1 && ADDRESS <= REG_HDMA5))
     {
       ppuWrite(ADDRESS, VALUE);

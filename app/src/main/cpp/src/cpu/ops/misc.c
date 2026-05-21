@@ -1,3 +1,4 @@
+#include <bus.h>
 #include <cpu/instruction.h>
 #include <cpu/interrupts.h>
 #include <cpu/ops.h>
@@ -25,7 +26,6 @@ ExecStatus instrStop(void)
   CpuContext* ctx = cpuGetContext();
   ctx->stopped    = true;
 
-  // - - - TODO: handle CB 
   return EXEC_STATUS_DONE_IMMEDIATE;
 }
 

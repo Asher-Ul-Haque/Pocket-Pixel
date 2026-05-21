@@ -217,19 +217,24 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[])
     // ----------------------------------------
     if (!paused)
     {
-      u32 frameDots = 0;
 
       while (
         running &&
-        !ppu->frameReady &&
-        frameDots < PPU_DOTS_PER_FRAME
-      )
+        !ppu->frameReady)
       {
         cpuTick();
-        timerStepMCycle();
-        ppuTick(DOTS_PER_MCYCLE);
+        if (cpuGetContext()->stopped)
+        {
+          if (ppuGetContext()->registers.doubleSpeed & 0x01)
+          {
+            ppuExecuteSpeedSwitch();
+            cpuGetContext()->stopped = false;
+          }
+        }
 
-        frameDots += DOTS_PER_MCYCLE;
+        timerStepMCycle();
+        ppuTick();
+
       }
 
       if (!ppu->frameReady)

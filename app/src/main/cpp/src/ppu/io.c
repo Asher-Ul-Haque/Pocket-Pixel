@@ -2,6 +2,17 @@
 #include <ppu/ppu.h>
 #include <cartridge/cartridge.h>
 
+void ppuExecuteSpeedSwitch(void)
+{
+  PpuContext* ctx = ppuGetContext();
+  
+  if (ctx->registers.doubleSpeed & 0x01)
+  {
+    ctx->registers.doubleSpeed ^= 0x80; // - --  Toggle speed
+    ctx->registers.doubleSpeed &= 0xFE; // - - - Clear arm bit
+  }
+}
+
 u8 ppuRead(u16 ADDRESS)
 {
   PpuContext* ctx = ppuGetContext();
@@ -42,6 +53,7 @@ u8 ppuRead(u16 ADDRESS)
     case REG_OBP_1: return ctx->registers.obp1;
     case REG_WY   : return ctx->registers.wy;
     case REG_WX   : return ctx->registers.wx;
+    case REG_KEY_1: return ctx->registers.doubleSpeed | 0x7E;
 
     // - - - CGB VRAM Bank Select 
     case REG_VRAM_BANK: return ctx->vramBankSelect | 0xFE;
@@ -134,6 +146,10 @@ void ppuWrite(u16 ADDRESS, u8 VALUE)
     case REG_OBP_1 : ctx->registers.obp1 = VALUE; break;
     case REG_WY    : ctx->registers.wy   = VALUE; break;
     case REG_WX    : ctx->registers.wx   = VALUE; break;
+    case REG_KEY_1:
+      ctx->registers.doubleSpeed &= 0xFE;           // - - - Clear the old preparation bit
+      ctx->registers.doubleSpeed |= (VALUE & 0x01); // - - - Mask and store the new bit
+      break;
 
     // - - - CGB Banking updates 
     case REG_VRAM_BANK: ctx->vramBankSelect = VALUE & 0x01; break;
