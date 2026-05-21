@@ -1,38 +1,6 @@
 #pragma once 
 #include <common.h>
-
-
-#define WIDTH  160
-#define HEIGHT 144
-
-#define CGB_PALETTE_COUNT       8  
-#define CGB_PALETTE_COLOR_COUNT 4
-
-#define VRAM_BANK_SIZE  0x2000
-#define VRAM_BANK_COUNT 2 
-#define OAM_SIZE        160
-
-#define PALETTE_RAM_SIZE            64
-#define PALETTE_DATA_MASK           0x3F
-#define PALETTE_AUTO_INCREMENT_BIT  0x80
-
-#define TILE_SIDE     8
-#define TILE_COUNT_X  16
-#define TILE_COUNT_Y  24
-
-#define DOT_OAM_SCAN  80
-#define DOTS_DRAWING  172
-#define DOTS_HBLANK   204
-#define DOTS_VBLANK   456
-
-#define LY_VBLANK_START 144 
-#define LY_MAX          153
-
-#define BOOT_LCDC 0x91
-#define BOOT_STAT 0x85
-#define BOOT_BGP  0xFC
-#define BOOT_OBP0 0xFF
-#define BOOT_OBP1 0xFF
+#include <ppu/internal.h>
 
 /// @brief Pixel Metadata bit-field
 typedef struct 
@@ -135,10 +103,10 @@ typedef struct PpuContext
 
   // - - - State Machine 
   PpuMode   mode;
-  u32       dotCount;         ///< Cycles within the current scanline 
+  u32       dotCount;         ///< Dot within current scanline
   PpuFrame  currentFrame;     ///< The one being filled right now
   u8        vramBankSelect;   ///< Internal tracker for FF4F
-  u8        testPatternFrame;
+  bool      frameReady;
 } PpuContext;
 
 void  ppuInit(void);
@@ -148,3 +116,27 @@ void  ppuWrite(u16 ADDR, u8 VALUE);
 void  ppuDmaTrigger(u8 SOURCE_HIGH_BYTE);
 
 PpuContext* ppuGetContext(void);
+
+
+// - - - Internal modular helpers - - - 
+
+
+void ppuSetMode(PpuMode MODE);
+
+void ppuUpdateStatLycFlag(void);
+
+void ppuHandleLycCompareEdge(bool PREVIOUS_MATCH, bool CURRENT_MATCH);
+
+void ppuHandleModeInterrupt(PpuMode MODE);
+
+void ppuHandleLcdStateChange(u8 PREVIOUS_LCDC, u8 NEW_LCDC);
+
+bool ppuIsLcdEnabled(void);
+
+void ppuRenderFrame(void);
+
+void ppuRenderBgLayer(void);
+
+void ppuRenderWindowLayer(void);
+
+void ppuRenderObjLayer(void);
