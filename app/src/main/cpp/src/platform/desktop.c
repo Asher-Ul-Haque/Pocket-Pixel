@@ -26,6 +26,17 @@ typedef struct
 
 static SdlInternalContext rendererCTX;
 
+static bool uploadTextureRGBA8888(SDL_Texture* TEXTURE, const u32* PIXELS, i32 WIDTH_PX, i32 HEIGHT_PX, const char* LABEL)
+{
+  const i32 pitch = WIDTH_PX * (i32)sizeof(u32);
+  if (SDL_UpdateTexture(TEXTURE, NULL, PIXELS, pitch) != 0)
+  {
+    FORGE_LOG_ERROR("[SDL] SDL_UpdateTexture failed for %s: %s", LABEL, SDL_GetError());
+    return false;
+  }
+  return true;
+}
+
 static u32 colorConvert555To8888(u16 COLOR_555)
 {
   u8 red   = (COLOR_555 & 0x1F);
@@ -65,43 +76,42 @@ void sdlInit(void)
 void renderFrame(const PpuFrame* FRAME)
 {
   static u32 renderCalls = 0;
-  void* pixels; i32 pitch;
-  if (SDL_LockTexture(rendererCTX.gameTexture, NULL, &pixels, &pitch) != 0) return;
-
-  u8* destBase = (u8*)pixels;
+  static u32 framePixels[WIDTH * HEIGHT];
   const u8 mode = cartridgeGetContext()->mode;
   u32 checksum = 0;
+  u32 nonBlack = 0;
 
   for (i32 y = 0; y < HEIGHT; ++y)
   {
-    u32* row = (u32*)(destBase + (y * pitch));
     for (i32 x = 0; x < WIDTH; ++x)
     {
       const i32 index = (y * WIDTH) + x;
       checksum ^= (u32)(FRAME->resolvedColor[index] + (u16)index);
       if (mode == MODE_DMG_GAMEBOY)
       {
-        row[x] = rendererCTX.dmgColors[FRAME->resolvedColor[index] & 0x03];
+        framePixels[index] = rendererCTX.dmgColors[FRAME->resolvedColor[index] & 0x03];
       }
       else
       {
         const u16 color555 = FRAME->resolvedColor[index] & 0x7FFF;
-        row[x] = colorConvert555To8888(color555);
+        framePixels[index] = colorConvert555To8888(color555);
       }
+      if ((framePixels[index] & 0xFFFFFF00u) != 0) nonBlack++;
     }
   }
-  SDL_UnlockTexture(rendererCTX.gameTexture);
+  if (!uploadTextureRGBA8888(rendererCTX.gameTexture, framePixels, WIDTH, HEIGHT, "gameTexture")) return;
 
   renderCalls++;
   if ((renderCalls % 120) == 0)
   {
     FORGE_LOG_INFO(
-      "[SDL] renderFrame calls=%u mode=%u checksum=0x%08X firstPx=0x%04X pitch=%d",
+      "[SDL] renderFrame calls=%u mode=%u checksum=0x%08X firstSrc=0x%04X firstOut=0x%08X nonBlack=%u",
       renderCalls,
       (u32)mode,
       checksum,
       FRAME->resolvedColor[0],
-      pitch
+      framePixels[0],
+      nonBlack
     );
   }
 }
@@ -110,8 +120,8 @@ void drawTileView(const u8* VRAM_BANK_0, const u8* VRAM_BANK_1)
 {
   (void) VRAM_BANK_1;
   if (!VRAM_BANK_0 || !rendererCTX.tileTexture) return;
-  void* pixels; i32 pitch;
-  if (SDL_LockTexture(rendererCTX.tileTexture, NULL, &pixels, &pitch) != 0) return;
+  static u32 tilePixels[128 * 192];
+  u32 nonBlack = 0;
   
   for (i32 tile = 0; tile < 384; ++tile)
   {
@@ -120,23 +130,30 @@ void drawTileView(const u8* VRAM_BANK_0, const u8* VRAM_BANK_1)
       u8 b1 = VRAM_BANK_0[tile * 16 + y * 2];
       u8 b2 = VRAM_BANK_0[tile * 16 + y * 2 + 1];
       const i32 rowY = (tile / 16) * 8 + y;
-      u32* row = (u32*)((u8*)pixels + (rowY * pitch));
       for (i32 x = 0; x < 8; ++x)
       {
         u8 color = (((b2 >> (7 - x)) & 0x01) << 1) | ((b1 >> (7 - x)) & 0x01);
-        row[((tile % 16) * 8) + x] = rendererCTX.dmgColors[color];
+        const i32 index = (rowY * 128) + ((tile % 16) * 8) + x;
+        tilePixels[index] = rendererCTX.dmgColors[color];
+        if ((tilePixels[index] & 0xFFFFFF00u) != 0) nonBlack++;
       }
     }
   }
-  SDL_UnlockTexture(rendererCTX.tileTexture);
+  if (!uploadTextureRGBA8888(rendererCTX.tileTexture, tilePixels, 128, 192, "tileTexture")) return;
+  static u32 tileCalls = 0;
+  tileCalls++;
+  if ((tileCalls % 120) == 0)
+  {
+    FORGE_LOG_INFO("[SDL] drawTileView calls=%u nonBlack=%u firstPx=0x%08X", tileCalls, nonBlack, tilePixels[0]);
+  }
 }
 
 void drawMapView(const u8* VRAM_BANK_0, const u8* VRAM_BANK_1, u8 MAP_SELECT)
 {
   (void) VRAM_BANK_1;
   if (!VRAM_BANK_0 || !rendererCTX.mapTexture) return;
-  void* pixels; i32 pitch;
-  if (SDL_LockTexture(rendererCTX.mapTexture, NULL, &pixels, &pitch) != 0) return;
+  static u32 mapPixels[256 * 256];
+  u32 nonBlack = 0;
 
   u16 mapOffset = (MAP_SELECT == 0) ? 0x1800 : 0x1C00;
 
@@ -150,16 +167,23 @@ void drawMapView(const u8* VRAM_BANK_0, const u8* VRAM_BANK_1, u8 MAP_SELECT)
         u8 b1 = VRAM_BANK_0[tileId * 16 + y * 2];
         u8 b2 = VRAM_BANK_0[tileId * 16 + y * 2 + 1];
         const i32 rowY = (ty * 8) + y;
-        u32* row = (u32*)((u8*)pixels + (rowY * pitch));
         for (i32 x = 0; x < 8; ++x)
         {
           u8 color = (((b2 >> (7 - x)) & 0x01) << 1) | ((b1 >> (7 - x)) & 0x01);
-          row[(tx * 8) + x] = rendererCTX.dmgColors[color];
+          const i32 index = (rowY * 256) + (tx * 8) + x;
+          mapPixels[index] = rendererCTX.dmgColors[color];
+          if ((mapPixels[index] & 0xFFFFFF00u) != 0) nonBlack++;
         }
       }
     }
   }
-  SDL_UnlockTexture(rendererCTX.mapTexture);
+  if (!uploadTextureRGBA8888(rendererCTX.mapTexture, mapPixels, 256, 256, "mapTexture")) return;
+  static u32 mapCalls = 0;
+  mapCalls++;
+  if ((mapCalls % 120) == 0)
+  {
+    FORGE_LOG_INFO("[SDL] drawMapView calls=%u nonBlack=%u firstPx=0x%08X", mapCalls, nonBlack, mapPixels[0]);
+  }
 }
 
 static bool isKeyboardPressed(SDL_Scancode KEY)
