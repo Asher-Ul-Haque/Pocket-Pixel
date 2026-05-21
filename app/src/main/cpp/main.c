@@ -11,7 +11,6 @@
 #include <debug.h>
 #include <joypad.h>
 
-#define DOTS_PER_FRAME  70224
 #define DOTS_PER_MCYCLE 4
 
 static char savePath[1024];
@@ -139,32 +138,59 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[])
 
   bool running = true;
   PpuContext* ppu = ppuGetContext();
+  u32 presentedFrames = 0;
+  u32 stalledIterations = 0;
 
   while (running)
   {
     if (platform && platform->input.poll) platform->input.poll(&running);
+    if (!running) break;
 
-    // Emulate a frame's worth of cycles, but break early if a frame finishes drawing
-    for (u32 frameCycles = 0; frameCycles < DOTS_PER_FRAME; )
+    u32 frameDots = 0;
+    while (running && !ppu->frameReady && frameDots < PPU_DOTS_PER_FRAME)
     {
       cpuTick();
       timerStepMCycle();
       ppuTick(DOTS_PER_MCYCLE);
-      frameCycles += DOTS_PER_MCYCLE;
-
-      // PRESENT IMMEDIATELY when the PPU signals the frame is ready
-      if (ppu->frameReady)
-      {
-        if (platform && platform->rendering.present)
-        {
-          platform->rendering.drawTileView(ppu->vram[0], ppu->vram[1]);
-          platform->rendering.drawMapView(ppu->vram[0], ppu->vram[1], 0);
-          platform->rendering.present();
-        }
-        // Clear the flag so we don't double-render on subsequent cycles
-        ppu->frameReady = false; 
-      }
+      frameDots += DOTS_PER_MCYCLE;
     }
+
+    if (!ppu->frameReady)
+    {
+      stalledIterations++;
+      if ((stalledIterations % 120) == 0)
+      {
+        FORGE_LOG_WARNING(
+          "[RENDER] frameReady not reached: lcdEnabled=%d ly=%u mode=%u dot=%u lcdc=0x%02X",
+          ppuIsLcdEnabled() ? 1 : 0,
+          ppu->registers.ly,
+          (u32)ppu->mode,
+          ppu->dotCount,
+          ppu->registers.lcdc
+        );
+      }
+      continue;
+    }
+    stalledIterations = 0;
+    ppuRenderFrame();
+
+    if (platform && platform->rendering.renderFrame) platform->rendering.renderFrame(&ppu->currentFrame);
+    if (platform && platform->rendering.drawTileView) platform->rendering.drawTileView(ppu->vram[0], ppu->vram[1]);
+    if (platform && platform->rendering.drawMapView)  platform->rendering.drawMapView(ppu->vram[0], ppu->vram[1], 0);
+    if (platform && platform->rendering.present)      platform->rendering.present();
+
+    presentedFrames++;
+    if ((presentedFrames % 120) == 0)
+    {
+      FORGE_LOG_INFO(
+        "[RENDER] presentedFrames=%u lcdEnabled=%d ly=%u mode=%u",
+        presentedFrames,
+        ppuIsLcdEnabled() ? 1 : 0,
+        ppu->registers.ly,
+        (u32)ppu->mode
+      );
+    }
+    ppu->frameReady = false;
   }
 
   if (platform && platform->rendering.cleanup) platform->rendering.cleanup();

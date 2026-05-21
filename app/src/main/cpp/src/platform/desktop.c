@@ -26,6 +26,18 @@ typedef struct
 
 static SdlInternalContext rendererCTX;
 
+static bool uploadTextureRGBA8888(SDL_Texture* TEXTURE, const u32* PIXELS, i32 WIDTH_PX, i32 HEIGHT_PX, const char* LABEL)
+{
+  (void) HEIGHT_PX;
+  const i32 pitch = WIDTH_PX * (i32)sizeof(u32);
+  if (SDL_UpdateTexture(TEXTURE, NULL, PIXELS, pitch) != 0)
+  {
+    FORGE_LOG_ERROR("[SDL] SDL_UpdateTexture failed for %s: %s", LABEL, SDL_GetError());
+    return false;
+  }
+  return true;
+}
+
 static u32 colorConvert555To8888(u16 COLOR_555)
 {
   u8 red   = (COLOR_555 & 0x1F);
@@ -64,63 +76,88 @@ void sdlInit(void)
 
 void renderFrame(const PpuFrame* FRAME)
 {
-  void* pixels; i32 pitch;
-  if (SDL_LockTexture(rendererCTX.gameTexture, NULL, &pixels, &pitch) != 0) return;
-
-  u32* dest = (u32*)pixels;
+  static u32 renderCalls = 0;
+  static u32 framePixels[WIDTH * HEIGHT];
   const u8 mode = cartridgeGetContext()->mode;
+  u32 checksum = 0;
+  u32 nonBlack = 0;
 
-  for (i32 i = 0; i < WIDTH * HEIGHT; ++i)
+  for (i32 y = 0; y < HEIGHT; ++y)
   {
-    PpuPixel pixel = FRAME->pixels[i];
-    if (mode == MODE_DMG_GAMEBOY)
+    for (i32 x = 0; x < WIDTH; ++x)
     {
-      const u8 paletteReg = (pixel.bits.layer == 0) ? FRAME->palettes.dmg.bgp : 
-                            ((pixel.bits.paletteId == 0) ? FRAME->palettes.dmg.obp0 : FRAME->palettes.dmg.obp1);
-      dest[i] = rendererCTX.dmgColors[(paletteReg >> (pixel.bits.colorIndex * 2)) & 0x03];
-    }
-    else
-    {
-      const u16 color555 = (pixel.bits.layer == 0) ? FRAME->palettes.cgb.bg[(pixel.bits.paletteId * 4) + pixel.bits.colorIndex] : 
-                                                    FRAME->palettes.cgb.obj[(pixel.bits.paletteId * 4) + pixel.bits.colorIndex];
-      dest[i] = colorConvert555To8888(color555);
+      const i32 index = (y * WIDTH) + x;
+      checksum ^= (u32)(FRAME->resolvedColor[index] + (u16)index);
+      if (mode == MODE_DMG_GAMEBOY)
+      {
+        framePixels[index] = rendererCTX.dmgColors[FRAME->resolvedColor[index] & 0x03];
+      }
+      else
+      {
+        const u16 color555 = FRAME->resolvedColor[index] & 0x7FFF;
+        framePixels[index] = colorConvert555To8888(color555);
+      }
+      if ((framePixels[index] & 0x00FFFFFFu) != 0) nonBlack++;
     }
   }
-  SDL_UnlockTexture(rendererCTX.gameTexture);
+  if (!uploadTextureRGBA8888(rendererCTX.gameTexture, framePixels, WIDTH, HEIGHT, "gameTexture")) return;
+
+  renderCalls++;
+  if ((renderCalls % 120) == 0)
+  {
+    FORGE_LOG_INFO(
+      "[SDL] renderFrame calls=%u mode=%u checksum=0x%08X firstSrc=0x%04X firstOut=0x%08X nonBlack=%u",
+      renderCalls,
+      (u32)mode,
+      checksum,
+      FRAME->resolvedColor[0],
+      framePixels[0],
+      nonBlack
+    );
+    if (nonBlack == 0) FORGE_LOG_WARNING("%s", "[SDL] renderFrame output is fully black (RGB)");
+  }
 }
 
 void drawTileView(const u8* VRAM_BANK_0, const u8* VRAM_BANK_1)
 {
   (void) VRAM_BANK_1;
   if (!VRAM_BANK_0 || !rendererCTX.tileTexture) return;
-  void* pixels; i32 pitch;
-  if (SDL_LockTexture(rendererCTX.tileTexture, NULL, &pixels, &pitch) != 0) return;
+  static u32 tilePixels[128 * 192];
+  u32 nonBlack = 0;
   
-  u32* dest = (u32*)pixels;
   for (i32 tile = 0; tile < 384; ++tile)
   {
     for (i32 y = 0; y < 8; ++y)
     {
       u8 b1 = VRAM_BANK_0[tile * 16 + y * 2];
       u8 b2 = VRAM_BANK_0[tile * 16 + y * 2 + 1];
+      const i32 rowY = (tile / 16) * 8 + y;
       for (i32 x = 0; x < 8; ++x)
       {
         u8 color = (((b2 >> (7 - x)) & 0x01) << 1) | ((b1 >> (7 - x)) & 0x01);
-        dest[((tile / 16) * 8 + y) * 128 + ((tile % 16) * 8 + x)] = rendererCTX.dmgColors[color];
+        const i32 index = (rowY * 128) + ((tile % 16) * 8) + x;
+        tilePixels[index] = rendererCTX.dmgColors[color];
+        if ((tilePixels[index] & 0x00FFFFFFu) != 0) nonBlack++;
       }
     }
   }
-  SDL_UnlockTexture(rendererCTX.tileTexture);
+  if (!uploadTextureRGBA8888(rendererCTX.tileTexture, tilePixels, 128, 192, "tileTexture")) return;
+  static u32 tileCalls = 0;
+  tileCalls++;
+  if ((tileCalls % 120) == 0)
+  {
+    FORGE_LOG_INFO("[SDL] drawTileView calls=%u nonBlack=%u firstPx=0x%08X", tileCalls, nonBlack, tilePixels[0]);
+    if (nonBlack == 0) FORGE_LOG_WARNING("%s", "[SDL] tile texture output is fully black (RGB)");
+  }
 }
 
 void drawMapView(const u8* VRAM_BANK_0, const u8* VRAM_BANK_1, u8 MAP_SELECT)
 {
   (void) VRAM_BANK_1;
   if (!VRAM_BANK_0 || !rendererCTX.mapTexture) return;
-  void* pixels; i32 pitch;
-  if (SDL_LockTexture(rendererCTX.mapTexture, NULL, &pixels, &pitch) != 0) return;
+  static u32 mapPixels[256 * 256];
+  u32 nonBlack = 0;
 
-  u32* dest = (u32*)pixels;
   u16 mapOffset = (MAP_SELECT == 0) ? 0x1800 : 0x1C00;
 
   for (i32 ty = 0; ty < 32; ++ty)
@@ -132,15 +169,25 @@ void drawMapView(const u8* VRAM_BANK_0, const u8* VRAM_BANK_1, u8 MAP_SELECT)
       {
         u8 b1 = VRAM_BANK_0[tileId * 16 + y * 2];
         u8 b2 = VRAM_BANK_0[tileId * 16 + y * 2 + 1];
+        const i32 rowY = (ty * 8) + y;
         for (i32 x = 0; x < 8; ++x)
         {
           u8 color = (((b2 >> (7 - x)) & 0x01) << 1) | ((b1 >> (7 - x)) & 0x01);
-          dest[(ty * 8 + y) * 256 + (tx * 8 + x)] = rendererCTX.dmgColors[color];
+          const i32 index = (rowY * 256) + (tx * 8) + x;
+          mapPixels[index] = rendererCTX.dmgColors[color];
+          if ((mapPixels[index] & 0x00FFFFFFu) != 0) nonBlack++;
         }
       }
     }
   }
-  SDL_UnlockTexture(rendererCTX.mapTexture);
+  if (!uploadTextureRGBA8888(rendererCTX.mapTexture, mapPixels, 256, 256, "mapTexture")) return;
+  static u32 mapCalls = 0;
+  mapCalls++;
+  if ((mapCalls % 120) == 0)
+  {
+    FORGE_LOG_INFO("[SDL] drawMapView calls=%u nonBlack=%u firstPx=0x%08X", mapCalls, nonBlack, mapPixels[0]);
+    if (nonBlack == 0) FORGE_LOG_WARNING("%s", "[SDL] map texture output is fully black (RGB)");
+  }
 }
 
 static bool isKeyboardPressed(SDL_Scancode KEY)
@@ -220,20 +267,55 @@ void printKeybinds(void)
 
 void present(void)
 {
+  static u32 presentCalls = 0;
+  static bool layoutLogged = false;
   if (!rendererCTX.renderer) return;
 
   SDL_SetRenderDrawColor(rendererCTX.renderer, 20, 20, 20, 255);
   SDL_RenderClear(rendererCTX.renderer);
 
-  SDL_FRect rGame = { 30,  50, 160 * 3, 144 * 3 };
-  SDL_FRect rTile = { 550, 50, 128 * 2, 192 * 2 };
-  SDL_FRect rMap  = { 850, 50, 256 * 1.5f, 256 * 1.5f };
+  i32 windowW = DESIGN_WIDTH;
+  i32 windowH = DESIGN_HEIGHT;
+  SDL_GetWindowSize(rendererCTX.window, &windowW, &windowH);
+
+  const float margin = 20.0f;
+  SDL_FRect rGame = { margin, margin, WIDTH * 3.0f, HEIGHT * 3.0f };
+  SDL_FRect rTile = { rGame.x + rGame.w + margin, margin, 128.0f * 2.0f, 192.0f * 2.0f };
+  SDL_FRect rMap  = { rTile.x + rTile.w + margin, margin, 256.0f * 1.5f, 256.0f * 1.5f };
+
+  if ((rMap.x + rMap.w) > (windowW - margin))
+  {
+    rMap.x = margin;
+    rMap.y = rGame.y + rGame.h + margin;
+  }
+  if ((rTile.x + rTile.w) > (windowW - margin))
+  {
+    rTile.x = margin;
+    rTile.y = rMap.y + rMap.h + margin;
+  }
+
+  if (!layoutLogged)
+  {
+    FORGE_LOG_INFO(
+      "[SDL] window=%dx%d game=(%.0f,%.0f,%.0f,%.0f) tile=(%.0f,%.0f,%.0f,%.0f) map=(%.0f,%.0f,%.0f,%.0f)",
+      windowW, windowH,
+      rGame.x, rGame.y, rGame.w, rGame.h,
+      rTile.x, rTile.y, rTile.w, rTile.h,
+      rMap.x, rMap.y, rMap.w, rMap.h
+    );
+    layoutLogged = true;
+  }
 
   SDL_RenderTexture(rendererCTX.renderer, rendererCTX.gameTexture, NULL, &rGame);
   SDL_RenderTexture(rendererCTX.renderer, rendererCTX.tileTexture, NULL, &rTile);
   SDL_RenderTexture(rendererCTX.renderer, rendererCTX.mapTexture,  NULL, &rMap);
 
   SDL_RenderPresent(rendererCTX.renderer);
+  presentCalls++;
+  if ((presentCalls % 120) == 0)
+  {
+    FORGE_LOG_INFO("[SDL] present calls=%u", presentCalls);
+  }
 }
 
 void cleanup(void)

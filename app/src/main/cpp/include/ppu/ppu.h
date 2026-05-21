@@ -22,6 +22,7 @@ typedef union
 typedef struct PpuFrame 
 {
   PpuPixel pixels[WIDTH * HEIGHT];
+  u16      resolvedColor[WIDTH * HEIGHT];
 
   union 
   {
@@ -134,9 +135,4 @@ void ppuHandleLcdStateChange(u8 PREVIOUS_LCDC, u8 NEW_LCDC);
 bool ppuIsLcdEnabled(void);
 
 void ppuRenderFrame(void);
-
-void ppuRenderBgLayer(void);
-
-void ppuRenderWindowLayer(void);
-
-void ppuRenderObjLayer(void);
+void ppuRenderScanline(u8 SCANLINE_Y);
