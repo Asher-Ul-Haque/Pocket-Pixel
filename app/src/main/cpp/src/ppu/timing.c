@@ -45,9 +45,6 @@ static void ppuStepScanlineDot(void)
 
 void ppuTick(u32 DOTS)
 {
-  PpuContext* ctx = ppuGetContext();
-  ctx->frameReady = false;
-
   if (!ppuIsLcdEnabled()) return;
 
   for (u32 dot = 0; dot < DOTS; ++dot)

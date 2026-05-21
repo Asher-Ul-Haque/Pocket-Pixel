@@ -10,12 +10,16 @@
 #define WINDOW_SCALE_FACTOR 3
 #define WINDOW_WIDTH        (WIDTH * WINDOW_SCALE_FACTOR)
 #define WINDOW_HEIGHT       (HEIGHT * WINDOW_SCALE_FACTOR)
+#define DESIGN_WIDTH  1280
+#define DESIGN_HEIGHT 720
 
 typedef struct
 {
   SDL_Window*   window;
   SDL_Renderer* renderer;
   SDL_Texture*  gameTexture;
+  SDL_Texture*  tileTexture;
+  SDL_Texture*  mapTexture;
   SDL_Gamepad*  gamepad;
   u32           dmgColors[4];
 } SdlInternalContext;
@@ -40,14 +44,16 @@ void sdlInit(void)
   FORGE_LOG_DEBUG("%s", "Initializing desktop SDL runtime");
   FORGE_ASSERT(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD));
 
-  rendererCTX.window = SDL_CreateWindow("Pocket Pixel", WINDOW_WIDTH, WINDOW_HEIGHT, 0);
+  rendererCTX.window = SDL_CreateWindow("Pocket Pixel Debugger", DESIGN_WIDTH, DESIGN_HEIGHT, 0);
   FORGE_ASSERT(rendererCTX.window);
 
   rendererCTX.renderer = SDL_CreateRenderer(rendererCTX.window, NULL);
   FORGE_ASSERT(rendererCTX.renderer);
 
   rendererCTX.gameTexture = SDL_CreateTexture(rendererCTX.renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, WIDTH, HEIGHT);
-  FORGE_ASSERT(rendererCTX.gameTexture);
+  rendererCTX.tileTexture = SDL_CreateTexture(rendererCTX.renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, 128, 192);
+  rendererCTX.mapTexture  = SDL_CreateTexture(rendererCTX.renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, 256, 256);
+  FORGE_ASSERT(rendererCTX.gameTexture && rendererCTX.tileTexture && rendererCTX.mapTexture);
 
   rendererCTX.dmgColors[0] = 0x9BBC0FFF;
   rendererCTX.dmgColors[1] = 0x8BAC0FFF;
@@ -58,8 +64,7 @@ void sdlInit(void)
 
 void renderFrame(const PpuFrame* FRAME)
 {
-  void* pixels;
-  i32 pitch;
+  void* pixels; i32 pitch;
   if (SDL_LockTexture(rendererCTX.gameTexture, NULL, &pixels, &pitch) != 0) return;
 
   u32* dest = (u32*)pixels;
@@ -68,40 +73,74 @@ void renderFrame(const PpuFrame* FRAME)
   for (i32 i = 0; i < WIDTH * HEIGHT; ++i)
   {
     PpuPixel pixel = FRAME->pixels[i];
-
     if (mode == MODE_DMG_GAMEBOY)
     {
-      const u8 paletteReg = (pixel.bits.layer == 0)
-        ? FRAME->palettes.dmg.bgp
-        : ((pixel.bits.paletteId == 0) ? FRAME->palettes.dmg.obp0 : FRAME->palettes.dmg.obp1);
-
-      const u8 physicalIndex = (u8)((paletteReg >> (pixel.bits.colorIndex * 2)) & 0x03);
-      dest[i] = rendererCTX.dmgColors[physicalIndex];
+      const u8 paletteReg = (pixel.bits.layer == 0) ? FRAME->palettes.dmg.bgp : 
+                            ((pixel.bits.paletteId == 0) ? FRAME->palettes.dmg.obp0 : FRAME->palettes.dmg.obp1);
+      dest[i] = rendererCTX.dmgColors[(paletteReg >> (pixel.bits.colorIndex * 2)) & 0x03];
     }
     else
     {
-      const u16 color555 = (pixel.bits.layer == 0)
-        ? FRAME->palettes.cgb.bg[(pixel.bits.paletteId * 4) + pixel.bits.colorIndex]
-        : FRAME->palettes.cgb.obj[(pixel.bits.paletteId * 4) + pixel.bits.colorIndex];
-
+      const u16 color555 = (pixel.bits.layer == 0) ? FRAME->palettes.cgb.bg[(pixel.bits.paletteId * 4) + pixel.bits.colorIndex] : 
+                                                    FRAME->palettes.cgb.obj[(pixel.bits.paletteId * 4) + pixel.bits.colorIndex];
       dest[i] = colorConvert555To8888(color555);
     }
   }
-
   SDL_UnlockTexture(rendererCTX.gameTexture);
 }
 
 void drawTileView(const u8* VRAM_BANK_0, const u8* VRAM_BANK_1)
 {
-  (void)VRAM_BANK_0;
-  (void)VRAM_BANK_1;
+  (void) VRAM_BANK_1;
+  if (!VRAM_BANK_0 || !rendererCTX.tileTexture) return;
+  void* pixels; i32 pitch;
+  if (SDL_LockTexture(rendererCTX.tileTexture, NULL, &pixels, &pitch) != 0) return;
+  
+  u32* dest = (u32*)pixels;
+  for (i32 tile = 0; tile < 384; ++tile)
+  {
+    for (i32 y = 0; y < 8; ++y)
+    {
+      u8 b1 = VRAM_BANK_0[tile * 16 + y * 2];
+      u8 b2 = VRAM_BANK_0[tile * 16 + y * 2 + 1];
+      for (i32 x = 0; x < 8; ++x)
+      {
+        u8 color = (((b2 >> (7 - x)) & 0x01) << 1) | ((b1 >> (7 - x)) & 0x01);
+        dest[((tile / 16) * 8 + y) * 128 + ((tile % 16) * 8 + x)] = rendererCTX.dmgColors[color];
+      }
+    }
+  }
+  SDL_UnlockTexture(rendererCTX.tileTexture);
 }
 
 void drawMapView(const u8* VRAM_BANK_0, const u8* VRAM_BANK_1, u8 MAP_SELECT)
 {
-  (void)VRAM_BANK_0;
-  (void)VRAM_BANK_1;
-  (void)MAP_SELECT;
+  (void) VRAM_BANK_1;
+  if (!VRAM_BANK_0 || !rendererCTX.mapTexture) return;
+  void* pixels; i32 pitch;
+  if (SDL_LockTexture(rendererCTX.mapTexture, NULL, &pixels, &pitch) != 0) return;
+
+  u32* dest = (u32*)pixels;
+  u16 mapOffset = (MAP_SELECT == 0) ? 0x1800 : 0x1C00;
+
+  for (i32 ty = 0; ty < 32; ++ty)
+  {
+    for (i32 tx = 0; tx < 32; ++tx)
+    {
+      u8 tileId = VRAM_BANK_0[mapOffset + (ty * 32) + tx];
+      for (i32 y = 0; y < 8; ++y)
+      {
+        u8 b1 = VRAM_BANK_0[tileId * 16 + y * 2];
+        u8 b2 = VRAM_BANK_0[tileId * 16 + y * 2 + 1];
+        for (i32 x = 0; x < 8; ++x)
+        {
+          u8 color = (((b2 >> (7 - x)) & 0x01) << 1) | ((b1 >> (7 - x)) & 0x01);
+          dest[(ty * 8 + y) * 256 + (tx * 8 + x)] = rendererCTX.dmgColors[color];
+        }
+      }
+    }
+  }
+  SDL_UnlockTexture(rendererCTX.mapTexture);
 }
 
 static bool isKeyboardPressed(SDL_Scancode KEY)
@@ -181,13 +220,19 @@ void printKeybinds(void)
 
 void present(void)
 {
-  if (!rendererCTX.renderer || !rendererCTX.gameTexture) return;
+  if (!rendererCTX.renderer) return;
 
-  SDL_SetRenderDrawColor(rendererCTX.renderer, 0, 0, 0, 255);
+  SDL_SetRenderDrawColor(rendererCTX.renderer, 20, 20, 20, 255);
   SDL_RenderClear(rendererCTX.renderer);
 
-  SDL_FRect frameRect = { 0.0f, 0.0f, WINDOW_WIDTH, WINDOW_HEIGHT };
-  SDL_RenderTexture(rendererCTX.renderer, rendererCTX.gameTexture, NULL, &frameRect);
+  SDL_FRect rGame = { 30,  50, 160 * 3, 144 * 3 };
+  SDL_FRect rTile = { 550, 50, 128 * 2, 192 * 2 };
+  SDL_FRect rMap  = { 850, 50, 256 * 1.5f, 256 * 1.5f };
+
+  SDL_RenderTexture(rendererCTX.renderer, rendererCTX.gameTexture, NULL, &rGame);
+  SDL_RenderTexture(rendererCTX.renderer, rendererCTX.tileTexture, NULL, &rTile);
+  SDL_RenderTexture(rendererCTX.renderer, rendererCTX.mapTexture,  NULL, &rMap);
+
   SDL_RenderPresent(rendererCTX.renderer);
 }
 

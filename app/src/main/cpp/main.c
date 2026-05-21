@@ -138,21 +138,32 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[])
   if (platform && platform->input.printKeybinds) platform->input.printKeybinds();
 
   bool running = true;
+  PpuContext* ppu = ppuGetContext();
+
   while (running)
   {
     if (platform && platform->input.poll) platform->input.poll(&running);
 
+    // Emulate a frame's worth of cycles, but break early if a frame finishes drawing
     for (u32 frameCycles = 0; frameCycles < DOTS_PER_FRAME; )
     {
       cpuTick();
       timerStepMCycle();
       ppuTick(DOTS_PER_MCYCLE);
       frameCycles += DOTS_PER_MCYCLE;
-    }
 
-    if (platform && platform->rendering.present)
-    {
-      platform->rendering.present();
+      // PRESENT IMMEDIATELY when the PPU signals the frame is ready
+      if (ppu->frameReady)
+      {
+        if (platform && platform->rendering.present)
+        {
+          platform->rendering.drawTileView(ppu->vram[0], ppu->vram[1]);
+          platform->rendering.drawMapView(ppu->vram[0], ppu->vram[1], 0);
+          platform->rendering.present();
+        }
+        // Clear the flag so we don't double-render on subsequent cycles
+        ppu->frameReady = false; 
+      }
     }
   }
 
