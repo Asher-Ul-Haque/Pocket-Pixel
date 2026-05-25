@@ -78,6 +78,9 @@ u8 ppuReadIo(u16 ADDR)
     case REG_LY         : return ctx->registers.ly;
     case REG_LYC        : return ctx->registers.lyc;
     case REG_DMA        : return ctx->registers.dma;
+    case REG_BGP        : return ctx->registers.bgp;   
+    case REG_OBP_0      : return ctx->registers.obp0;  
+    case REG_OBP_1      : return ctx->registers.obp1;  
     case REG_WY         : return ctx->registers.wy;
     case REG_WX         : return ctx->registers.wx;
     case REG_KEY_1      : return ctx->registers.key1 | 0x7E;  ///< Bits 1-6 are unused, always read high
@@ -126,6 +129,10 @@ void ppuWriteIo(u16 ADDR, u8 VALUE)
       ctx->registers.key1 &= 0xFE;           /// Strip old preparation state
       ctx->registers.key1 |= (VALUE & 0x01); /// Latch new configuration
       break;
+
+    case REG_BGP   : ctx->registers.bgp  = VALUE; break; 
+    case REG_OBP_0 : ctx->registers.obp0 = VALUE; break; 
+    case REG_OBP_1 : ctx->registers.obp1 = VALUE; break;
 
     /// @brief: CGB: Latch VBK register
     case REG_VRAM_BANK:
