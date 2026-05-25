@@ -84,6 +84,13 @@ u8 busRead(u16 ADDRESS)
       return ppuReadCram(ADDRESS); 
     }
 
+    // - - - CGB WRAM bank register (SVBK)
+    if (ADDRESS == REG_SVBK)
+    {
+      if (cartridgeGetContext()->mode == MODE_DMG_GAMEBOY) return OPEN_BUS_VALUE;
+      return ramReadWramBank();
+    }
+
     // - - - Timer Registers (0xFF04 - 0xFF07)
     if (ADDRESS >= DIV_REGISTER_ADDRESS && ADDRESS <= TAC_REGISTER_ADDRESS) 
     { return timerRead(ADDRESS); }
@@ -197,6 +204,14 @@ void busWrite(u16 ADDRESS, u8 VALUE)
     if (ADDRESS >= REG_BG_PALETTE_INDEX && ADDRESS <= REG_OBJ_PALETTE_DATA)
     { 
       ppuWriteCram(ADDRESS, VALUE);
+      return;
+    }
+
+    // - - - CGB WRAM bank register (SVBK)
+    if (ADDRESS == REG_SVBK)
+    {
+      if (cartridgeGetContext()->mode == MODE_DMG_GAMEBOY) return;
+      ramWriteWramBank(VALUE);
       return;
     }
 

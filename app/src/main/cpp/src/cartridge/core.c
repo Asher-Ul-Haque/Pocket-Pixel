@@ -159,7 +159,17 @@ void cartridgeFlushRAM(void)
 
   if (!ctx.hasBattery) return;
   if (!ctx.ramDirty)   return;
-  if (ctx.externalRamData && ctx.fileIO->saveRamToFile)
+
+  if (!ctx.fileIO || !ctx.fileIO->saveRamToFile) return;
+
+  if (ctx.mapperType == MAPPER_MBC2)
+  {
+    ctx.fileIO->saveRamToFile(ctx.mapper.mbc2.ram, RAM_SIZE_MBC2);
+    ctx.ramDirty = false;
+    return;
+  }
+
+  if (ctx.externalRamData)
   {
     ctx.fileIO->saveRamToFile(
       ctx.externalRamData,
@@ -218,4 +228,3 @@ void cartridgeWrite(u16 ADDRESS, u8 VALUE)
       break;
   }
 }
-
