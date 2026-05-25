@@ -220,6 +220,7 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[])
     platform->video.cleanup();
   }
 
+  cartridgeUnload();
   free(romData);
   return 0;
 }
