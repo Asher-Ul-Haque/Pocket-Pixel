@@ -40,7 +40,7 @@ u8 busRead(u16 ADDRESS)
 
   // - - - 3. VRAM Range (0x8000 - 0x9FFF) - Mode dependent
   if (ADDRESS >= BUS_ADDR_VRAM_START && ADDRESS <= BUS_ADDR_VRAM_END) 
-  { return ppuRead(ADDRESS); }
+  { return ppuReadVram(ADDRESS); }
 
   // - - - 4. External Cartridge RAM (0xA000 - 0xBFFF)
   if (ADDRESS >= BUS_ADDR_CART_RAM_START && ADDRESS <= BUS_ADDR_CART_RAM_END) 
@@ -56,7 +56,7 @@ u8 busRead(u16 ADDRESS)
 
   // - - - 7. OAM (0xFE00 - 0xFE9F) - Mode dependent
   if (ADDRESS >= BUS_ADDR_OAM_START && ADDRESS <= BUS_ADDR_OAM_END) 
-  { return ppuRead(ADDRESS); }
+  { return ppuReadOam(ADDRESS); }
 
   // - - - 8. Unusable Area (0xFEA0 - 0xFEFF)
   if (ADDRESS >= BUS_ADDR_UNUSED_START && ADDRESS <= BUS_ADDR_UNUSED_END) 
@@ -70,17 +70,19 @@ u8 busRead(u16 ADDRESS)
     { return joypadRead(); }
 
     // - - - PPU Io 
-    if (ADDRESS >= REG_LCDC && ADDRESS <= REG_WX)
-    { return ppuRead(ADDRESS); }
-
-    // - - - CGB specific Hardware Register Ports (VBK, Palettes, and HDMA)
-    if (ADDRESS == REG_VRAM_BANK          ||
-        ADDRESS == REG_BG_PALETTE_INDEX  ||
-        ADDRESS == REG_BG_PALETTE_DATA   ||
-        ADDRESS == REG_OBJ_PALETTE_INDEX ||
-        ADDRESS == REG_OBJ_PALETTE_DATA  ||
+    if ((ADDRESS >= REG_LCDC && ADDRESS <= REG_WX)  || 
+         ADDRESS == REG_KEY_1                       || 
+         ADDRESS == REG_VRAM_BANK                   ||
         (ADDRESS >= REG_HDMA1 && ADDRESS <= REG_HDMA5))
-    { return ppuRead(ADDRESS); }
+    { 
+      return ppuReadIo(ADDRESS); 
+    }
+
+    // - - - Dedicated color palette Index  Data ports (0xFF68 - 0xFF6B)
+    if (ADDRESS >= REG_BG_PALETTE_INDEX && ADDRESS <= REG_OBJ_PALETTE_DATA)
+    { 
+      return ppuReadCram(ADDRESS); 
+    }
 
     // - - - Timer Registers (0xFF04 - 0xFF07)
     if (ADDRESS >= DIV_REGISTER_ADDRESS && ADDRESS <= TAC_REGISTER_ADDRESS) 
@@ -124,7 +126,7 @@ void busWrite(u16 ADDRESS, u8 VALUE)
   // - - - 3. VRAM Range
   if (ADDRESS >= BUS_ADDR_VRAM_START && ADDRESS <= BUS_ADDR_VRAM_END) 
   {
-    ppuWrite(ADDRESS, VALUE);
+    ppuWriteVram(ADDRESS, VALUE);
     return;
   }
 
@@ -152,7 +154,7 @@ void busWrite(u16 ADDRESS, u8 VALUE)
   // - - - 7. OAM 
   if (ADDRESS >= BUS_ADDR_OAM_START && ADDRESS <= BUS_ADDR_OAM_END) 
   {
-    ppuWrite(ADDRESS, VALUE);
+    ppuWriteOam(ADDRESS, VALUE);
     return;
   }
 
@@ -181,21 +183,20 @@ void busWrite(u16 ADDRESS, u8 VALUE)
       return;
     }
 
-    if (ADDRESS >= REG_LCDC && ADDRESS <= REG_WX)
+    // - - - PPU Io 
+    if ((ADDRESS >= REG_LCDC && ADDRESS <= REG_WX)  || 
+         ADDRESS == REG_KEY_1                       || 
+         ADDRESS == REG_VRAM_BANK                   ||
+        (ADDRESS >= REG_HDMA1 && ADDRESS <= REG_HDMA5))
     {
-      ppuWrite(ADDRESS, VALUE);
+      ppuWriteIo(ADDRESS, VALUE);
       return;
     }
 
-    if (ADDRESS == REG_VRAM_BANK          ||
-        ADDRESS == REG_BG_PALETTE_INDEX   ||
-        ADDRESS == REG_BG_PALETTE_DATA    ||
-        ADDRESS == REG_OBJ_PALETTE_INDEX  ||
-        ADDRESS == REG_OBJ_PALETTE_DATA   ||
-        ADDRESS == REG_KEY_1              ||
-        (ADDRESS >= REG_HDMA1 && ADDRESS <= REG_HDMA5))
-    {
-      ppuWrite(ADDRESS, VALUE);
+    // - - - Dedicated color palette Index  Data ports (0xFF68 - 0xFF6B)
+    if (ADDRESS >= REG_BG_PALETTE_INDEX && ADDRESS <= REG_OBJ_PALETTE_DATA)
+    { 
+      ppuWriteCram(ADDRESS, VALUE);
       return;
     }
 

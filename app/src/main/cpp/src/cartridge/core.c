@@ -86,7 +86,7 @@ bool cartridgeInit(const CartridgeFileIO* FILE_IO, const u8* ROM_DATA, const u32
   }
   else if (ctx.metadata->titleInfo.cgb.cgbFlag == CART_CGB_SUPPORTED)
   {
-    ctx.mode = MODE_DMG_GAMEBOY; 
+    ctx.mode = MODE_CGB_GAMEBOY; 
   }
   else
   {

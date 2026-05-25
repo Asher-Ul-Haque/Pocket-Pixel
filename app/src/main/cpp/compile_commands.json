@@ -16,11 +16,11 @@
       "-O1",
       "-c",
       "-o",
-      ".build/bus.o",
-      "src/bus.c"
+      ".build/ppu/timing.o",
+      "src/ppu/timing.c"
     ],
     "directory": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp",
-    "file": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/src/bus.c",
-    "output": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/.build/bus.o"
+    "file": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/src/ppu/timing.c",
+    "output": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/.build/ppu/timing.o"
   }
 ]

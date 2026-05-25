@@ -4,7 +4,7 @@
 #define WIDTH  160
 #define HEIGHT 144
 
-#define CGB_PALETTE_COUNT       8  
+#define CGB_PALETTE_COUNT       8
 #define CGB_PALETTE_COLOR_COUNT 4
 
 #define VRAM_BANK_SIZE  0x2000
@@ -24,6 +24,7 @@
 
 #define DOT_OAM_SCAN        80
 #define DOTS_DRAWING        172
+#define DOTS_DRAWING_MAX    289
 #define DOTS_HBLANK_DURATION (PPU_DOTS_PER_SCANLINE - DOT_OAM_SCAN - DOTS_DRAWING)
 #define DOTS_TRANSFER_START DOT_OAM_SCAN
 #define DOTS_HBLANK_START   (DOT_OAM_SCAN + DOTS_DRAWING)
@@ -31,6 +32,12 @@
 #define LY_VBLANK_START 144 
 #define LY_MAX          153
 #define LY_PER_FRAME    154
+
+#define CGB_DMA_BLOCKS_LEFT_EDGE 0xFF 
+
+#define BG_SCROLLING_PENALTY 6
+#define SPRITE_X_0_PENALTY   11
+#define VRAM_DATA_FETCH      6
 
 #define BG_MAP_0_OFFSET 0x1800
 #define BG_MAP_1_OFFSET 0x1C00
@@ -108,3 +115,62 @@
 #define EMPTY_PIXEL_COLOR        0
 #define DEFAULT_BG_PALETTE       0
 #define DEFAULT_LAYER_BACKGROUND 0
+
+#define VRAM_START_ADDR             0x8000u
+#define HDMA_SRC_HIGH_SHIFT         8
+#define HDMA_SRC_LOW_ALIGN_MASK     0xF0u
+#define HDMA_DEST_HIGH_SHIFT        8
+#define HDMA_DEST_LOW_ALIGN_MASK    0xF0u
+#define HDMA_DEST_WINDOW_MASK       0x1Fu
+#define HDMA_MODE_BIT_MASK          0x80u
+#define HDMA_BLOCKS_LIMIT_MASK      0x7Fu
+#define HDMA_FINISHED_STATUS        0xFFu
+
+#define OAM_DMA_SRC_SHIFT           8
+#define OAM_DMA_START_INDEX         0
+#define CGB_DMA_START_INDEX         0
+#define BUS_BANK_BIT_MASK           0x01
+
+#define FETCH_STEP_DOTS             2
+#define FETCH_CLOCK_RESET           0
+
+#define MAP_START_0                 0x9800u
+#define MAP_START_1                 0x9C00u
+#define MAP_DATA_MASK               0x03FFu
+
+#define TILE_DATA_MODE_0_START      0x9000  ///< Address $8800 signed indexing base midpoint
+#define TILE_DATA_MODE_1_START      0x8000u ///< Address $8000 unsigned indexing base
+
+#define ATTR_PALETTE_MASK           0x07u
+#define ATTR_VRAM_BANK_MASK         0x08u
+#define ATTR_X_FLIP_MASK            0x20u
+#define ATTR_Y_FLIP_MASK            0x40u
+#define ATTR_PRIORITY_MASK          0x80u
+
+#define FIFO_MAX_CAPACITY           8
+#define PIXEL_BIT_WIDTH             8
+
+#define FIFO_CAPACITY               8
+#define MAX_SCREEN_X                160
+#define PIXEL_COLOR_TRANSPARENT     0
+#define PIXEL_COLOR_OPAQUE_MIN      1
+
+#define LCDC_MASTER_ENABLE_MASK     0x01
+
+#define FIFO_EMPTY_COUNT            0
+#define PIXEL_BIT_WIDTH             8
+#define PIXEL_SHIFT_HIGH_BIT        1
+
+#define BIT_MASK_BASE               0x01
+
+#define COLOR_BYTES_PER_PALETTE     8
+#define COLOR_BYTES_PER_INDEX       2
+
+#define REG_BGP_ADDR                0xFF47u
+#define REG_OBP0_ADDR               0xFF48u
+#define REG_OBP1_ADDR               0xFF49u
+
+#define COLOR_BYTES_PER_PALETTE     8
+#define COLOR_BYTES_PER_INDEX       2
+
+#define DMG_SHADE_LIGHTEST          0
