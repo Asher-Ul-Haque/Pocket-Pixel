@@ -13,21 +13,16 @@ static SDL_Texture* gDisplayTexture  = NULL;
 static DmgPalette gActiveDmgPalette;
 static bool gShaderEnabled           = false;
 
-// VRAM Viewer State
 static SDL_Window* gDebugWindow      = NULL;
 static SDL_Renderer* gDebugRenderer  = NULL;
 static SDL_Texture* gDebugTexture    = NULL;
-bool gDebugWindowOpen                = false; // Not static so main.c can extern toggle it
+bool gDebugWindowOpen                = false; 
 
 static PlatformContext gPlatformCtx;
 
 static bool sdlVideoInit(void)
 {
-  if (!SDL_Init(SDL_INIT_VIDEO))
-  { 
-    FORGE_LOG_DEBUG("[PLATFORM] SDL_Init Failed: %s", SDL_GetError());
-    return false; 
-  }
+  if (!SDL_Init(SDL_INIT_VIDEO)) return false; 
 
   gWindow = SDL_CreateWindow("Game Boy Emulator", WIDTH * 4, HEIGHT * 4, SDL_WINDOW_RESIZABLE);
   if (!gWindow) return false; 
@@ -53,14 +48,8 @@ static void sdlSetDmgPalette(DmgPalette PALETTE)
 static void sdlSetShader(bool ENABLE)
 {
   gShaderEnabled = ENABLE;
-  if (gShaderEnabled)
-  {
-    SDL_SetTextureScaleMode(gDisplayTexture, SDL_SCALEMODE_LINEAR);
-  }
-  else
-  {
-    SDL_SetTextureScaleMode(gDisplayTexture, SDL_SCALEMODE_NEAREST);
-  }
+  if (gShaderEnabled) SDL_SetTextureScaleMode(gDisplayTexture, SDL_SCALEMODE_LINEAR);
+  else                SDL_SetTextureScaleMode(gDisplayTexture, SDL_SCALEMODE_NEAREST);
 }
 
 static void sdlDrawTileView(const u8* vbk0, const u8* vbk1)
@@ -92,6 +81,10 @@ static void sdlDrawTileView(const u8* vbk0, const u8* vbk1)
   {
     u32* dest = (u32*)pixels;
     i32 pixelsPerRow = pitch / sizeof(u32);
+    
+    GameBoyMode romMode = cartridgeGetContext()->mode;
+    bool isCgbMode = (romMode == MODE_CGB_GAMEBOY || romMode == MODE_CGB_ONLY_GAMEBOY);
+    PpuContext* ctx = ppuGetContext();
 
     for (int t = 0; t < 384; t++)
     {
@@ -109,12 +102,31 @@ static void sdlDrawTileView(const u8* vbk0, const u8* vbk1)
           u8 colorIdx = ((byte1 >> bit) & 1) | (((byte2 >> bit) & 1) << 1);
           u32 color = 0;
           
-          switch(colorIdx) 
+          if (isCgbMode)
           {
-            case 0: color = gActiveDmgPalette.color0; break;
-            case 1: color = gActiveDmgPalette.color1; break;
-            case 2: color = gActiveDmgPalette.color2; break;
-            case 3: color = gActiveDmgPalette.color3; break;
+            // THE FIX: Parse the actual CGB Palette 0 memory to colorize the VRAM Viewer!
+            u16 cramAddr = colorIdx * 2; 
+            u8 dataLow = ctx->bgPaletteRam[cramAddr];
+            u8 dataHigh = ctx->bgPaletteRam[cramAddr + 1];
+            u16 cgbColor = (((u16)dataHigh) << 8) | dataLow;
+            
+            u8 r5 = (cgbColor & 0x001F);
+            u8 g5 = (cgbColor & 0x03E0) >> 5;
+            u8 b5 = (cgbColor & 0x7C00) >> 10;
+            u8 r8 = (r5 << 3) | (r5 >> 2);
+            u8 g8 = (g5 << 3) | (g5 >> 2);
+            u8 b8 = (b5 << 3) | (b5 >> 2);
+            color = (r8 << 24) | (g8 << 16) | (b8 << 8) | 0xFF;
+          }
+          else 
+          {
+            switch(colorIdx) 
+            {
+              case 0: color = gActiveDmgPalette.color0; break;
+              case 1: color = gActiveDmgPalette.color1; break;
+              case 2: color = gActiveDmgPalette.color2; break;
+              case 3: color = gActiveDmgPalette.color3; break;
+            }
           }
 
           dest[((tileY + y) * pixelsPerRow) + (tileX + x)] = color;
@@ -139,7 +151,10 @@ static void sdlRenderFrame(const PpuFrame* FRAME)
   }
 
   u32* destination = (u32*)lockedPixels;
-  bool isCgbMode   = (cartridgeGetContext()->mode != MODE_DMG_GAMEBOY);
+  
+  GameBoyMode romMode = cartridgeGetContext()->mode;
+  bool isCgbMode = (romMode == MODE_CGB_GAMEBOY || romMode == MODE_CGB_ONLY_GAMEBOY);
+  
   i32 pixelsPerRow = pitch / sizeof(u32);
 
   for (i32 y = 0; y < HEIGHT; y++)
@@ -213,9 +228,7 @@ static void sdlPollEvents(bool* IS_RUNNING)
     }
   }
 
-  // --- Hardware Joypad Routing ---
   const bool* keyboard = SDL_GetKeyboardState(NULL);
-  
   joypadSetButton(JOYPAD_BUTTON_UP,     keyboard[SDL_SCANCODE_UP]);
   joypadSetButton(JOYPAD_BUTTON_DOWN,   keyboard[SDL_SCANCODE_DOWN]);
   joypadSetButton(JOYPAD_BUTTON_LEFT,   keyboard[SDL_SCANCODE_LEFT]);
@@ -243,7 +256,6 @@ void platformInit(void)
 
   if (!gPlatformCtx.video.init())
   {
-    FORGE_LOG_FATAL("%s", "Hardware Init Failed. Terminating.");
     exit(1);
   }
 }

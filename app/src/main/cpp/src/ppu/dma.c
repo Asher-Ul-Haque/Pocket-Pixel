@@ -3,8 +3,6 @@
 #include <cartridge/cartridge.h>
 #include <bus.h>
 
-
-// - - - OAM Dma incremental controller
 void ppuStepOamDma(void)
 {
   PpuContext* ctx = ppuGetContext();
@@ -25,7 +23,6 @@ void ppuStepOamDma(void)
   }
 }
 
-// - - - CGB Horizontal blank block dma controller
 void ppuCheckHblankDma(void)
 {
   PpuContext* ctx = ppuGetContext();
@@ -46,16 +43,12 @@ void ppuCheckHblankDma(void)
     ctx->cgbDma.destination++;
   }
 
-  // - - - Decrement tracked transfer block balance count 
-  if (ctx->cgbDma.blocksLeft > CGB_DMA_START_INDEX) ctx->cgbDma.blocksLeft--;
-
-  ctx->registers.hdma5 = ctx->cgbDma.blocksLeft;
-
-  // - - - If blocks left reached 0xFF, the sequence has completed all requests 
-  if (ctx->cgbDma.blocksLeft == HDMA_FINISHED_STATUS)
+  // THE FIX: Decrease the remaining length. 
+  // HDMA5 stores length-1. It underflows to 0xFF when the transfer is entirely complete.
+  ctx->registers.hdma5--;
+  
+  if (ctx->registers.hdma5 == 0xFF)
   {
-    ctx->cgbDma.active      = false;
-    ctx->cgbDma.source      = CGB_DMA_START_INDEX;
-    ctx->cgbDma.destination = CGB_DMA_START_INDEX;
+    ctx->cgbDma.active = false;
   }
 }

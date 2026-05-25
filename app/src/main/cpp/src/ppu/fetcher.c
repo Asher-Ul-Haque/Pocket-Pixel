@@ -23,19 +23,25 @@ void ppuStepPixelFetcher(void)
   if (ctx->fetcher.stepClock < FETCH_STEP_DOTS) return;
   ctx->fetcher.stepClock = FETCH_CLOCK_RESET;
 
-  bool windowEnabled = (ctx->registers.lcdc & LCDC_WIN_ENABLE_MASK) != 0;
-  
-  // THE FIX: Use signed integers to prevent underflow if WX < 7
-  int currentScreenX       = (int)ctx->fetcher.fetcherX * TILE_SIDE;
-  int windowActivationEdge = (int)ctx->registers.wx - WINDOW_X_OFFSET;
+  bool  windowEnabled         = (ctx->registers.lcdc & LCDC_WIN_ENABLE_MASK) != 0;
+  int   windowActivationEdge  = (int) ctx->registers.wx - WINDOW_X_OFFSET;
 
-  if (windowEnabled && ctx->registers.ly >= ctx->registers.wy && currentScreenX >= windowActivationEdge)
+  // Fix: Check ctx->screenX instead of fetcherX so it aligns visually with the display
+  if (windowEnabled && ctx->registers.ly >= ctx->registers.wy && (int)ctx->screenX >= windowActivationEdge)
   {
     if (!ctx->windowTriggered)
     {
       ctx->windowTriggered  = true;
       ctx->fetcher.state    = FETCH_STATE_GET_TILE_MAP;
-      ctx->fetcher.fetcherX = 0; // THE FIX: Reset fetcher X so the window pulls from tile 0
+      ctx->fetcher.fetcherX = 0;
+
+      // Fix: Flush FIFOs instantly to tear off trailing BG pixels
+      ctx->bgFifo.count  = FIFO_EMPTY_COUNT;
+      ctx->bgFifo.head   = FIFO_EMPTY_COUNT;
+      ctx->bgFifo.tail   = FIFO_EMPTY_COUNT;
+      ctx->objFifo.count = FIFO_EMPTY_COUNT;
+      ctx->objFifo.head  = FIFO_EMPTY_COUNT;
+      ctx->objFifo.tail  = FIFO_EMPTY_COUNT;
     }
   }
 
@@ -175,7 +181,7 @@ void ppuStepPixelFetcher(void)
         }
         else 
         {
-          ctx->fetcher.stepClock = 0; // THE FIX: Prevent stepClock from underflowing to 255
+          ctx->fetcher.stepClock = 0;
         }
         break;
       }
