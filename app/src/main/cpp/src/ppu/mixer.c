@@ -25,27 +25,13 @@ void ppuStepPixelMixer(void)
   PpuContext* ctx   = ppuGetContext();
   bool        isDMG = cartridgeGetContext()->mode == MODE_DMG_GAMEBOY;
 
+  // - - - - If already running an active VRAM fetch step, stop and yield 
   if (ctx->spriteFetching) return;
 
-  if ((ctx->registers.lcdc & LCDC_OBJ_ENABLE_MASK) != 0)
-  {
-    for (u8 scanIndex = FIFO_EMPTY_COUNT; scanIndex < ctx->scanlineOamBuffer.spriteCount; ++scanIndex)
-    {
-      u8  targetOamIndex  = ctx->scanlineOamBuffer.spriteIndices[scanIndex];
-      u16 oamBase         = (u16) targetOamIndex * SPRITE_OAM_ENTRY_BYTES;
-      u8  spriteX         = ctx->oam[oamBase + OAM_X_OFFSET];
-
-      // THE FIX: Trigger normally, OR trigger instantly at screenX = 0 if the sprite is hanging off the left edge
-      if ((((u16) ctx->screenX + 8) == (u16)spriteX) || 
-          (ctx->screenX == 0 && spriteX > 0 && spriteX < 8))
-      { 
-        ppuInjectSpriteToFifo(scanIndex); 
-      }
-    }
-  }
-
+  // - - - The mixer can process a pixel step if the fetcher has successfully populated the BG Fifo 
   if (ctx->bgFifo.count == FIFO_EMPTY_COUNT) return;
 
+  // - - - Background fine scrolling drops the first (SCX & 7) pixels of the leftmost tile row 
   u8 fineScrollOffset = ctx->registers.scx & TILE_PIXEL_MASK;
   if (ctx->droppedPixels < fineScrollOffset && !ctx->windowTriggered)
   {
@@ -59,6 +45,24 @@ void ppuStepPixelMixer(void)
     return;
   }
 
+  // - - - THE FIX: Move Sprite Injection AFTER fine scroll dropping!
+  // - - - Check if objects are globally enabled inside LCDC Bit 1 before evaluating layout overlaps 
+  if ((ctx->registers.lcdc & LCDC_OBJ_ENABLE_MASK) != 0)
+  {
+    // - - - Scan the line buffer to verify if any sprite intersects the current screen pixel position 
+    for (u8 scanIndex = FIFO_EMPTY_COUNT; scanIndex < ctx->scanlineOamBuffer.spriteCount; ++scanIndex)
+    {
+      u8  targetOamIndex  = ctx->scanlineOamBuffer.spriteIndices[scanIndex];
+      u16 oamBase         = (u16) targetOamIndex * SPRITE_OAM_ENTRY_BYTES;
+      u8  spriteX         = ctx->oam[oamBase + OAM_X_OFFSET];
+
+      if ((((u16) ctx->screenX + 8) == (u16)spriteX) || 
+          (ctx->screenX == 0 && spriteX > 0 && spriteX < 8))
+      { ppuInjectSpriteToFifo(scanIndex); }
+    }
+  }
+
+  // - - - Pop active working pixels
   PpuPixel bgPixel  = ctx->bgFifo.pixels[ctx->bgFifo.head];
   PpuPixel objPixel = ctx->objFifo.pixels[ctx->objFifo.head];
 
@@ -70,16 +74,14 @@ void ppuStepPixelMixer(void)
   ctx->bgFifo.count--;
   ctx->objFifo.count--;
 
+  // - - - Resolve visibility 
   bool chooseSprite = false;
 
   if ((ctx->registers.lcdc & LCDC_OBJ_ENABLE_MASK) != 0)
   {
     if (objPixel.colorIndex != PIXEL_COLOR_TRANSPARENT)
     {
-      if (bgPixel.colorIndex == PIXEL_COLOR_TRANSPARENT)
-      {
-        chooseSprite = true;
-      }
+      if (bgPixel.colorIndex == PIXEL_COLOR_TRANSPARENT) chooseSprite = true;
       else 
       {
         bool masterPriorityEnabled = (ctx->registers.lcdc & LCDC_MASTER_ENABLE_MASK) != 0;
@@ -122,9 +124,11 @@ void ppuStepPixelMixer(void)
     }
   }
 
+  // - - - Dispatch to platform 
   ppuPushPixelToScreen(ctx->screenX, ctx->registers.ly, finalPixelColor);
   ctx->screenX++;
 
+  // - - - Evaluate horizontal scanline end completion row 
   if (ctx->screenX >= MAX_SCREEN_X)
   {
     ctx->mode = PPU_MODE_HBLANK;
