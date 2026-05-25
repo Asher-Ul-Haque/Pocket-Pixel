@@ -8,17 +8,21 @@
 #include <joypad.h>
 
 static SDL_Window* gWindow           = NULL;
-static SDL_Renderer* gRenderer         = NULL;
-static SDL_Texture* gDisplayTexture   = NULL;
-static DmgPalette     gActiveDmgPalette;
-static bool           gShaderEnabled    = false;
-static bool           gFirstFrameTraced = false;
+static SDL_Renderer* gRenderer       = NULL;
+static SDL_Texture* gDisplayTexture  = NULL;
+static DmgPalette gActiveDmgPalette;
+static bool gShaderEnabled           = false;
+
+// VRAM Viewer State
+static SDL_Window* gDebugWindow      = NULL;
+static SDL_Renderer* gDebugRenderer  = NULL;
+static SDL_Texture* gDebugTexture    = NULL;
+bool gDebugWindowOpen                = false; // Not static so main.c can extern toggle it
 
 static PlatformContext gPlatformCtx;
 
 static bool sdlVideoInit(void)
 {
-  FORGE_LOG_DEBUG("%s", "[PLATFORM] Initializing SDL3 Video...");
   if (!SDL_Init(SDL_INIT_VIDEO))
   { 
     FORGE_LOG_DEBUG("[PLATFORM] SDL_Init Failed: %s", SDL_GetError());
@@ -26,25 +30,13 @@ static bool sdlVideoInit(void)
   }
 
   gWindow = SDL_CreateWindow("Game Boy Emulator", WIDTH * 4, HEIGHT * 4, SDL_WINDOW_RESIZABLE);
-  if (!gWindow) 
-  { 
-    FORGE_LOG_DEBUG("[PLATFORM] SDL_CreateWindow Failed: %s", SDL_GetError());
-    return false; 
-  }
+  if (!gWindow) return false; 
 
   gRenderer = SDL_CreateRenderer(gWindow, NULL);
-  if (!gRenderer) 
-  { 
-    FORGE_LOG_DEBUG("[PLATFORM] SDL_CreateRenderer Failed: %s", SDL_GetError());
-    return false; 
-  }
+  if (!gRenderer) return false; 
 
   gDisplayTexture = SDL_CreateTexture(gRenderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, WIDTH, HEIGHT);
-  if (!gDisplayTexture)
-  {
-    FORGE_LOG_DEBUG("[PLATFORM] SDL_CreateTexture Failed: %s", SDL_GetError());
-    return false;
-  }
+  if (!gDisplayTexture) return false;
   
   gActiveDmgPalette.color0 = 0x9BBC0FFF; 
   gActiveDmgPalette.color1 = 0x8BAC0FFF;
@@ -52,7 +44,6 @@ static bool sdlVideoInit(void)
   gActiveDmgPalette.color3 = 0x0F380FFF;
 
   SDL_SetTextureScaleMode(gDisplayTexture, SDL_SCALEMODE_NEAREST);
-  FORGE_LOG_DEBUG("%s", "[PLATFORM] SDL3 Video successfully initialized.");
   return true;
 }
 
@@ -72,25 +63,83 @@ static void sdlSetShader(bool ENABLE)
   }
 }
 
-static void sdlRenderFrame(const PpuFrame* FRAME)
+static void sdlDrawTileView(const u8* vbk0, const u8* vbk1)
 {
-  if (!gFirstFrameTraced)
+  (void) vbk1;
+  if (!gDebugWindowOpen) 
   {
-    FORGE_LOG_DEBUG("%s", "[RENDERER] First frame arrived at the platform! Locking texture...");
-    gFirstFrameTraced = true;
+    if (gDebugWindow)
+    {
+      SDL_DestroyTexture(gDebugTexture);
+      SDL_DestroyRenderer(gDebugRenderer);
+      SDL_DestroyWindow(gDebugWindow);
+      gDebugWindow = NULL;
+    }
+    return;
   }
 
+  if (!gDebugWindow)
+  {
+    gDebugWindow = SDL_CreateWindow("VRAM Tile Viewer", 128 * 2, 192 * 2, 0);
+    gDebugRenderer = SDL_CreateRenderer(gDebugWindow, NULL);
+    gDebugTexture = SDL_CreateTexture(gDebugRenderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, 128, 192);
+  }
+
+  void* pixels = NULL;
+  int pitch = 0;
+
+  if (SDL_LockTexture(gDebugTexture, NULL, &pixels, &pitch))
+  {
+    u32* dest = (u32*)pixels;
+    i32 pixelsPerRow = pitch / sizeof(u32);
+
+    for (int t = 0; t < 384; t++)
+    {
+      int tileX = (t % 16) * 8;
+      int tileY = (t / 16) * 8;
+
+      for (int y = 0; y < 8; y++)
+      {
+        u8 byte1 = vbk0[(t * 16) + (y * 2)];
+        u8 byte2 = vbk0[(t * 16) + (y * 2) + 1];
+
+        for (int x = 0; x < 8; x++)
+        {
+          int bit = 7 - x; 
+          u8 colorIdx = ((byte1 >> bit) & 1) | (((byte2 >> bit) & 1) << 1);
+          u32 color = 0;
+          
+          switch(colorIdx) 
+          {
+            case 0: color = gActiveDmgPalette.color0; break;
+            case 1: color = gActiveDmgPalette.color1; break;
+            case 2: color = gActiveDmgPalette.color2; break;
+            case 3: color = gActiveDmgPalette.color3; break;
+          }
+
+          dest[((tileY + y) * pixelsPerRow) + (tileX + x)] = color;
+        }
+      }
+    }
+    SDL_UnlockTexture(gDebugTexture);
+    SDL_RenderClear(gDebugRenderer);
+    SDL_RenderTexture(gDebugRenderer, gDebugTexture, NULL, NULL);
+    SDL_RenderPresent(gDebugRenderer);
+  }
+}
+
+static void sdlRenderFrame(const PpuFrame* FRAME)
+{
   void* lockedPixels = NULL;
   int   pitch        = 0;
 
   if (!SDL_LockTexture(gDisplayTexture, NULL, &lockedPixels, &pitch))
   {
-    FORGE_LOG_DEBUG("[RENDERER] Texture lock failed: %s", SDL_GetError());
     return; 
   }
 
   u32* destination = (u32*)lockedPixels;
-  bool isCgbMode   = (cartridgeGetContext()->mode == MODE_CGB_GAMEBOY);
+  bool isCgbMode   = (cartridgeGetContext()->mode != MODE_DMG_GAMEBOY);
   i32 pixelsPerRow = pitch / sizeof(u32);
 
   for (i32 y = 0; y < HEIGHT; y++)
@@ -138,9 +187,13 @@ static void sdlPresent(void)
 
 static void sdlCleanup(void)
 {
-  if (gDisplayTexture)  SDL_DestroyTexture(gDisplayTexture);
-  if (gRenderer)        SDL_DestroyRenderer(gRenderer);
-  if (gWindow)          SDL_DestroyWindow(gWindow);
+  if (gDebugTexture)   SDL_DestroyTexture(gDebugTexture);
+  if (gDebugRenderer)  SDL_DestroyRenderer(gDebugRenderer);
+  if (gDebugWindow)    SDL_DestroyWindow(gDebugWindow);
+
+  if (gDisplayTexture) SDL_DestroyTexture(gDisplayTexture);
+  if (gRenderer)       SDL_DestroyRenderer(gRenderer);
+  if (gWindow)         SDL_DestroyWindow(gWindow);
   SDL_Quit();
 }
 
@@ -150,10 +203,17 @@ static void sdlPollEvents(bool* IS_RUNNING)
   while (SDL_PollEvent(&event))
   {
     if (event.type == SDL_EVENT_QUIT) *IS_RUNNING = false;
+    
+    if (event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED)
+    {
+        if (gDebugWindow && SDL_GetWindowID(gDebugWindow) == event.window.windowID)
+        {
+            gDebugWindowOpen = false;
+        }
+    }
   }
 
   // --- Hardware Joypad Routing ---
-  // The platform reads the OS and pushes it strictly into the hardware abstraction.
   const bool* keyboard = SDL_GetKeyboardState(NULL);
   
   joypadSetButton(JOYPAD_BUTTON_UP,     keyboard[SDL_SCANCODE_UP]);
@@ -176,6 +236,7 @@ void platformInit(void)
   gPlatformCtx.video.setDmgPalette  = sdlSetDmgPalette;
   gPlatformCtx.video.enableShader   = sdlSetShader;
   gPlatformCtx.video.renderFrame    = sdlRenderFrame;
+  gPlatformCtx.video.drawTileView   = sdlDrawTileView;
   gPlatformCtx.video.present        = sdlPresent;
   gPlatformCtx.video.cleanup        = sdlCleanup;
   gPlatformCtx.input.poll           = sdlPollEvents;

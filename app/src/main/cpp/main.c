@@ -11,6 +11,7 @@
 #include <ppu/ppu.h>
 #include <cartridge/cartridge.h>
 #include <debug.h>
+#include <joypad.h>
 
 #define TARGET_FRAME_MS_60FPS  16
 #define TARGET_FRAME_MS_120FPS 8
@@ -58,8 +59,6 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[])
     return 1;
   }
 
-  FORGE_LOG_DEBUG("%s", "[BOOT] Starting Pocket Pixel Execution...");
-
   const char* romPath = ARGUMENT_VECTOR[1];
   FILE* file = fopen(romPath, "rb");
   if (!file) return 1;
@@ -91,7 +90,6 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[])
     .getExpectedSaveSize = fileGetExpectedSaveSize
   };
 
-  FORGE_LOG_DEBUG("%s", "[BOOT] Initializing Cartridge...");
   if (!cartridgeInit(&fileIO, romData, (u32)romSize))
   {
     FORGE_LOG_FATAL("%s", "Failed to initialize cartridge");
@@ -99,12 +97,8 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[])
     return 1;
   }
 
-  FORGE_LOG_DEBUG("%s", "[BOOT] Initializing Platform Subsystems...");
   platformInit();
-  
-  FORGE_LOG_DEBUG("%s", "[BOOT] Initializing Hardware Cores...");
-  // Note: joypadInit() is omitted here as it's assumed to be handled within hardware boots now,
-  // but if your architecture requires explicit init in main, include it. Assuming CPU/PPU handle their own.
+  joypadInit();
   cpuInit();
   ppuInit();
   timerInit();
@@ -119,31 +113,25 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[])
   bool running      = true;
   bool paused       = false;
   bool doubleSpeed  = false;
+  bool showVram     = false;
   bool pKeyHeld     = false;
   bool fKeyHeld     = false;
+  bool tKeyHeld     = false;
 
   PpuContext* ppu = ppuGetContext();
-  u32 stalledIterations = 0;
-  
-  FORGE_LOG_DEBUG("%s", "[LOOP] Entering Main Execution Loop.");
 
   while (running)
   {
     u64 frameStartMs = SDL_GetTicks();
 
-    // The platform poll handles hardware joypad routing natively.
     if (platform && platform->input.poll)
     {
       platform->input.poll(&running);
     }
 
-    if (!running) 
-    {
-      FORGE_LOG_DEBUG("%s", "[LOOP] Stop requested. Breaking main loop.");
-      break;
-    }
+    if (!running) break;
 
-    // --- UI Toggles (Emulator Shell Control) ---
+    // --- UI Shell Controls ---
     const bool* keyboard = SDL_GetKeyboardState(NULL);
 
     bool pPressed = keyboard[SDL_SCANCODE_P];
@@ -158,14 +146,21 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[])
     if (fPressed && !fKeyHeld)
     {
       doubleSpeed = !doubleSpeed;
-      FORGE_LOG_INFO("Speed Mode: %s", doubleSpeed ? "2x (120 FPS)" : "Normal (60 FPS)");
     }
     fKeyHeld = fPressed;
 
+    bool tPressed = keyboard[SDL_SCANCODE_T];
+    if (tPressed && !tKeyHeld)
+    {
+      showVram = !showVram;
+      extern bool gDebugWindowOpen;
+      gDebugWindowOpen = showVram;
+    }
+    tKeyHeld = tPressed;
+
+    // --- Hardware Clocking Loop ---
     if (!paused)
     {
-      u32 syncCycleFailsafe = 0;
-
       while (running && !ppu->frameReady)
       {
         cpuTick();
@@ -186,41 +181,22 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[])
         {
           ppuTick();
         }
-
-        syncCycleFailsafe++;
-        if (syncCycleFailsafe > 1000000)
-        {
-            FORGE_LOG_DEBUG("[TRAP] CPU/PPU executed 1,000,000 times without frameReady. LCDC: 0x%02X, LY: %u, Mode: %u", ppu->registers.lcdc, ppu->registers.ly, ppu->mode);
-            syncCycleFailsafe = 0; 
-        }
       }
 
-      if (!ppu->frameReady)
-      {
-        stalledIterations++;
-        if ((stalledIterations % 120) == 0)
-        {
-          FORGE_LOG_WARNING(
-            "[RENDER] frameReady not reached: lcdEnabled=%d ly=%u mode=%u dot=%u lcdc=0x%02X",
-            (ppu->registers.lcdc & 0x80) ? 1 : 0,
-            ppu->registers.ly,
-            (u32)ppu->mode,
-            ppu->dotCount,
-            ppu->registers.lcdc
-          );
-        }
-        continue;
-      }
-
-      stalledIterations = 0;
       ppu->frameReady = false;
     }
 
+    // --- Platform Presentation ---
     if (platform)
     {
       if (platform->video.renderFrame)
       {
         platform->video.renderFrame(&ppu->frameBuffer);
+      }
+      
+      if (showVram && platform->video.drawTileView)
+      {
+        platform->video.drawTileView(ppu->vram[0], ppu->vram[1]);
       }
 
       if (platform->video.present)
@@ -239,7 +215,6 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[])
     }
   }
 
-  FORGE_LOG_DEBUG("%s", "[SHUTDOWN] Exiting emulator sequence.");
   if (platform && platform->video.cleanup)
   {
     platform->video.cleanup();

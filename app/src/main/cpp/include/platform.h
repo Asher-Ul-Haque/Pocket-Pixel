@@ -38,7 +38,7 @@ typedef struct RendererSystem
 
   // - - - Core Interaction Hook
   void (*renderFrame)(const PpuFrame* FRAME);
-
+  void (*drawTileView)(const u8* VBK0, const u8* VBK1);
   void (*present)(void);
   void (*cleanup)(void);
 } RendererSystem;

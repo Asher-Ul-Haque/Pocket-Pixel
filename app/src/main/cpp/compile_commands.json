@@ -16,11 +16,83 @@
       "-O1",
       "-c",
       "-o",
-      ".build/ppu/io.o",
-      "src/ppu/io.c"
+      ".build/ppu/timing.o",
+      "src/ppu/timing.c"
     ],
     "directory": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp",
-    "file": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/src/ppu/io.c",
-    "output": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/.build/ppu/io.o"
+    "file": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/src/ppu/timing.c",
+    "output": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/.build/ppu/timing.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/clang",
+      "-Iinclude",
+      "-I/usr/include/pipewire-0.3",
+      "-I/usr/include/spa-0.2",
+      "-D_REENTRANT",
+      "-I/usr/include/libdrm",
+      "-I/usr/include/libdecor-0",
+      "-Wall",
+      "-Werror",
+      "-Wextra",
+      "-Wpedantic",
+      "-DDEBUG",
+      "-O1",
+      "-c",
+      "-o",
+      ".build/ppu/fifo.o",
+      "src/ppu/fifo.c"
+    ],
+    "directory": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp",
+    "file": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/src/ppu/fifo.c",
+    "output": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/.build/ppu/fifo.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/clang",
+      "-Iinclude",
+      "-I/usr/include/pipewire-0.3",
+      "-I/usr/include/spa-0.2",
+      "-D_REENTRANT",
+      "-I/usr/include/libdrm",
+      "-I/usr/include/libdecor-0",
+      "-Wall",
+      "-Werror",
+      "-Wextra",
+      "-Wpedantic",
+      "-DDEBUG",
+      "-O1",
+      "-c",
+      "-o",
+      ".build/ppu/mixer.o",
+      "src/ppu/mixer.c"
+    ],
+    "directory": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp",
+    "file": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/src/ppu/mixer.c",
+    "output": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/.build/ppu/mixer.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/clang",
+      "-Iinclude",
+      "-I/usr/include/pipewire-0.3",
+      "-I/usr/include/spa-0.2",
+      "-D_REENTRANT",
+      "-I/usr/include/libdrm",
+      "-I/usr/include/libdecor-0",
+      "-Wall",
+      "-Werror",
+      "-Wextra",
+      "-Wpedantic",
+      "-DDEBUG",
+      "-O1",
+      "-c",
+      "-o",
+      ".build/ppu/fetcher.o",
+      "src/ppu/fetcher.c"
+    ],
+    "directory": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp",
+    "file": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/src/ppu/fetcher.c",
+    "output": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/.build/ppu/fetcher.o"
   }
 ]
