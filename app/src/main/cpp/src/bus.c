@@ -5,6 +5,7 @@
 #include <timer.h>
 #include <cpu/interrupts.h>
 #include <ppu/ppu.h>
+#include <apu/apu.h>
 #include <joypad.h>
 
 u16 busRead16(u16 ADDRESS)
@@ -68,6 +69,10 @@ u8 busRead(u16 ADDRESS)
     // - - - Joypad 
     if (ADDRESS == JOYP_REGISTER_ADDRESS) 
     { return joypadRead(); }
+
+    // - - - APU 
+    if (ADDRESS >= BUS_ADDR_APU_START && ADDRESS <= BUS_ADDR_APU_END)
+    { return apuRead(ADDRESS); }
 
     // - - - PPU Io 
     if ((ADDRESS >= REG_LCDC && ADDRESS <= REG_WX)  || 
@@ -187,6 +192,13 @@ void busWrite(u16 ADDRESS, u8 VALUE)
     if (ADDRESS == ADDR_IF) 
     {
       cpuWriteInterrupt(ADDRESS, VALUE);
+      return;
+    }
+
+    // - - - APU IO 
+    if (ADDRESS >= BUS_ADDR_APU_START && ADDRESS <= BUS_ADDR_APU_END)
+    {
+      apuWrite(ADDRESS, VALUE);
       return;
     }
 

@@ -1,10 +1,7 @@
 #pragma once 
 #include <apu/internal.h>
+#include <apu/channels/pulse.h>
 
-typedef struct 
-{
-  bool enabled;
-} PulseChannel;
 
 typedef struct 
 {
@@ -19,18 +16,27 @@ typedef struct
 /// @brief: Master APU Context 
 typedef struct 
 {
-  PulseChannel channel1;
   PulseChannel channel2;
-  WaveChannel  channel3;
-  NoiseChannel channel4;
 
+  // - - - Output 
   f32 sampleBuffer[AUDIO_BUFFER_SIZE];
   u32 bufferIndex;
-
   f32 sampleAccumulator;
-  f32 testTonePhase;
+
+  // - - - Frame sequencing 
+  u32 frameSequencerTimer;
+  u8  frameSequencerStep;
+
+  // - - - Mixer 
+  u8    masterVolumeLeft;
+  u8    masterVolumeRight;
+  u8    panningMap;
+  bool  audioEnabled;
 } ApuContext;
 
 ApuContext* apuGetContext(void);
 void        apuInit(void);
 void        apuTick(void);
+
+u8    apuRead(u16 ADDR);
+void  apuWrite(u16 ADDR, u8 VALUE);
