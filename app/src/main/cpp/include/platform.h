@@ -2,7 +2,8 @@
 #include <common.h>
 #include <ppu/ppu.h>
 
-// - - - HARDWARE DISPLAY DEFINITIONS - - - 
+// - - - HARDWARE DEFINITIONS - - - 
+#define AUDIO_FREQ 44100
 
 // - - - PLATFORM CONFIGURATION STRUCTURES - - - 
 
@@ -48,6 +49,12 @@ typedef struct InputSystem
   void (*poll)(bool* IS_RUNNING);
 } InputSystem;
 
+typedef struct AudioSystem
+{
+  bool (*init)        (void);
+  void (*pushSamples) (const f32* SAMPLES, u32 COUNT);
+  void (*cleanup)     (void);
+} AudioSystem;
 
 // - - - MASTER PLATFORM CONTEXT - - -
 
@@ -56,6 +63,7 @@ typedef struct PlatformContext
   const char*       name;
   CartridgeFileIO   fileIO;
   RendererSystem    video;
+  AudioSystem       audio;
   InputSystem       input;
 } PlatformContext;
 

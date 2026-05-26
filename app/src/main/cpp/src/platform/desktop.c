@@ -1,6 +1,8 @@
 #if defined(_WIN32) || defined(__linux__) || (defined(__APPLE__) && defined(__MACH__))
 
 #include <SDL3/SDL.h>
+#include <SDL3/SDL_audio.h>
+#include <SDL3/SDL_init.h>
 #include <platform.h>
 #include <debug.h>
 #include <ppu/ppu.h>
@@ -17,6 +19,8 @@ static SDL_Window* gDebugWindow      = NULL;
 static SDL_Renderer* gDebugRenderer  = NULL;
 static SDL_Texture* gDebugTexture    = NULL;
 bool gDebugWindowOpen                = false; 
+
+static SDL_AudioStream* gAudioStream = NULL;
 
 static PlatformContext gPlatformCtx;
 
@@ -41,6 +45,7 @@ static bool sdlVideoInit(void)
   SDL_SetTextureScaleMode(gDisplayTexture, SDL_SCALEMODE_NEAREST);
   return true;
 }
+
 
 static void sdlSetDmgPalette(DmgPalette PALETTE)
 { gActiveDmgPalette = PALETTE; }
@@ -239,12 +244,46 @@ static void sdlPollEvents(bool* IS_RUNNING)
   joypadSetButton(JOYPAD_BUTTON_SELECT, keyboard[SDL_SCANCODE_RSHIFT]);
 }
 
+static bool sdlAudioInit(void)
+{
+  if (!SDL_InitSubSystem(SDL_INIT_AUDIO)) {
+    FORGE_LOG_DEBUG("[AUDIO] SDL_Init Audio Failed: %s", SDL_GetError());
+    return false;
+  }
+
+  SDL_AudioSpec spec = { SDL_AUDIO_F32, 2, 44100 };
+  
+  // The foolproof SDL3 method: Opens device, creates stream, and binds them atomically.
+  gAudioStream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, NULL, NULL);
+  if (!gAudioStream) {
+    FORGE_LOG_DEBUG("[AUDIO] Open Stream Failed: %s", SDL_GetError());
+    return false;
+  }
+
+  // Unpause the specific device tied to this stream
+  SDL_ResumeAudioDevice(SDL_GetAudioStreamDevice(gAudioStream));
+
+  FORGE_LOG_INFO("%s", "[AUDIO] Hardware successfully connected!");
+  return true;
+}
+
+static void sdlPushSamples(const f32* SAMPLES, u32 COUNT)
+{
+  if (gAudioStream) SDL_PutAudioStreamData(gAudioStream, SAMPLES, COUNT * sizeof(f32));
+}
+
+static void sdlAudioCleanup(void)
+{
+  if (gAudioStream) SDL_DestroyAudioStream(gAudioStream);
+}
+
 PlatformContext* platformGetContext(void)
 { return &gPlatformCtx; }
 
 void platformInit(void)
 {
   gPlatformCtx.name                 = "SDL3 Desktop Frontend";
+
   gPlatformCtx.video.init           = sdlVideoInit;
   gPlatformCtx.video.setDmgPalette  = sdlSetDmgPalette;
   gPlatformCtx.video.enableShader   = sdlSetShader;
@@ -252,12 +291,15 @@ void platformInit(void)
   gPlatformCtx.video.drawTileView   = sdlDrawTileView;
   gPlatformCtx.video.present        = sdlPresent;
   gPlatformCtx.video.cleanup        = sdlCleanup;
+
   gPlatformCtx.input.poll           = sdlPollEvents;
 
-  if (!gPlatformCtx.video.init())
-  {
-    exit(1);
-  }
+  gPlatformCtx.audio.init           = sdlAudioInit;
+  gPlatformCtx.audio.pushSamples    = sdlPushSamples;
+  gPlatformCtx.audio.cleanup        = sdlAudioCleanup;
+
+  FORGE_ASSERT(gPlatformCtx.video.init());
+  FORGE_ASSERT(gPlatformCtx.audio.init());
 }
 
 #endif

@@ -1,3 +1,4 @@
+#include "apu/apu.h"
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_timer.h>
 #include <stdio.h>
@@ -101,6 +102,7 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[])
   joypadInit();
   cpuInit();
   ppuInit();
+  apuInit();
   timerInit();
   serialInit();
 
@@ -175,6 +177,7 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[])
         }
 
         timerStepMCycle();
+        apuTick();
 
         u8 dotsToTick = (ppu->registers.key1 & 0x80) ? 2 : 4;
         for (u8 i = 0; i < dotsToTick; ++i)
