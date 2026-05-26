@@ -97,3 +97,38 @@
 #define NR51_CH1_RIGHT_MASK        0x01
 
 #define NR52_CH1_ACTIVE_MASK       0x01
+
+// - - - Add under Channel Hardware Limits - - -
+#define WAVE_RAM_SIZE              16u
+#define WAVE_SAMPLE_COUNT          32u
+#define WAVE_TIMER_SPEED_MULTI     2u
+
+// - - - Wave Channel Registers - - -
+#define REG_NR30                   0xFF1A
+#define REG_NR31                   0xFF1B
+#define REG_NR32                   0xFF1C
+#define REG_NR33                   0xFF1D
+#define REG_NR34                   0xFF1E
+
+#define REG_WAVE_RAM_START         0xFF30
+#define REG_WAVE_RAM_END           0xFF3F
+
+// - - - NR30: DAC Enable - - -
+#define NR30_DAC_ENABLE_MASK       0x80
+
+// - - - NR31: Length Timer - - -
+#define NR31_LENGTH_MASK           0xFF
+
+// - - - NR32: Output Level - - -
+#define NR32_VOL_MASK              0x60
+#define NR32_VOL_SHIFT             5
+
+// - - - NR34: Trigger & Length Enable - - -
+#define NR34_LEN_ENABLE_MASK       0x40
+#define NR34_TRIGGER_MASK          0x80
+
+// - - - Panning Flags (Update for CH3) - - -
+#define NR51_CH3_LEFT_MASK         0x40
+#define NR51_CH3_RIGHT_MASK        0x04
+
+#define NR52_CH3_ACTIVE_MASK       0x04

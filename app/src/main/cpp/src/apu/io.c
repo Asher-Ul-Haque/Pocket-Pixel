@@ -1,3 +1,5 @@
+#include "apu/channels/wave.h"
+#include "apu/internal.h"
 #include <apu/apu.h>
 #include <bus.h>
 
@@ -6,8 +8,39 @@ void apuWrite(u16 ADDR, u8 VALUE)
   ApuContext* ctx = apuGetContext();
   if (!ctx->audioEnabled && ADDR != REG_NR52) return;
 
+  // - - - Wave Ram block 
+  if (ADDR >= REG_WAVE_RAM_START && ADDR <= REG_WAVE_RAM_END) 
+  {
+    waveWriteRam(&ctx->channel3, ADDR, VALUE);
+    return;
+  }
+
   switch (ADDR)
   {
+    case REG_NR30: 
+      ctx->channel3.dacEnabled = (VALUE & NR30_DAC_ENABLE_MASK) != 0;
+      if (!ctx->channel3.dacEnabled) ctx->channel3.enabled = false;
+      break;
+        
+    case REG_NR31: 
+      ctx->channel3.lengthTimer = CH_WAVE_LENGTH_MAX - (VALUE & NR31_LENGTH_MASK);
+      break;
+        
+    case REG_NR32: 
+      ctx->channel3.volumeCode = (VALUE & NR32_VOL_MASK) >> NR32_VOL_SHIFT;
+      break;
+        
+    case REG_NR33: 
+      ctx->channel3.periodValue = (ctx->channel3.periodValue & ~NR23_PERIOD_LOW_MASK) | VALUE;
+      break;
+        
+    case REG_NR34: 
+      ctx->channel3.periodValue   = (ctx->channel3.periodValue & NR23_PERIOD_LOW_MASK) | 
+                              ((VALUE & NR24_PERIOD_HIGH_MASK) << NR24_PERIOD_HIGH_SHIFT);
+      ctx->channel3.lengthEnabled = (VALUE & NR34_LEN_ENABLE_MASK) != 0;
+      if (VALUE & NR34_TRIGGER_MASK) waveTrigger(&ctx->channel3);
+      break;
+
     case REG_NR10:
       ctx->channel1.sweepPace     = (VALUE & NR10_PACE_MASK) >> NR10_PACE_SHIFT;
       ctx->channel1.sweepDecrease = (VALUE & NR10_DIR_MASK) != 0;
@@ -80,6 +113,7 @@ void apuWrite(u16 ADDR, u8 VALUE)
       {
         memset(&ctx->channel1, 0, sizeof(PulseChannel));
         memset(&ctx->channel2, 0, sizeof(PulseChannel));
+        memset(&ctx->channel3, 0, sizeof(WaveChannel));
         ctx->panningMap                 = 0;
         ctx->channel1.hasSweepHardware  = true;
       }
@@ -96,6 +130,7 @@ u8 apuRead(u16 ADDR)
 
     if (ctx->channel1.enabled) val |= NR52_CH1_ACTIVE_MASK;
     if (ctx->channel2.enabled) val |= NR52_CH2_ACTIVE_MASK;
+    if (ctx->channel3.enabled) val |= NR52_CH3_ACTIVE_MASK;
 
     return val | NR52_UNUSED_BITS_MASK;
   }

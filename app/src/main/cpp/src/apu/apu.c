@@ -1,3 +1,4 @@
+#include "apu/channels/wave.h"
 #include "apu/internal.h"
 #include <platform.h>
 #include <apu/apu.h>
@@ -47,6 +48,7 @@ void apuTick(void)
     {
       pulseClockLength(&ctx.channel1);
       pulseClockLength(&ctx.channel2);
+      waveClockLength(&ctx.channel3);
     }
 
     // - - - Step 7: Clock Volume Envelopes
@@ -62,6 +64,7 @@ void apuTick(void)
   // - - - 2. Command channels to generate their next digital slice
   pulseStepTimer(&ctx.channel1);
   pulseStepTimer(&ctx.channel2);
+  waveStepTimer (&ctx.channel3);
 
   // - - - 3. Resample and push to OS (44100 Hz target)
   f32 clockPaced = (f32) APU_CLOCK_SPEED * ctx.speedMultiplier;
@@ -87,6 +90,14 @@ void apuTick(void)
       f32 analog = (ctx.channel2.outputVolume / DAC_NEUTRAL_POINT) - 1.0f;
       if (ctx.panningMap & NR51_CH2_LEFT_MASK)  sampleL += analog; 
       if (ctx.panningMap & NR51_CH2_RIGHT_MASK) sampleR += analog; 
+    }
+
+    // - - - Mix CH3
+    if (ctx.channel3.dacEnabled) 
+    {
+      f32 analog = (ctx.channel3.outputVolume / DAC_NEUTRAL_POINT) - 1.0f;
+      if (ctx.panningMap & NR51_CH3_LEFT_MASK)  sampleL += analog; 
+      if (ctx.panningMap & NR51_CH3_RIGHT_MASK) sampleR += analog; 
     }
 
     // - - - Apply NR50 Master Volume and global scale to prevent blowing out speakers

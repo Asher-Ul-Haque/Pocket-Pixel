@@ -1,12 +1,7 @@
 #pragma once 
 #include <apu/internal.h>
 #include <apu/channels/pulse.h>
-
-
-typedef struct 
-{
-  bool enabled;
-} WaveChannel;
+#include <apu/channels/wave.h>
 
 typedef struct 
 {
@@ -18,6 +13,7 @@ typedef struct
 {
   PulseChannel channel1;
   PulseChannel channel2;
+  WaveChannel  channel3;
 
   // - - - Customization 
   f32 speedMultiplier;
