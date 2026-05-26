@@ -16,7 +16,11 @@ typedef struct
 /// @brief: Master APU Context 
 typedef struct 
 {
+  PulseChannel channel1;
   PulseChannel channel2;
+
+  // - - - Customization 
+  f32 speedMultiplier;
 
   // - - - Output 
   f32 sampleBuffer[AUDIO_BUFFER_SIZE];
@@ -37,6 +41,7 @@ typedef struct
 ApuContext* apuGetContext(void);
 void        apuInit(void);
 void        apuTick(void);
+void        apuSetSpeed(f32 MULTIPLIER);
 
 u8    apuRead(u16 ADDR);
 void  apuWrite(u16 ADDR, u8 VALUE);

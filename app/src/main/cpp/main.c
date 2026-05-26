@@ -148,8 +148,12 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[])
     if (fPressed && !fKeyHeld)
     {
       doubleSpeed = !doubleSpeed;
+      if (doubleSpeed) apuSetSpeed(2.0f);
+      else apuSetSpeed(1.0f);
+
     }
     fKeyHeld = fPressed;
+
 
     bool tPressed = keyboard[SDL_SCANCODE_T];
     if (tPressed && !tKeyHeld)

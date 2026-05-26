@@ -78,3 +78,22 @@
 #define NR52_AUDIO_ENABLE_MASK     0x80
 #define NR52_CH2_ACTIVE_MASK       0x02
 #define NR52_UNUSED_BITS_MASK      0x70
+
+// - - - NR10: Channel 1 Sweep - - -
+#define NR10_PACE_MASK             0x70
+#define NR10_PACE_SHIFT            4
+#define NR10_DIR_MASK              0x08
+#define NR10_SHIFT_MASK            0x07
+
+// - - - Channel 1 Registers - - -
+#define REG_NR10                   0xFF10
+#define REG_NR11                   0xFF11
+#define REG_NR12                   0xFF12
+#define REG_NR13                   0xFF13
+#define REG_NR14                   0xFF14
+
+// - - - Panning Flags (Update for CH1) - - -
+#define NR51_CH1_LEFT_MASK         0x10
+#define NR51_CH1_RIGHT_MASK        0x01
+
+#define NR52_CH1_ACTIVE_MASK       0x01
