@@ -17,6 +17,29 @@ void apuWrite(u16 ADDR, u8 VALUE)
 
   switch (ADDR)
   {
+    case REG_NR41: 
+        ctx->channel4.lengthTimer = CH_NOISE_LENGTH_MAX - (VALUE & NR41_LENGTH_MASK);
+        break;
+        
+    case REG_NR42: 
+      ctx->channel4.initialVolume    = (VALUE & NR22_VOL_MASK) >> NR22_VOL_SHIFT;
+      ctx->channel4.envelopeIncrease = (VALUE & NR22_ENV_DIR_MASK) != 0;
+      ctx->channel4.envelopePace     = VALUE & NR22_ENV_PACE_MASK;
+      ctx->channel4.dacEnabled       = (VALUE & NR22_DAC_ENABLE_MASK) != 0;
+      if (!ctx->channel4.dacEnabled) ctx->channel4.enabled = false;
+      break;
+        
+    case REG_NR43: 
+      ctx->channel4.clockShift   = (VALUE & NR43_CLOCK_SHIFT_MASK) >> NR43_CLOCK_SHIFT_OFFSET;
+      ctx->channel4.shortMode    = (VALUE & NR43_LFSR_WIDTH_MASK) != 0;
+      ctx->channel4.clockDivider = VALUE & NR43_CLOCK_DIV_MASK;
+      break;
+        
+    case REG_NR44: 
+      ctx->channel4.lengthEnabled = (VALUE & NR44_LEN_ENABLE_MASK) != 0;
+      if (VALUE & NR44_TRIGGER_MASK) noiseTrigger(&ctx->channel4);
+      break;
+
     case REG_NR30: 
       ctx->channel3.dacEnabled = (VALUE & NR30_DAC_ENABLE_MASK) != 0;
       if (!ctx->channel3.dacEnabled) ctx->channel3.enabled = false;

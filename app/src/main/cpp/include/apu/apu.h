@@ -2,11 +2,7 @@
 #include <apu/internal.h>
 #include <apu/channels/pulse.h>
 #include <apu/channels/wave.h>
-
-typedef struct 
-{
-  bool enabled;
-} NoiseChannel;
+#include <apu/channels/noise.h>
 
 /// @brief: Master APU Context 
 typedef struct 
@@ -14,6 +10,7 @@ typedef struct
   PulseChannel channel1;
   PulseChannel channel2;
   WaveChannel  channel3;
+  NoiseChannel channel4;
 
   // - - - Customization 
   f32 speedMultiplier;

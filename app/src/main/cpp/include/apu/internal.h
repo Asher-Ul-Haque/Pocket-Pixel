@@ -132,3 +132,32 @@
 #define NR51_CH3_RIGHT_MASK        0x04
 
 #define NR52_CH3_ACTIVE_MASK       0x04
+
+// - - - Noise Channel Limits - - -
+#define CH_NOISE_LENGTH_MAX        64u
+#define LFSR_INITIAL_VALUE         0x7FFF // 15-bit LFSR starts filled with 1s
+
+// - - - Noise Channel Registers - - -
+#define REG_NR41                   0xFF20
+#define REG_NR42                   0xFF21
+#define REG_NR43                   0xFF22
+#define REG_NR44                   0xFF23
+
+// - - - NR41: Length Timer - - -
+#define NR41_LENGTH_MASK           0x3F
+
+// - - - NR43: Clock & LFSR Width - - -
+#define NR43_CLOCK_SHIFT_MASK      0xF0
+#define NR43_CLOCK_SHIFT_OFFSET    4
+#define NR43_LFSR_WIDTH_MASK       0x08
+#define NR43_CLOCK_DIV_MASK        0x07
+
+// - - - NR44: Trigger & Length Enable - - -
+#define NR44_LEN_ENABLE_MASK       0x40
+#define NR44_TRIGGER_MASK          0x80
+
+// - - - Panning Flags (Update for CH4) - - -
+#define NR51_CH4_LEFT_MASK         0x80
+#define NR51_CH4_RIGHT_MASK        0x08
+
+#define NR52_CH4_ACTIVE_MASK       0x08
