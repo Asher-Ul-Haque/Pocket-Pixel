@@ -1,3 +1,8 @@
+/**
+ * @file ppu/internal.h 
+ * @brief PPU magic numbers
+*/
+
 #pragma once 
 #include <common.h>
 

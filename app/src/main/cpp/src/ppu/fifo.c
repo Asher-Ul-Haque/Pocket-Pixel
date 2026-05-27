@@ -30,12 +30,12 @@ bool ppuPushTileToFifo(void)
 
   if (ctx->bgFifo.count > FIFO_EMPTY_COUNT) return false;
 
-  // THE FIX: Check if the background tile has the X-Flip attribute enabled
+  // - - - Check if the background tile has the X-Flip attribute enabled
   bool bgXFlip = (ctx->fetcher.tileAttributes & ATTR_X_FLIP_MASK) != 0;
 
   for (u8 pixelIndex = FIFO_EMPTY_COUNT; pixelIndex < PIXEL_BIT_WIDTH; ++pixelIndex)
   {
-    // THE FIX: If X-Flip is true, parse from right-to-left instead of left-to-right
+    // - - - If X-Flip is true, parse from right-to-left instead of left-to-right
     u8 bitShift = bgXFlip ? pixelIndex : ((PIXEL_BIT_WIDTH - BIT_MASK_BASE) - pixelIndex);
     u8 bitMask  = (BIT_MASK_BASE << bitShift);
 

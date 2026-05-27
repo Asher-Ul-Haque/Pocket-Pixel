@@ -1,5 +1,5 @@
-#include "cartridge/cartridge.h"
-#include "ppu/internal.h"
+#include <cartridge/cartridge.h>
+#include <ppu/internal.h>
 #include <ppu/ppu.h>
 #include <bus.h>
 
@@ -17,7 +17,7 @@ u8 ppuReadVram(u16 ADDR)
 {
   PpuContext* ctx = ppuGetContext();
 
-  /// @brief: When the PPU is rendering pixels (Mode 3), VRAM is completely inaccessible to the CPU and reads return 0xFF.
+  // - - - When the PPU is rendering pixels (Mode 3), VRAM is completely inaccessible to the CPU and reads return 0xFF.
   if (ppuIsLcdEnabled() && ctx->mode == PPU_MODE_DRAWING) return OPEN_BUS_VALUE;
 
   u16 offset  = ADDR - BUS_ADDR_VRAM_START;
@@ -29,7 +29,7 @@ void ppuWriteVram(u16 ADDR, u8 VALUE)
 {
   PpuContext* ctx = ppuGetContext();
 
-  ///@brief: Writes to VRAM during Mode 3 are entirely ignored.
+  // - - - Writes to VRAM during Mode 3 are entirely ignored.
   if (ppuIsLcdEnabled() && ctx->mode == PPU_MODE_DRAWING) return;
 
   u16 offset  = ADDR - BUS_ADDR_VRAM_START;
@@ -44,7 +44,7 @@ u8 ppuReadOam(u16 ADDR)
 {
   PpuContext* ctx = ppuGetContext();
 
-  /// @brief: OAM is inaccessible during Mode 2 (OAM Scan) and Mode 3 (Drawing). Reads during these blocked cycles return 0xFF.
+  // - - - OAM is inaccessible during Mode 2 (OAM Scan) and Mode 3 (Drawing). Reads during these blocked cycles return 0xFF.
   if (ppuIsLcdEnabled() && (ctx->mode == PPU_MODE_OAM_SCAN || ctx->mode == PPU_MODE_DRAWING))
   { return OPEN_BUS_VALUE;  }
 
@@ -55,7 +55,7 @@ void ppuWriteOam(u16 ADDR, u8 VALUE)
 {
   PpuContext* ctx = ppuGetContext();
 
-  /// @brief: Writes to OAM are ignored while the PPU scans or draws.
+  // - - - Writes to OAM are ignored while the PPU scans or draws.
   if (ppuIsLcdEnabled() && (ctx->mode == PPU_MODE_OAM_SCAN || ctx->mode == PPU_MODE_DRAWING))
   { return; }
 
@@ -101,7 +101,7 @@ void ppuWriteIo(u16 ADDR, u8 VALUE)
       ctx->registers.lcdc = VALUE;
       break;
 
-    /// @brief: Only bits 3-6 (Interrupt Select Enables) are writable by the CPU. Bits 0-2 reflect pure live hardware status flags.
+    // - - - Only bits 3-6 (Interrupt Select Enables) are writable by the CPU. Bits 0-2 reflect pure live hardware status flags.
     case REG_STAT:
       ctx->registers.stat &= 0x07;           ///< Retain read-only lower bits
       ctx->registers.stat |= (VALUE & 0x78); ///< Merge CPU written configuration bits
@@ -109,7 +109,7 @@ void ppuWriteIo(u16 ADDR, u8 VALUE)
 
     case REG_SCY : ctx->registers.scy = VALUE; break;
     case REG_SCX : ctx->registers.scx = VALUE; break;
-    case REG_LY  : break; /// @brief: LY is completely read-only
+    case REG_LY  : break; // - - - LY is completely read-only
     case REG_LYC :
       ctx->registers.lyc = VALUE; 
       break;
@@ -124,17 +124,17 @@ void ppuWriteIo(u16 ADDR, u8 VALUE)
     case REG_WY : ctx->registers.wy = VALUE; break;
     case REG_WX : ctx->registers.wx = VALUE; break;
 
-    /// @brief: CPU can only write to bit 0 to arm/disarm speed modifications
+    // - - - CPU can only write to bit 0 to arm/disarm speed modifications
     case REG_KEY_1:
-      ctx->registers.key1 &= 0xFE;           /// Strip old preparation state
-      ctx->registers.key1 |= (VALUE & 0x01); /// Latch new configuration
+      ctx->registers.key1 &= 0xFE;           // - - - Strip old preparation state
+      ctx->registers.key1 |= (VALUE & 0x01); // - - - Latch new configuration
       break;
 
     case REG_BGP   : ctx->registers.bgp  = VALUE; break; 
     case REG_OBP_0 : ctx->registers.obp0 = VALUE; break; 
     case REG_OBP_1 : ctx->registers.obp1 = VALUE; break;
 
-    /// @brief: CGB: Latch VBK register
+    // - - - CGB: Latch VBK register
     case REG_VRAM_BANK:
       ctx->registers.vbk = VALUE;
       break;
@@ -205,22 +205,22 @@ u8 ppuReadCram(u16 ADDR)
 {
   PpuContext* ctx = ppuGetContext();
 
-  /// @brief - - - Palette CRAM is inaccessible during Mode 3 rendering.
+  // - - - Palette CRAM is inaccessible during Mode 3 rendering.
   if (ppuIsLcdEnabled() && ctx->mode == PPU_MODE_DRAWING)
   { return OPEN_BUS_VALUE; }
 
-  if (ADDR == REG_BG_PALETTE_INDEX)  return ctx->registers.bgpi | 0x40; /// Bit 6 always high
-  if (ADDR == REG_OBJ_PALETTE_INDEX) return ctx->registers.obpi | 0x40; /// Bit 6 always high
+  if (ADDR == REG_BG_PALETTE_INDEX)  return ctx->registers.bgpi | 0x40; // - - - Bit 6 always high
+  if (ADDR == REG_OBJ_PALETTE_INDEX) return ctx->registers.obpi | 0x40; // - - - Bit 6 always high
 
   if (ADDR == REG_BG_PALETTE_DATA)
   {
-    u8 index = ctx->registers.bgpi & 0x3F; // 64 byte absolute array index
+    u8 index = ctx->registers.bgpi & 0x3F; // - - - 64 byte absolute array index
     return ctx->bgPaletteRam[index];
   }
   
   if (ADDR == REG_OBJ_PALETTE_DATA)
   {
-    u8 index = ctx->registers.obpi & 0x3F; // 64 byte absolute array index
+    u8 index = ctx->registers.obpi & 0x3F; // - - - 64 byte absolute array index
     return ctx->objPaletteRam[index];
   }
 
@@ -231,7 +231,7 @@ void ppuWriteCram(u16 ADDR, u8 VALUE)
 {
   PpuContext* ctx = ppuGetContext();
 
-  /// @brief: Writes to Color Palette memory are discarded during Mode 3.
+  // - - - Writes to Color Palette memory are discarded during Mode 3.
   if (ppuIsLcdEnabled() && ctx->mode == PPU_MODE_DRAWING)
   { return; }
 
@@ -243,7 +243,7 @@ void ppuWriteCram(u16 ADDR, u8 VALUE)
     u8 index = ctx->registers.bgpi & 0x3F;
     ctx->bgPaletteRam[index] = VALUE;
 
-    /// - - -  Auto-Increment Feature: If bit 7 of the Index register is high, advance the internal pointer automatically after a data write
+    // - - -  Auto-Increment Feature: If bit 7 of the Index register is high, advance the internal pointer automatically after a data write
     if (ctx->registers.bgpi & 0x80)
     {
       u8 nextIndex = (index + 1) & 0x3F;
@@ -272,10 +272,10 @@ void ppuExecuteSpeedSwitch(void)
 {
   PpuContext* ctx = ppuGetContext();
 
-  /// - - - @warning: Executed only when a switch was armed via memory (bit 0)  and the CPU subsequently hits a STOP opcode block.
+  /// - - - WARN: Executed only when a switch was armed via memory (bit 0)  and the CPU subsequently hits a STOP opcode block.
   if (ctx->registers.key1 & 0x01)
   {
-    ctx->registers.key1 ^= 0x80; // Toggle Double Speed Mode bit (bit 7)
-    ctx->registers.key1 &= 0xFE; // Clear active preparation flag (bit 0)
+    ctx->registers.key1 ^= 0x80; // - - - Toggle Double Speed Mode bit (bit 7)
+    ctx->registers.key1 &= 0xFE; // - - - Clear active preparation flag (bit 0)
   }
 }

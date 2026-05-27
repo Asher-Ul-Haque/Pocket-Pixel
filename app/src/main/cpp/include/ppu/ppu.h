@@ -1,3 +1,8 @@
+/**
+ * @file ppu/ppu.h 
+ * @brief the master ppu header file, stores all ppu structs 
+*/
+
 #pragma once 
 #include <common.h>
 #include <ppu/internal.h>
@@ -169,63 +174,145 @@ typedef struct PpuContext
 
 // - - - Ppu IO - - - 
 
-/// @brief: Vram memory area (0x8000 - 0x9FFF)
+
+/**
+ * @brief: Vram memory area (0x8000 - 0x9FFF) read
+ * @param ADDR the address to read from 
+ * @return a byte from vram
+*/
 u8   ppuReadVram (u16 ADDR);
+
+/**
+ * @brief: Vram memory area (0x8000 - 0x9FFF) write
+ * @param ADDR the address to write to
+ * @param VALUE the byte to write 
+*/
 void ppuWriteVram(u16 ADDR, u8 VALUE);
 
-/// @brief: oam MEMORY AREA (0xFE00 - 0xFE9F)
+/**
+ * @brief: oam MEMORY AREA (0xFE00 - 0xFE9F) read
+ * @param ADDR the address to read from 
+ * @return a byte from oam
+*/
 u8   ppuReadOam (u16 ADDR);
+
+/**
+ * @brief: oam MEMORY AREA (0xFE00 - 0xFE9F) write
+ * @param ADDR the address to write to 
+ * @param VALUE the byte to be wrriten
+*/
 void ppuWriteOam(u16 ADDR, u8 VALUE);
 
-/// @brief Core standard & CGB IO register (0xFF40 - 0xFF55)
+/**
+ * @brief Core standard & CGB IO register (0xFF40 - 0xFF55) read
+ * @param ADDR the address to read from
+ * @return CGB io register value
+*/
 u8   ppuReadIo (u16 ADDR);
+
+/**
+ * @brief Core standard & CGB IO register (0xFF40 - 0xFF55) write
+ * @param ADDR the address to write to
+ * @parma VALUE the byte to write
+*/
 void ppuWriteIo(u16 ADDR, u8 VALUE);
 
-/// @brief: Color palette memory access ports (0xFF68 - 0xFF6B)
+
+/**
+ * @brief: Color palette memory access ports (0xFF68 - 0xFF6B) read 
+ * @param ADDR the address to read from
+ * @return color palette value
+*/
 u8   ppuReadCram (u16 ADDR);
+
+/**
+ * @brief: Color palette memory access ports (0xFF68 - 0xFF6B) write
+ * @param ADDR the address to write to 
+ * @parma VALUE the value to write
+*/
 void ppuWriteCram(u16 ADDR, u8 VALUE);
 
 
 // - - - Main functions - - - 
 
+/// @brief Initilize the ppu 
 void        ppuInit(void);
+
+/**
+ * @brief Dot tick of the ppu 
+ * @warning THIS IS NOT AN M-CYCLE TICK, but a DOT TICK, maybe 2 or 4 dots per m cycle
+*/
 void        ppuTick(void);
 PpuContext* ppuGetContext(void);
 
 
 // - - - DMA - - -
 
+/// @brief trigger the dma 
 void ppuDmaTrigger (u8 VALUE);
+
+/// @brief trigger the hdma
 void ppuHdmaTrigger(u8 VALUE);
 
 // - - - Interrupt - - - 
 
+/// @brief interrupt the cpu
 void ppuUpdateInterrupts(void);
+
+/// @brief double speed
 void ppuExecuteSpeedSwitch(void);
 
 // - - - Timing - - - 
 
+/// @brief runs the oam scna
 void ppuExecuteOamScan(void);
+
+/**
+ * @brief get penatly timing 
+ * @return how much the penalty is
+*/
 u16  ppuGetSpriteTimingPenalties(void);
 
 
 // - - - Oam clock linked operations - - - 
 
+/// @brief step the oam dma
 void ppuStepOamDma(void);
+
+/// @brief check faster dma 
 void ppuCheckHblankDma(void);
 
 
 // - - - Pixel Fetcher - - - 
 
+/// @brief Reset the pixel fetcher 
 void ppuResetFetcher(void);
+
+/// @brief next step of the pixel fetcher 
 void ppuStepPixelFetcher(void);
-bool ppuPushTileToFifo(void);
 
 
 // - - - Fifo functions - - - 
 
+/// @brief Reset the fifos 
 void ppuResetFifos(void);
+
+/// @brief push a tile to fifo 
 bool ppuPushTileToFifo(void);
+
+/// @brief decide on a final pixel
 void ppuStepPixelMixer(void);
+
+/**
+ * @brief inject a sprite to queue 
+ * @param SPRITE_LINE_BUFFER_INDEX the head to inject in 
+*/
 void ppuInjectSpriteToFifo(u8 SPRITE_LINE_BUFFER_INDEX);
+
+/**
+ * @brief push a pixel to the screen 
+ * @param SCREEN_X the x position of the screen 
+ * @param SCREEN_Y the y position of the screen 
+ * @param RGB_555 the color to push
+*/
 void ppuPushPixelToScreen(u8 SCREEN_X, u8 SCREEN_Y, u16 RGB_555);

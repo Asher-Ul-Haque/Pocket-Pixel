@@ -43,8 +43,7 @@ void ppuCheckHblankDma(void)
     ctx->cgbDma.destination++;
   }
 
-  // THE FIX: Decrease the remaining length. 
-  // HDMA5 stores length-1. It underflows to 0xFF when the transfer is entirely complete.
+  // - - - HDMA5 stores length-1. It underflows to 0xFF when the transfer is entirely complete.
   ctx->registers.hdma5--;
   
   if (ctx->registers.hdma5 == 0xFF)

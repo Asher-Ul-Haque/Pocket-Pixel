@@ -45,7 +45,6 @@ void ppuStepPixelMixer(void)
     return;
   }
 
-  // - - - THE FIX: Move Sprite Injection AFTER fine scroll dropping!
   // - - - Check if objects are globally enabled inside LCDC Bit 1 before evaluating layout overlaps 
   if ((ctx->registers.lcdc & LCDC_OBJ_ENABLE_MASK) != 0)
   {

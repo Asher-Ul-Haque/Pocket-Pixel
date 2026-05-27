@@ -17,7 +17,7 @@ void ppuTick(void)
     }
 
     ctx->registers.ly        = 0;
-    ctx->windowLineCounter   = 0; // Fix: Reset window line
+    ctx->windowLineCounter   = 0; // - - - Reset window line
     ctx->mode                = PPU_MODE_HBLANK;
     ctx->registers.stat     &= ~STAT_MODE_BITS_MASK;
     return;
@@ -41,7 +41,6 @@ void ppuTick(void)
     else if (ctx->dotCount == DOT_OAM_SCAN)
     {
       ctx->mode = PPU_MODE_DRAWING;
-      // Fix: Mode 3 naturally ends when screenX hits 160 inside mixer.c
     }
 
     if (ctx->mode == PPU_MODE_DRAWING) 
@@ -63,7 +62,7 @@ void ppuTick(void)
     if (ctx->registers.ly >= LY_PER_FRAME) 
     {
       ctx->registers.ly        = 0;
-      ctx->windowLineCounter   = 0; // Fix: Reset window line for next frame
+      ctx->windowLineCounter   = 0; // - - - Reset window line for next frame
       ctx->mode                = PPU_MODE_OAM_SCAN;
       ctx->frameReady          = true;
     }
