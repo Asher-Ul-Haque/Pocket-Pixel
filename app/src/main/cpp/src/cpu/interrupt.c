@@ -1,7 +1,3 @@
-#include <cpu/interrupts.h>
-#include <cpu/cpu.h>
-#include <bus.h>
-
 /**
  * @file interrupt.c
  * @brief Interrupt pending detection and interrupt entry microsequence.
@@ -14,6 +10,11 @@
  * This file needs access to IE (0xFFFF) and IF (0xFF0F).
  * For now, we read/write them via busRead/busWrite. Later you can route through IO helpers.
 */
+
+#include <cpu/interrupts.h>
+#include <cpu/cpu.h>
+#include <bus.h>
+
 
 static InterruptContext ctx;
 InterruptContext* cpuInterruptGetContext(void) 

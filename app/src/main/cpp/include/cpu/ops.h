@@ -1,11 +1,11 @@
-#pragma once 
-#include <cpu/instruction.h>
-#include <common.h>
-
 /**
  * @file ops.h 
  * @brief function pointers for every opcode
 */
+
+#pragma once 
+#include <cpu/instruction.h>
+#include <common.h>
 
 /// @brief Crashes
 ExecStatus instrUnimplemented(void);

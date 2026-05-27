@@ -1,5 +1,3 @@
-#pragma once 
-
 /**
  * @file cpu.h
  * @brief SM83 CPU core public API (DMG + CGB).
@@ -8,6 +6,7 @@
  * the loaded cartridge via CartContext.mode (MODE_DMG_GAMEBOY / MODE_CGB_GAMEBOY / MODE_CGB_ONLY_GAMEBOY).
  */
 
+#pragma once 
 #include <cpu/interrupts.h>
 #include <common.h>
 #include <cpu/registers.h>

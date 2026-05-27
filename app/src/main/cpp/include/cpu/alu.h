@@ -1,10 +1,9 @@
-#pragma once
-#include <common.h>
-
 /**
  * @file alu.h 
  * @brief Handles ALU operations safetly
 */
+#pragma once
+#include <common.h>
 
 /**
  * @struct AluResult8
@@ -36,7 +35,7 @@ typedef struct
 // - - - 8-bit Arithmetic - - - 
 
 AluResult8 aluAdd8(u8 A, u8 B, bool CARRY_IN);
-AluResult8 aluSub8(u8 A, u8 B, bool CARRY_IN); /// Used for SUB, SBC, and CP
+AluResult8 aluSub8(u8 A, u8 B, bool CARRY_IN); ///< Used for SUB, SBC, and CP
 AluResult8 aluAnd8(u8 A, u8 B);
 AluResult8 aluOr8 (u8 A, u8 B);
 AluResult8 aluXor8(u8 A, u8 B);
@@ -47,7 +46,7 @@ AluResult8 aluDec8(u8 VAL);
 // - - - 16-bit Arithmetic - - -
 
 AluResult16 aluAdd16  (u16 A, u16 B);
-AluResult16 aluAdd16Sp(u16 SP, i8 REL); /// Special case for ADD SP, e8
+AluResult16 aluAdd16Sp(u16 SP, i8 REL); ///< Special case for ADD SP, e8
 
 
 // - - - Bitwise/Shifts (CB) - - -

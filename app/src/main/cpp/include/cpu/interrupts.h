@@ -1,4 +1,3 @@
-#pragma once
 /**
  * @file interrupts.h
  * @brief Interrupt definitions + interrupt entry stepping for the SM83 CPU.
@@ -14,6 +13,7 @@
  *   CPU code should call into io/interrupt register helpers (implemented elsewhere).
 */
 
+#pragma once
 #include <common.h>
 
 /// @brief Interrupt bit indices (IE/IF bits) 

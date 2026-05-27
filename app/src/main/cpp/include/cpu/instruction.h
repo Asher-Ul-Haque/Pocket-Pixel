@@ -1,5 +1,3 @@
-#pragma once
-
 /**
  * @file instructions.h
  * @brief Instruction metadata for the Game Boy SM83 CPU (unprefixed + CB-prefixed).
@@ -10,6 +8,7 @@
  * - Lookup functions for opcode -> Instruction.
 */
 
+#pragma once
 #include <common.h>
 
 // - - - Flag behavior encoding

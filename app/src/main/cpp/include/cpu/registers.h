@@ -1,4 +1,3 @@
-#pragma once
 /**
  * @file registers.h
  * @brief SM83 register file and flag definitions.
@@ -12,8 +11,10 @@
  * - This header intentionally does not include cpu.h to avoid circular deps.
  */
 
+#pragma once
 #include <cpu/instruction.h>
 #include <common.h>
+
 /**
  * @brief CPU architectural register file.
  *
