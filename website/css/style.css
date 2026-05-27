@@ -24,14 +24,14 @@
 }
 
 body {
-    background-color: var(--light-green); /* Starts light for boot sequence */
+    background-color: var(--light-green); 
     color: var(--pure-white);
     font-family: 'Minecraft', 'Courier New', Courier, monospace;
     image-rendering: pixelated; 
     user-select: none; 
     height: 100vh;
     overflow: hidden;
-    transition: background-color 1.5s ease-out; /* Smooth fade to dark */
+    transition: background-color 1.5s ease-out; 
 }
 
 body.booted {
@@ -63,7 +63,7 @@ body.booted {
 }
 
 #mascot.slide-up {
-    transform: translateY(-100vh); /* Shoots up out of frame */
+    transform: translateY(-100vh); 
 }
 
 #start-prompt {
@@ -97,10 +97,10 @@ body.booted {
     justify-content: center;
     align-items: center;
     padding: 20px;
-    min-height: 0; /* CRITICAL: Allows the flex child to shrink properly */
+    min-height: 0; 
 }
 
-/* --- Hotbar (Now on top) --- */
+/* --- Hotbar --- */
 .hotbar {
     margin-bottom: 20px;
     display: flex;
@@ -111,7 +111,7 @@ body.booted {
 .console-screen {
     width: 100%;
     max-width: 800px;
-    max-height: 75vh; /* CRITICAL: Prevents it from pushing off the screen */
+    max-height: 75vh; 
     aspect-ratio: 10 / 9;
     background-color: var(--pure-black);
     border: 10px solid var(--medium-green);
@@ -119,6 +119,7 @@ body.booted {
     justify-content: center;
     align-items: center;
     position: relative;
+    overflow: hidden;
 }
 
 .cartridge-prompt {

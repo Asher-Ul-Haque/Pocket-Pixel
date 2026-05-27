@@ -41,7 +41,16 @@ void apuSetChannelVolumes(f32 CH1, f32 CH2, f32 CH3, f32 CH4)
 void apuTick(void) 
 {
   PlatformContext* platform = platformGetContext();
-  if (!platform || !platform->audio.pushSamples) return;
+  if (!platform || !platform->audio.pushSamples) 
+  {
+    static bool logOnce = false;
+    if (!logOnce) 
+    {
+      FORGE_LOG_ERROR("%s", "[C++ Debug] Audio failure: pushSamples callback is NULL.");
+      logOnce = true;
+    }
+    return;
+  }
 
   if (!ctx.audioEnabled) return;
 

@@ -249,6 +249,10 @@ static void sdlInputSetConfig(InputConfig NEW_CONFIG) {
 static void sdlInputPoll(bool* IS_RUNNING) {
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
+      
+        if (event.type == SDL_EVENT_KEY_DOWN || event.type == SDL_EVENT_KEY_UP) {
+            FORGE_LOG_INFO("[C++ Debug] SDL caught scancode: %d | Down: %d", event.key.scancode, event.key.down);
+        }
         if (event.type == SDL_EVENT_QUIT) *IS_RUNNING = false;
         
         // Gamepad Hotplugging

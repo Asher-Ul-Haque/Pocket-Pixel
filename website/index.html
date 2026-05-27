@@ -15,7 +15,8 @@
         <div id="start-prompt" class="pulse-text">CLICK OR PRESS SPACE</div>
     </div>
 
-    <div id="main-layout" style="display: none;">  
+    <div id="main-layout" style="display: none;">
+        
         <div class="side-pane left-pane">
             <div class="dpad-grid">
                 <button class="dpad-btn diag top-left"></button>
@@ -40,7 +41,7 @@
             <div class="hotbar">
                 <button>📂</button>
                 <button>⏪</button>
-                <button>⏸️</button>
+                <button id="btn-pause">⏸️</button>
                 <button>💾</button>
                 <button>⏏️</button>
             </div>
@@ -59,11 +60,16 @@
                 <button class="action-btn" style="margin-top: -40px;">A</button>
             </div>
             <div class="pill-btn-container">
-                <button class="pill-btn">START</button>
+                <button class="pill-btn" id="btn-start">START</button>
             </div>
         </div>
     </div>
 
+    <input type="file" id="rom-upload" accept=".gb,.gbc" style="display: none;">
+
+    <script src="js/db.js"></script>
+    <script src="js/engine.js"></script>
     <script src="js/ui.js"></script>
+    <script src="js/input.js"></script>
 </body>
 </html>
