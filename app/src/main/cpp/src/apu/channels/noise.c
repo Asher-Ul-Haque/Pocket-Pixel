@@ -12,6 +12,9 @@ void noiseTrigger(NoiseChannel* CHANNEL)
   
   CHANNEL->envelopeTimer = CHANNEL->envelopePace;
   CHANNEL->currentVolume = CHANNEL->initialVolume;
+
+  u32 divisor = (CHANNEL->clockDivider == 0) ? 8 : (CHANNEL->clockDivider << 4);
+  CHANNEL->periodTimer = (divisor << CHANNEL->clockShift) >> 2;
   
   if (!CHANNEL->dacEnabled) CHANNEL->enabled = false;
 }
@@ -49,14 +52,14 @@ void noiseStepTimer(NoiseChannel* CHANNEL)
 
   if (!CHANNEL->enabled || !CHANNEL->dacEnabled)  return;
 
-  // - - - Using a clock shift of 14 or 15 completely stops the LFSR from receiving clocks
+  // THE FIX: Using a clock shift of 14 or 15 completely stops the LFSR from receiving clocks
   if (CHANNEL->clockShift >= 14) return;
 
   if (CHANNEL->periodTimer > 0)                   CHANNEL->periodTimer--;
   
   if (CHANNEL->periodTimer == 0) 
   {
-    // - - - 1. Calculate Period Timer based on hardware formula. 
+    // THE FIX: Calculate Period Timer based on hardware formula. 
     // The standard formula (Divisor = 8 or r*16) is in T-Cycles (4.19 MHz).
     // Because our APU ticks in M-Cycles (1.04 MHz), we must divide the final period by 4!
     u32 divisor = (CHANNEL->clockDivider == 0) ? 8 : (CHANNEL->clockDivider << 4);
@@ -64,7 +67,7 @@ void noiseStepTimer(NoiseChannel* CHANNEL)
     // Shift right by 2 divides the T-Cycle period by 4, perfectly syncing it to our M-Cycle loop
     CHANNEL->periodTimer = (divisor << CHANNEL->clockShift) >> 2;
 
-    // - - - 2. Advance the LFSR
+    // - - - Advance the LFSR
     u8 xorBit = (CHANNEL->lfsr & 0x01) ^ ((CHANNEL->lfsr & 0x02) >> 1);
     CHANNEL->lfsr >>= 1;
     CHANNEL->lfsr |= (xorBit << 14);
@@ -77,7 +80,7 @@ void noiseStepTimer(NoiseChannel* CHANNEL)
     }
   }
 
-  // - - - 3. Emit Volume (Inverted: output volume if bit 0 is 0)
+  // - - - Emit Volume (Inverted: output volume if bit 0 is 0)
   if ((CHANNEL->lfsr & 0x01) == 0) 
   { CHANNEL->outputVolume = CHANNEL->currentVolume; }
 }

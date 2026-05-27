@@ -269,7 +269,22 @@ static bool sdlAudioInit(void)
 
 static void sdlPushSamples(const f32* SAMPLES, u32 COUNT)
 {
-  if (gAudioStream) SDL_PutAudioStreamData(gAudioStream, SAMPLES, COUNT * sizeof(f32));
+  if (!gAudioStream) return;
+
+  // 1. Calculate a safe latency threshold. 
+  // 44100 samples/sec * 2 channels * 4 bytes (float32) = 352,800 bytes per second.
+  // 8192 bytes is roughly ~23 milliseconds of audio delay.
+  const int MAX_QUEUED_BYTES = 8192;
+
+  // 2. The Audio Sync Lock
+  // If the sound card has too much data queued, STOP the emulator loop and wait.
+  while (SDL_GetAudioStreamQueued(gAudioStream) > MAX_QUEUED_BYTES) 
+  {
+    SDL_Delay(1); 
+  }
+
+  // 3. Queue the new batch of samples
+  SDL_PutAudioStreamData(gAudioStream, SAMPLES, COUNT * sizeof(float));
 }
 
 static void sdlAudioCleanup(void)

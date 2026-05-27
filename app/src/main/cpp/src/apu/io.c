@@ -1,12 +1,12 @@
-#include "apu/channels/wave.h"
-#include "apu/internal.h"
+#include "apu/channels/noise.h"
+#include <apu/channels/wave.h>
+#include <apu/internal.h>
 #include <apu/apu.h>
 #include <bus.h>
 
 void apuWrite(u16 ADDR, u8 VALUE)
 {
   ApuContext* ctx = apuGetContext();
-  if (!ctx->audioEnabled && ADDR != REG_NR52) return;
 
   // - - - Wave Ram block 
   if (ADDR >= REG_WAVE_RAM_START && ADDR <= REG_WAVE_RAM_END) 
@@ -14,6 +14,9 @@ void apuWrite(u16 ADDR, u8 VALUE)
     waveWriteRam(&ctx->channel3, ADDR, VALUE);
     return;
   }
+  
+  // - - - Block the rest if APU is off 
+  if (!ctx->audioEnabled && ADDR != REG_NR52) return;
 
   switch (ADDR)
   {
@@ -137,7 +140,10 @@ void apuWrite(u16 ADDR, u8 VALUE)
         memset(&ctx->channel1, 0, sizeof(PulseChannel));
         memset(&ctx->channel2, 0, sizeof(PulseChannel));
         memset(&ctx->channel3, 0, sizeof(WaveChannel));
+        memset(&ctx->channel4, 0, sizeof(NoiseChannel));
         ctx->panningMap                 = 0;
+        ctx->masterVolumeLeft           = 0;
+        ctx->masterVolumeRight          = 0;
         ctx->channel1.hasSweepHardware  = true;
       }
       break;
@@ -147,6 +153,12 @@ void apuWrite(u16 ADDR, u8 VALUE)
 u8 apuRead(u16 ADDR)
 {
   ApuContext* ctx = apuGetContext();
+
+  if (ADDR >= REG_WAVE_RAM_START && ADDR <= REG_WAVE_RAM_END) 
+  {
+    return waveReadRam(&ctx->channel3, ADDR);
+  }
+
   if (ADDR == REG_NR52)
   {
     u8 val = ctx->audioEnabled ? NR52_AUDIO_ENABLE_MASK : 0x00;
@@ -154,6 +166,7 @@ u8 apuRead(u16 ADDR)
     if (ctx->channel1.enabled) val |= NR52_CH1_ACTIVE_MASK;
     if (ctx->channel2.enabled) val |= NR52_CH2_ACTIVE_MASK;
     if (ctx->channel3.enabled) val |= NR52_CH3_ACTIVE_MASK;
+    if (ctx->channel4.enabled) val |= NR52_CH4_ACTIVE_MASK; 
 
     return val | NR52_UNUSED_BITS_MASK;
   }

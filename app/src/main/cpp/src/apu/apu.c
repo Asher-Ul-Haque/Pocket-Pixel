@@ -59,6 +59,7 @@ void apuTick(void)
     {
       pulseClockEnvelope(&ctx.channel1);
       pulseClockEnvelope(&ctx.channel2);
+      noiseClockEnvelope(&ctx.channel4);
     }
 
     ctx.frameSequencerStep = (ctx.frameSequencerStep + 1) % FRAME_SEQ_MAX_STEPS;
