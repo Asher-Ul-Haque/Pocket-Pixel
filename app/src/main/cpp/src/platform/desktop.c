@@ -6,6 +6,7 @@
 #include <platform.h>
 #include <debug.h>
 #include <ppu/ppu.h>
+#include <apu/apu.h>
 #include <cartridge/cartridge.h>
 #include <joypad.h>
 
@@ -37,15 +38,14 @@ static bool sdlVideoInit(void)
   gDisplayTexture = SDL_CreateTexture(gRenderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, WIDTH, HEIGHT);
   if (!gDisplayTexture) return false;
   
-  gActiveDmgPalette.color0 = 0x9BBC0FFF; 
-  gActiveDmgPalette.color1 = 0x8BAC0FFF;
-  gActiveDmgPalette.color2 = 0x306230FF;
-  gActiveDmgPalette.color3 = 0x0F380FFF;
+  gActiveDmgPalette.color0 = 0xE0F8D0FF; // Lightest (#e0f8d0)
+  gActiveDmgPalette.color1 = 0x88C070FF; // Light    (#88c070)
+  gActiveDmgPalette.color2 = 0x346856FF; // Dark     (#346856)
+  gActiveDmgPalette.color3 = 0x081820FF; // Darkest  (#081820)
 
   SDL_SetTextureScaleMode(gDisplayTexture, SDL_SCALEMODE_NEAREST);
   return true;
 }
-
 
 static void sdlSetDmgPalette(DmgPalette PALETTE)
 { gActiveDmgPalette = PALETTE; }
@@ -217,31 +217,92 @@ static void sdlCleanup(void)
   SDL_Quit();
 }
 
-static void sdlPollEvents(bool* IS_RUNNING)
-{
-  SDL_Event event;
-  while (SDL_PollEvent(&event))
-  {
-    if (event.type == SDL_EVENT_QUIT) *IS_RUNNING = false;
+static SDL_Gamepad* gGamepad = NULL;
+
+// Unified hold states for system toggles
+static bool pauseHeld = false, speedHeld = false, fullHeld = false;
+
+// Default Configuration
+static InputConfig gInputConfig = {
+    .keyUp = SDL_SCANCODE_UP, .keyDown = SDL_SCANCODE_DOWN, 
+    .keyLeft = SDL_SCANCODE_LEFT, .keyRight = SDL_SCANCODE_RIGHT,
+    .keyA = SDL_SCANCODE_Z, .keyB = SDL_SCANCODE_X,
+    .keyStart = SDL_SCANCODE_RETURN, .keySelect = SDL_SCANCODE_RSHIFT,
+    .keyPause = SDL_SCANCODE_P, .keySpeed = SDL_SCANCODE_F,
+    .keyFullscreen = SDL_SCANCODE_F11,
     
-    if (event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED)
-    {
-        if (gDebugWindow && SDL_GetWindowID(gDebugWindow) == event.window.windowID)
-        {
-            gDebugWindowOpen = false;
+    .padA = SDL_GAMEPAD_BUTTON_SOUTH, .padB = SDL_GAMEPAD_BUTTON_EAST,
+    .padStart = SDL_GAMEPAD_BUTTON_START, .padSelect = SDL_GAMEPAD_BUTTON_BACK,
+    .padUp = SDL_GAMEPAD_BUTTON_DPAD_UP, .padDown = SDL_GAMEPAD_BUTTON_DPAD_DOWN,
+    .padLeft = SDL_GAMEPAD_BUTTON_DPAD_LEFT, .padRight = SDL_GAMEPAD_BUTTON_DPAD_RIGHT,
+    
+    // Map system actions to standard modern controller buttons (e.g., Xbox Guide / Stick Clicks)
+    .padPause = SDL_GAMEPAD_BUTTON_GUIDE, 
+    .padSpeed = SDL_GAMEPAD_BUTTON_RIGHT_STICK, 
+    .padFullscreen = SDL_GAMEPAD_BUTTON_LEFT_STICK 
+};
+
+static void sdlInputSetConfig(InputConfig NEW_CONFIG) {
+    gInputConfig = NEW_CONFIG;
+}
+
+static void sdlInputPoll(bool* IS_RUNNING) {
+    SDL_Event event;
+    while (SDL_PollEvent(&event)) {
+        if (event.type == SDL_EVENT_QUIT) *IS_RUNNING = false;
+        
+        // Gamepad Hotplugging
+        if (event.type == SDL_EVENT_GAMEPAD_ADDED && !gGamepad) {
+            gGamepad = SDL_OpenGamepad(event.gdevice.which);
+            FORGE_LOG_INFO("%s", "Gamepad Connected.");
+        }
+        if (event.type == SDL_EVENT_GAMEPAD_REMOVED && gGamepad) {
+            SDL_CloseGamepad(gGamepad);
+            gGamepad = NULL;
+            FORGE_LOG_INFO("%s", "Gamepad Disconnected.");
         }
     }
-  }
 
-  const bool* keyboard = SDL_GetKeyboardState(NULL);
-  joypadSetButton(JOYPAD_BUTTON_UP,     keyboard[SDL_SCANCODE_UP]);
-  joypadSetButton(JOYPAD_BUTTON_DOWN,   keyboard[SDL_SCANCODE_DOWN]);
-  joypadSetButton(JOYPAD_BUTTON_LEFT,   keyboard[SDL_SCANCODE_LEFT]);
-  joypadSetButton(JOYPAD_BUTTON_RIGHT,  keyboard[SDL_SCANCODE_RIGHT]);
-  joypadSetButton(JOYPAD_BUTTON_A,      keyboard[SDL_SCANCODE_Z]);
-  joypadSetButton(JOYPAD_BUTTON_B,      keyboard[SDL_SCANCODE_X]);
-  joypadSetButton(JOYPAD_BUTTON_START,  keyboard[SDL_SCANCODE_RETURN]);
-  joypadSetButton(JOYPAD_BUTTON_SELECT, keyboard[SDL_SCANCODE_RSHIFT]);
+    const bool* keyboard = SDL_GetKeyboardState(NULL);
+    PlatformContext* platform = platformGetContext();
+
+    // --- System Toggles (Keyboard OR Gamepad) ---
+    bool isPausePressed = keyboard[gInputConfig.keyPause] || (gGamepad && SDL_GetGamepadButton(gGamepad, gInputConfig.padPause));
+    if (isPausePressed && !pauseHeld) platform->input.paused = !platform->input.paused;
+    pauseHeld = isPausePressed;
+
+    bool isSpeedPressed = keyboard[gInputConfig.keySpeed] || (gGamepad && SDL_GetGamepadButton(gGamepad, gInputConfig.padSpeed));
+    if (isSpeedPressed && !speedHeld) {
+        platform->input.doubleSpeed = !platform->input.doubleSpeed;
+        apuSetSpeed(platform->input.doubleSpeed ? 2.0f : 1.0f);
+    }
+    speedHeld = isSpeedPressed;
+
+    bool isFullPressed = keyboard[gInputConfig.keyFullscreen] || (gGamepad && SDL_GetGamepadButton(gGamepad, gInputConfig.padFullscreen));
+    if (isFullPressed && !fullHeld) {
+        platform->input.fullscreen = !platform->input.fullscreen;
+        // Trigger SDL fullscreen toggle here if needed for the desktop build
+    }
+    fullHeld = isFullPressed;
+
+    // --- Emulator Joypad Mapping ---
+    bool up = keyboard[gInputConfig.keyUp] || (gGamepad && SDL_GetGamepadButton(gGamepad, gInputConfig.padUp));
+    bool down = keyboard[gInputConfig.keyDown] || (gGamepad && SDL_GetGamepadButton(gGamepad, gInputConfig.padDown));
+    bool left = keyboard[gInputConfig.keyLeft] || (gGamepad && SDL_GetGamepadButton(gGamepad, gInputConfig.padLeft));
+    bool right = keyboard[gInputConfig.keyRight] || (gGamepad && SDL_GetGamepadButton(gGamepad, gInputConfig.padRight));
+    bool a = keyboard[gInputConfig.keyA] || (gGamepad && SDL_GetGamepadButton(gGamepad, gInputConfig.padA));
+    bool b = keyboard[gInputConfig.keyB] || (gGamepad && SDL_GetGamepadButton(gGamepad, gInputConfig.padB));
+    bool start = keyboard[gInputConfig.keyStart] || (gGamepad && SDL_GetGamepadButton(gGamepad, gInputConfig.padStart));
+    bool select = keyboard[gInputConfig.keySelect] || (gGamepad && SDL_GetGamepadButton(gGamepad, gInputConfig.padSelect));
+
+    joypadSetButton(JOYPAD_BUTTON_SELECT, select);
+    joypadSetButton(JOYPAD_BUTTON_START, start);
+    joypadSetButton(JOYPAD_BUTTON_UP, up);
+    joypadSetButton(JOYPAD_BUTTON_DOWN, down);
+    joypadSetButton(JOYPAD_BUTTON_LEFT, left);
+    joypadSetButton(JOYPAD_BUTTON_RIGHT, right);
+    joypadSetButton(JOYPAD_BUTTON_A, a);
+    joypadSetButton(JOYPAD_BUTTON_B, b);
 }
 
 static bool sdlAudioInit(void)
@@ -314,7 +375,8 @@ void platformInit(void)
   gPlatformCtx.video.present        = sdlPresent;
   gPlatformCtx.video.cleanup        = sdlCleanup;
 
-  gPlatformCtx.input.poll           = sdlPollEvents;
+  gPlatformCtx.input.poll           = sdlInputPoll;
+  gPlatformCtx.input.setConfig      = sdlInputSetConfig;
 
   gPlatformCtx.audio.init           = sdlAudioInit;
   gPlatformCtx.audio.pushSamples    = sdlPushSamples;

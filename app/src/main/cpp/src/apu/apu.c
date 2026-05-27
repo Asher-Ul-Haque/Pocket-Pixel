@@ -18,12 +18,24 @@ void apuInit(void)
   ctx.channel2.hasSweepHardware = false;
 
   ctx.speedMultiplier = 1.0f;
+  ctx.channelModifiers[0] = 1.0f;
+  ctx.channelModifiers[1] = 1.0f;
+  ctx.channelModifiers[2] = 1.0f;
+  ctx.channelModifiers[3] = 1.0f;
 }
 
 void apuSetSpeed(f32 MULTIPLIER)
 {
   if (MULTIPLIER < 0.01f) MULTIPLIER = 0.01f;
   ctx.speedMultiplier = MULTIPLIER;
+}
+
+void apuSetChannelVolumes(f32 CH1, f32 CH2, f32 CH3, f32 CH4)
+{
+  ctx.channelModifiers[0] = CH1;
+  ctx.channelModifiers[1] = CH2;
+  ctx.channelModifiers[2] = CH3;
+  ctx.channelModifiers[3] = CH4;
 }
 
 void apuTick(void) 
@@ -84,7 +96,7 @@ void apuTick(void)
     // - - - Mix channel 1 
     if (ctx.channel1.dacEnabled)
     {
-      f32 analog = (ctx.channel1.outputVolume / DAC_NEUTRAL_POINT) - 1.0f;
+      f32 analog = ((ctx.channel1.outputVolume / DAC_NEUTRAL_POINT) - 1.0f) * ctx.channelModifiers[0];
       if (ctx.panningMap & NR51_CH1_LEFT_MASK)  sampleL += analog;
       if (ctx.panningMap & NR51_CH1_RIGHT_MASK) sampleR += analog;
     }
@@ -92,7 +104,7 @@ void apuTick(void)
     // - - - Mix channel 2 
     if (ctx.channel2.dacEnabled) 
     {
-      f32 analog = (ctx.channel2.outputVolume / DAC_NEUTRAL_POINT) - 1.0f;
+      f32 analog = ((ctx.channel2.outputVolume / DAC_NEUTRAL_POINT) - 1.0f) * ctx.channelModifiers[1];
       if (ctx.panningMap & NR51_CH2_LEFT_MASK)  sampleL += analog; 
       if (ctx.panningMap & NR51_CH2_RIGHT_MASK) sampleR += analog; 
     }
@@ -100,7 +112,7 @@ void apuTick(void)
     // - - - Mix CH3
     if (ctx.channel3.dacEnabled) 
     {
-      f32 analog = (ctx.channel3.outputVolume / DAC_NEUTRAL_POINT) - 1.0f;
+      f32 analog = ((ctx.channel3.outputVolume / DAC_NEUTRAL_POINT) - 1.0f) * ctx.channelModifiers[2];
       if (ctx.panningMap & NR51_CH3_LEFT_MASK)  sampleL += analog; 
       if (ctx.panningMap & NR51_CH3_RIGHT_MASK) sampleR += analog; 
     }
@@ -108,7 +120,7 @@ void apuTick(void)
     // - - - Mix CH4
     if (ctx.channel4.dacEnabled) 
     {
-      f32 analog = (ctx.channel4.outputVolume / DAC_NEUTRAL_POINT) - 1.0f;
+      f32 analog = ((ctx.channel4.outputVolume / DAC_NEUTRAL_POINT) - 1.0f) * ctx.channelModifiers[3];
       if (ctx.panningMap & NR51_CH4_LEFT_MASK)  sampleL += analog; 
       if (ctx.panningMap & NR51_CH4_RIGHT_MASK) sampleR += analog; 
     }

@@ -34,7 +34,8 @@
 
         <div class="list-section" id="all-games">
             <h2>All Games</h2>
-            <div class="placeholder-text">Waiting for ROM directory...</div>
+            <button id="scan-btn" class="power-btn-text" style="font-size: 1rem; padding: 10px 20px; margin-bottom: 15px; background: var(--dark-green); cursor: pointer;">Scan ROM Folder</button>
+            <div id="game-grid" style="display: flex; flex-wrap: wrap; gap: 15px;"></div>
         </div>
     </div>
 
@@ -74,5 +75,6 @@
             }, 2500); 
         });
     </script>
+    <script src="js/ui.js"></script>
 </body>
 </html>

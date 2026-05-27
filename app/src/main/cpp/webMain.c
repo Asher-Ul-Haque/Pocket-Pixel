@@ -1,4 +1,4 @@
-#include "apu/apu.h"
+#include <apu/apu.h>
 #include <SDL3/SDL.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,16 +13,11 @@
 #include <cartridge/cartridge.h>
 #include <debug.h>
 #include <joypad.h>
+#include "state.h" // Included for memory-based save states
 
-static bool running      = true;
-static bool paused       = false;
-static bool doubleSpeed  = false;
-static bool showVram     = false;
-static bool pKeyHeld     = false;
-static bool fKeyHeld     = false;
-static bool tKeyHeld     = false;
+static bool running              = true;
 static PlatformContext* platform = NULL;
-static PpuContext* ppu = NULL;
+static PpuContext* ppu           = NULL;
 
 // --- Timing & FPS Variables ---
 static u64 lastFrameTime = 0;
@@ -51,7 +46,10 @@ void emscripten_main_loop(void) {
     timeAccumulator += deltaTime;
 
     // A Game Boy runs at exactly 59.7275 Hz. (1000ms / 59.7275 = ~16.742ms per frame)
-    const double targetFrameTimeMs = doubleSpeed ? (16.742 / 2.0) : 16.742;
+    double targetFrameTimeMs = 16.742;
+    if (platform && platform->input.doubleSpeed) {
+        targetFrameTimeMs /= 2.0; 
+    }
 
     bool frameRendered = false;
 
@@ -67,30 +65,8 @@ void emscripten_main_loop(void) {
             return;
         }
 
-        const bool* keyboard = SDL_GetKeyboardState(NULL);
-
-        bool pPressed = keyboard[SDL_SCANCODE_P];
-        if (pPressed && !pKeyHeld) paused = !paused;
-        pKeyHeld = pPressed;
-
-        bool fPressed = keyboard[SDL_SCANCODE_F];
-        if (fPressed && !fKeyHeld) {
-            doubleSpeed = !doubleSpeed;
-            if (doubleSpeed) apuSetSpeed(2.0f);
-            else apuSetSpeed(1.0f);
-        }
-        fKeyHeld = fPressed;
-
-        bool tPressed = keyboard[SDL_SCANCODE_T];
-        if (tPressed && !tKeyHeld) {
-            showVram = !showVram;
-            extern bool gDebugWindowOpen;
-            gDebugWindowOpen = showVram;
-        }
-        tKeyHeld = tPressed;
-
         // --- Hardware Loop ---
-        if (!paused) {
+        if (platform && !platform->input.paused) {
             int mCyclesThisFrame = 0;
             const int MAX_MCYCLES = 36000; // LCD-Off Breaker
 
@@ -121,7 +97,6 @@ void emscripten_main_loop(void) {
     // 3. Render only if a frame was actually generated
     if (frameRendered && platform) {
         if (platform->video.renderFrame) platform->video.renderFrame(&ppu->frameBuffer);
-        if (showVram && platform->video.drawTileView) platform->video.drawTileView(ppu->vram[0], ppu->vram[1]);
         if (platform->video.present) platform->video.present();
         
         framesThisSecond++;
@@ -192,4 +167,38 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[]) {
     emscripten_set_main_loop(emscripten_main_loop, 0, 1);
 
     return 0;
+}
+
+
+// ============================================================================
+// --- JAVASCRIPT EXPORTS (WASM API) ---
+// These functions are called directly from your web UI using Emscripten's ccall
+// ============================================================================
+
+EMSCRIPTEN_KEEPALIVE
+u8* webSaveState(u32* outSize) {
+    return systemSaveStateToMemory(outSize);
+}
+
+EMSCRIPTEN_KEEPALIVE
+bool webLoadState(const u8* buffer, u32 size) {
+    return systemLoadStateFromMemory(buffer, size);
+}
+
+EMSCRIPTEN_KEEPALIVE
+void webFreeStateBuffer(u8* buffer) {
+    if (buffer) free(buffer);
+}
+
+EMSCRIPTEN_KEEPALIVE
+void webSetChannelVolumes(float ch1, float ch2, float ch3, float ch4) {
+    apuSetChannelVolumes(ch1, ch2, ch3, ch4);
+}
+
+EMSCRIPTEN_KEEPALIVE
+void webSetPalette(u32 c0, u32 c1, u32 c2, u32 c3) {
+    if (platform && platform->video.setDmgPalette) {
+        DmgPalette p = {c0, c1, c2, c3};
+        platform->video.setDmgPalette(p);
+    }
 }

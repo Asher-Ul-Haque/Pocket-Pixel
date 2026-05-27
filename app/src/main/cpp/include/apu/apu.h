@@ -18,8 +18,8 @@ typedef struct
   NoiseChannel channel4; ///< Noise channel for percussion
 
   // - - - Customization 
-  f32 speedMultiplier;  ///< How fast to run the apu
-
+  f32 speedMultiplier;        ///< How fast to run the apu
+  f32 channelModifiers[4];    ///< User volume scaling (0.0f to 1.0f) for CH1, CH2, CH3, CH4
   // - - - Output 
   f32 sampleBuffer[AUDIO_BUFFER_SIZE]; ///< The buffer of audio samples
   u32 bufferIndex;                     ///< circular buffer head 
@@ -55,6 +55,15 @@ void        apuTick(void);
  * @note  The minimum value it accepts is 0.01f
 */
 void        apuSetSpeed(f32 MULTIPLIER);
+
+/**
+ * @brief Set user-defined volume modifiers for each channel
+ * @param CH1 Volume for Pulse 1 (0.0f - 1.0f)
+ * @param CH2 Volume for Pulse 2 (0.0f - 1.0f)
+ * @param CH3 Volume for Wave (0.0f - 1.0f)
+ * @param CH4 Volume for Noise (0.0f - 1.0f)
+ */
+void        apuSetChannelVolumes(f32 CH1, f32 CH2, f32 CH3, f32 CH4);
 
 /**
  * @brief Bus access to the apu (read)

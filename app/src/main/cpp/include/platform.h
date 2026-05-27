@@ -54,10 +54,50 @@ typedef struct RendererSystem
   void (*cleanup)(void);
 } RendererSystem;
 
+/// @brief: Keybinds 
+typedef struct InputConfig
+{
+  // - - - key up
+  u16 keyUp; 
+  u16 keyDown;
+  u16 keyLeft;
+  u16 keyRight;
+  u16 keyA;
+  u16 keyB;
+  u16 keySelect;
+  u16 keyStart;
+
+  u16 keyPause;
+  u16 keySpeed;
+  u16 keyFullscreen;
+
+  // - - - Gamepad buttons 
+  u16 padA;
+  u16 padB;
+  u16 padStart;
+  u16 padSelect;
+  u16 padUp;
+  u16 padDown;
+  u16 padLeft;
+  u16 padRight;
+
+  u16 padPause;
+  u16 padSpeed;
+  u16 padFullscreen;
+} InputConfig;
+
 /// @brief Keyboard / Gamepad access to the emulator
 typedef struct InputSystem
 {
-  void (*poll)(bool* IS_RUNNING);
+  InputConfig config;
+
+  // - - - System states 
+  bool paused;
+  bool doubleSpeed;
+  bool fullscreen;
+
+  void (*poll)      (bool*       IS_RUNNING);
+  void (*setConfig) (InputConfig NEW_CONFIG);
 } InputSystem;
 
 /// @brief Audio access to the emulator
