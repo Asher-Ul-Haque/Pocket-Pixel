@@ -13,6 +13,7 @@
 
 #pragma once 
 #include <common.h>
+#include <time.h>
 
 /// @brief Enumeration of supported mappers 
 typedef enum 

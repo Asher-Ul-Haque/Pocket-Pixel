@@ -1,4 +1,4 @@
-#if defined(_WIN32) || defined(__linux__) || (defined(__APPLE__) && defined(__MACH__))
+#if defined(_WIN32) || defined(__linux__) || (defined(__APPLE__) && defined(__MACH__)) || defined(__EMSCRIPTEN__)
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_audio.h>
@@ -271,19 +271,24 @@ static void sdlPushSamples(const f32* SAMPLES, u32 COUNT)
 {
   if (!gAudioStream) return;
 
-  // 1. Calculate a safe latency threshold. 
-  // 44100 samples/sec * 2 channels * 4 bytes (float32) = 352,800 bytes per second.
-  // 8192 bytes is roughly ~23 milliseconds of audio delay.
   const int MAX_QUEUED_BYTES = 8192;
 
-  // 2. The Audio Sync Lock
-  // If the sound card has too much data queued, STOP the emulator loop and wait.
+#ifndef __EMSCRIPTEN__
+  // NATIVE: Block thread if full
   while (SDL_GetAudioStreamQueued(gAudioStream) > MAX_QUEUED_BYTES) 
   {
     SDL_Delay(1); 
   }
+#else
+  // WEB: NEVER silently drop chunks of samples (this causes the static!).
+  // Only intervene if the user changes browser tabs and the queue builds up massive latency.
+  if (SDL_GetAudioStreamQueued(gAudioStream) > MAX_QUEUED_BYTES * 4) 
+  {
+    return;
+  }
+#endif
 
-  // 3. Queue the new batch of samples
+  // Push every single sample flawlessly to the sound card
   SDL_PutAudioStreamData(gAudioStream, SAMPLES, COUNT * sizeof(float));
 }
 

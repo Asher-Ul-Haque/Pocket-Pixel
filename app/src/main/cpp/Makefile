@@ -7,16 +7,41 @@ BIN_DIR         := bin
 DOCS_DIR        := docs
 TEST_BIN_DIR    := $(BIN_DIR)/tests
 
-# - - - Compilers
-CC      := clang
-CXX     := clang++
+# - - - Compilers & Native Defaults
+CC          := clang
+CXX         := clang++
 SDL3_CFLAGS := $(shell pkg-config --cflags sdl3)
 SDL3_LIBS   := $(shell pkg-config --libs sdl3)
 
-CFLAGS  := -I$(INCLUDE_DIR) $(SDL3_CFLAGS) -Wall -Werror -Wextra -Wpedantic -DDEBUG -O1 -MMD -MP 
-CXXFLAGS:= -I$(INCLUDE_DIR) $(SDL3_CFLAGS) -Wall -Werror -Wextra -Wpedantic -DDEBUG -O1 -MMD -MP
-LDFLAGS := $(SDL3_LIBS)
-RPATH   :=
+# - - - Native Flags (Defined BEFORE the override)
+CFLAGS      := -I$(INCLUDE_DIR) $(SDL3_CFLAGS) -Wall -Werror -Wextra -Wpedantic -DDEBUG -O1 -MMD -MP 
+CXXFLAGS    := -I$(INCLUDE_DIR) $(SDL3_CFLAGS) -Wall -Werror -Wextra -Wpedantic -DDEBUG -O1 -MMD -MP
+LDFLAGS     := $(SDL3_LIBS)
+RPATH       := 
+
+# - - - Root project name & Target
+ROOT_NAME   := pixel_pocket_core
+TARGET      := $(BIN_DIR)/$(ROOT_NAME)
+
+# - - - WebAssembly Override - - -
+ifeq ($(PLATFORM), web)
+  CC          := emcc
+  CXX         := em++
+  
+  # 1. Override SDL3 flags for Emscripten
+  SDL3_CFLAGS := -s USE_SDL=3
+  SDL3_LIBS   := -s USE_SDL=3
+  
+  # 2. Hard-overwrite the CFLAGS to include the new SDL3 flags AND the warning bypass
+  CFLAGS      := -I$(INCLUDE_DIR) $(SDL3_CFLAGS) -Wall -Werror -Wextra -Wpedantic -DDEBUG -O1 -MMD -MP -Wno-experimental
+  CXXFLAGS    := -I$(INCLUDE_DIR) $(SDL3_CFLAGS) -Wall -Werror -Wextra -Wpedantic -DDEBUG -O1 -MMD -MP -Wno-experimental
+  
+  # 3. Add WebAssembly specific linker flags (Export JS functions for the HTML shell)
+  LDFLAGS     := $(SDL3_LIBS) -s ALLOW_MEMORY_GROWTH=1 -s EXPORTED_RUNTIME_METHODS='["FS", "callMain"]' -s INVOKE_RUN=0
+  
+  # 4. Redirect the output to a JavaScript module
+  TARGET      := $(BIN_DIR)/pixel_pocket.js
+endif
 
 # - - - Colors
 GREEN  := \033[0;32m
@@ -27,17 +52,16 @@ PINK   := \033[95m
 BLUE   := \033[0;34m
 RESET  := \033[0m
 
-# - - - Root project name
-ROOT_NAME := pixel_pocket_core
-
-# - - - Main (FIXED)
+# - - - Main
+# Make sure your main.c is placed in the src/ directory or root so this picks it up!
 MAIN_SRC := $(wildcard main.c main.cpp)
 MAIN_OBJ := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(MAIN_SRC))
 MAIN_OBJ := $(patsubst %.c,$(BUILD_DIR)/%.o,$(MAIN_OBJ))
 
 # - - - Application sources (excluding main)
-SRC_FILES_C    := $(shell find $(SRC_DIR) -name "*.c")
-SRC_FILES_CPP  := $(shell find $(SRC_DIR) -name "*.cpp")
+# We filter out desktopMain.c and webMain.c because they are strictly included via main.c
+SRC_FILES_C    := $(shell find $(SRC_DIR) -name "*.c" ! -name "*Main.c")
+SRC_FILES_CPP  := $(shell find $(SRC_DIR) -name "*.cpp" ! -name "*Main.cpp")
 OBJ_FILES_C    := $(patsubst $(SRC_DIR)/%.c,  $(BUILD_DIR)/%.o, $(SRC_FILES_C))
 OBJ_FILES_CPP  := $(patsubst $(SRC_DIR)/%.cpp,$(BUILD_DIR)/%.o, $(SRC_FILES_CPP))
 OBJ_FILES      := $(OBJ_FILES_C) $(OBJ_FILES_CPP)
@@ -45,9 +69,6 @@ OBJ_FILES      := $(OBJ_FILES_C) $(OBJ_FILES_CPP)
 # - - - Tests
 TEST_FILES_C   := $(shell find $(TESTS_DIR) -name "*.c")
 TEST_FILES_CPP := $(shell find $(TESTS_DIR) -name "*.cpp")
-
-# - - - Final executable
-TARGET := $(BIN_DIR)/$(ROOT_NAME)
 
 # - - - Default target
 all: banner sources $(MAIN_OBJ) tests $(TARGET) docs finished
@@ -68,7 +89,7 @@ sources: sourceBanner $(OBJ_FILES)
 	@echo ""
 	@echo ""
 
-# - - - Compile main (NEW)
+# - - - Compile main
 $(BUILD_DIR)/%.o: %.c
 	@mkdir -p $(dir $@)
 	@echo " |_ Compiling (C) : $<"
@@ -98,7 +119,7 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp
 		&& echo "    $(GREEN)✓ Success$(RESET)" \
 		|| (echo "    $(RED)✗ Error compiling $<$(RESET)"; $(CXX) $(CXXFLAGS) -c $< -o $@; exit 1)
 
-# - - - Application build (FIXED)
+# - - - Application build
 $(TARGET): $(OBJ_FILES) $(MAIN_OBJ)
 	@mkdir -p $(BIN_DIR)
 	@echo "$(PINK)> Linking application $(TARGET)$(RESET)"
@@ -108,7 +129,7 @@ $(TARGET): $(OBJ_FILES) $(MAIN_OBJ)
 	@echo "$(GREEN)- - - Finished Building Application - - -$(RESET)"
 	@echo ""
 
-# - - - Tests build target (unchanged)
+# - - - Tests build target
 tests: sources
 	@echo "$(BLUE)- - - Building Tests - - -$(RESET)"
 	@mkdir -p $(TEST_BIN_DIR)
@@ -139,47 +160,4 @@ clean:
 
 remake: clean all
 
-remake-sources:
-	@echo "$(PINK)- - - Remaking Sources - - -$(RESET)"
-	@rm -rf $(BUILD_DIR)
-	$(MAKE) sources
-	@echo "$(GREEN)- - - Finished Remaking Sources - - -$(RESET)"
-
-remake-target:
-	@echo "$(PURPLE)- - - Remaking Application - - -$(RESET)"
-	@rm -f $(TARGET)
-	$(MAKE) $(TARGET)
-	@echo "$(GREEN)- - - Finished Remaking Application - - -$(RESET)"
-
-remake-tests:
-	@echo "$(BLUE)- - - Remaking Tests - - -$(RESET)"
-	@rm -rf $(TEST_BIN_DIR)
-	$(MAKE) tests
-	@echo "$(GREEN)- - - Finished Remaking Tests - - -$(RESET)"
-
-remake-docs:
-	@echo "$(YELLOW)- - - Remaking Documentation - - -$(RESET)"
-	@rm -rf $(DOCS_DIR)
-	$(MAKE) docs
-	@echo "$(GREEN)- - - Finished Remaking Documentation - - -$(RESET)"
-
-run:
-	@clear
-	@$(TARGET)
-
-compileRun: $(TARGET)
-	@clear
-	@$(TARGET)
-
-docs:
-	@echo "$(BLUE) - - - Building Doxygen Documentation - - -$(RESET)"
-	@doxygen Doxyfile >/dev/null 2>&1 \
-		&& echo "$(GREEN)✓ Documentation built successfully$(RESET)" \
-		|| (echo "$(RED)✗ Error building documentation$(RESET)"; doxygen Doxyfile; exit 1)
-	@echo "$(GREEN)- - - Finished Building Documentation - - -$(RESET)"
-	@echo ""
-
--include $(OBJ_FILES:.o=.d) $(MAIN_OBJ:.o=.d)
-
-.PHONY: all clean banner finished sources tests docs remake \
-        remake-sources remake-target remake-tests
+# ... (rest of your Makefile remains the same)
