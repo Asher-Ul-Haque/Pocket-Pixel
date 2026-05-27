@@ -42,5 +42,41 @@ window.PocketDB = {
             request.onsuccess = () => resolve(request.result);
             request.onerror = (e) => reject(e.target.error);
         });
+    },
+
+    saveQuickState: async function(stateBuffer) {
+        const db = await this.init();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(STORE_NAME, 'readwrite');
+            const store = tx.objectStore(STORE_NAME);
+            const request = store.get(1); // Get current cartridge
+            
+            request.onsuccess = () => {
+                const data = request.result;
+                if (data) {
+                    data.quickSave = stateBuffer; // Append the state
+                    store.put(data); // Write back to DB
+                    resolve(true);
+                } else {
+                    resolve(false);
+                }
+            };
+            request.onerror = (e) => reject(e.target.error);
+        });
+    },
+
+    loadQuickState: async function() {
+        const db = await this.init();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(STORE_NAME, 'readonly');
+            const store = tx.objectStore(STORE_NAME);
+            const request = store.get(1);
+            
+            request.onsuccess = () => {
+                const data = request.result;
+                resolve(data && data.quickSave ? data.quickSave : null);
+            };
+            request.onerror = (e) => reject(e.target.error);
+        });
     }
 };

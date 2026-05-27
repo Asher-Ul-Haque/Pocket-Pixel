@@ -37,7 +37,7 @@ ifeq ($(PLATFORM), web)
   CXXFLAGS    := -I$(INCLUDE_DIR) $(SDL3_CFLAGS) -Wall -Werror -Wextra -Wpedantic -DDEBUG -O1 -MMD -MP -Wno-experimental
   
   # 3. Add WebAssembly specific linker flags (Export JS functions for the HTML shell)
-  LDFLAGS     := $(SDL3_LIBS) -s ALLOW_MEMORY_GROWTH=1 -s EXPORTED_RUNTIME_METHODS='["FS", "callMain"]' -s INVOKE_RUN=0
+  LDFLAGS     := $(SDL3_LIBS) -s ALLOW_MEMORY_GROWTH=1 -s EXPORTED_RUNTIME_METHODS='["FS", "callMain", "ccall", "HEAPU32", "HEAPU8"]' -s INVOKE_RUN=0
   
   # 4. Redirect the output to a JavaScript module
   TARGET      := $(BIN_DIR)/pixel_pocket.js

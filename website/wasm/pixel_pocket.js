@@ -466,10 +466,10 @@ function updateMemoryViews() {
   var b = wasmMemory.buffer;
   HEAP8 = new Int8Array(b);
   HEAP16 = new Int16Array(b);
-  HEAPU8 = new Uint8Array(b);
+  Module['HEAPU8'] = HEAPU8 = new Uint8Array(b);
   HEAPU16 = new Uint16Array(b);
   HEAP32 = new Int32Array(b);
-  HEAPU32 = new Uint32Array(b);
+  Module['HEAPU32'] = HEAPU32 = new Uint32Array(b);
   HEAPF32 = new Float32Array(b);
   HEAPF64 = new Float64Array(b);
   HEAP64 = new BigInt64Array(b);
@@ -8054,6 +8054,76 @@ var findStringEnd = (heapOrArray, idx, maxBytesToRead, ignoreNul) => {
     };
 
 
+  var getCFunc = (ident) => {
+      var func = Module['_' + ident]; // closure exported function
+      assert(func, `Cannot call unknown function ${ident}, make sure it is exported`);
+      return func;
+    };
+  
+  
+  
+  
+  
+  
+  
+    /**
+   * @param {string|null=} returnType
+   * @param {Array=} argTypes
+   * @param {Array=} args
+   * @param {Object=} opts
+   */
+  var ccall = (ident, returnType, argTypes, args, opts) => {
+      // For fast lookup of conversion functions
+      var toC = {
+        'string': (str) => {
+          var ret = 0;
+          if (str !== null && str !== undefined && str !== 0) { // null string
+            ret = stringToUTF8OnStack(str);
+          }
+          return ret;
+        },
+        'array': (arr) => {
+          var ret = stackAlloc(arr.length);
+          writeArrayToMemory(arr, ret);
+          return ret;
+        }
+      };
+  
+      function convertReturnValue(ret) {
+        if (returnType === 'string') {
+          return UTF8ToString(ret);
+        }
+        if (returnType === 'boolean') return Boolean(ret);
+        return ret;
+      }
+  
+      var func = getCFunc(ident);
+      var cArgs = [];
+      var stack = 0;
+      assert(returnType !== 'array', 'return type should not be "array"');
+      if (args) {
+        for (var i = 0; i < args.length; i++) {
+          var converter = toC[argTypes[i]];
+          if (converter) {
+            if (stack === 0) stack = stackSave();
+            cArgs[i] = converter(args[i]);
+          } else {
+            cArgs[i] = args[i];
+          }
+        }
+      }
+      var ret = func(...cArgs);
+      function onDone(ret) {
+        if (stack !== 0) stackRestore(stack);
+        return convertReturnValue(ret);
+      }
+  
+      ret = onDone(ret);
+      return ret;
+    };
+
+
+
   FS.createPreloadedFile = FS_createPreloadedFile;
   FS.preloadFile = FS_preloadFile;
   FS.staticInit();;
@@ -8121,6 +8191,7 @@ if (Module['wasmBinary']) wasmBinary = Module['wasmBinary'];
 
 // Begin runtime exports
   Module['callMain'] = callMain;
+  Module['ccall'] = ccall;
   Module['FS'] = FS;
   var missingLibrarySymbols = [
   'writeI53ToI64Clamped',
@@ -8153,7 +8224,6 @@ if (Module['wasmBinary']) wasmBinary = Module['wasmBinary'];
   'STACK_ALIGN',
   'POINTER_SIZE',
   'ASSERTIONS',
-  'ccall',
   'cwrap',
   'convertJsFunctionToWasm',
   'getEmptyTableSlot',
@@ -8240,11 +8310,9 @@ missingLibrarySymbols.forEach(missingLibrarySymbol)
   'INT53_MIN',
   'bigintToI53Checked',
   'HEAP8',
-  'HEAPU8',
   'HEAP16',
   'HEAPU16',
   'HEAP32',
-  'HEAPU32',
   'HEAPF32',
   'HEAPF64',
   'HEAP64',
@@ -8619,6 +8687,8 @@ var _webLoadState = Module['_webLoadState'] = makeInvalidEarlyAccess('_webLoadSt
 var _webFreeStateBuffer = Module['_webFreeStateBuffer'] = makeInvalidEarlyAccess('_webFreeStateBuffer');
 var _webSetChannelVolumes = Module['_webSetChannelVolumes'] = makeInvalidEarlyAccess('_webSetChannelVolumes');
 var _webSetPalette = Module['_webSetPalette'] = makeInvalidEarlyAccess('_webSetPalette');
+var _webAllocate = Module['_webAllocate'] = makeInvalidEarlyAccess('_webAllocate');
+var _webFree = Module['_webFree'] = makeInvalidEarlyAccess('_webFree');
 var _SDL_free = Module['_SDL_free'] = makeInvalidEarlyAccess('_SDL_free');
 var _SDL_malloc = Module['_SDL_malloc'] = makeInvalidEarlyAccess('_SDL_malloc');
 var _SDL_calloc = Module['_SDL_calloc'] = makeInvalidEarlyAccess('_SDL_calloc');
@@ -8659,6 +8729,8 @@ function assignWasmExports(wasmExports) {
   assert(typeof wasmExports['webFreeStateBuffer'] != 'undefined', 'missing Wasm export: webFreeStateBuffer');
   assert(typeof wasmExports['webSetChannelVolumes'] != 'undefined', 'missing Wasm export: webSetChannelVolumes');
   assert(typeof wasmExports['webSetPalette'] != 'undefined', 'missing Wasm export: webSetPalette');
+  assert(typeof wasmExports['webAllocate'] != 'undefined', 'missing Wasm export: webAllocate');
+  assert(typeof wasmExports['webFree'] != 'undefined', 'missing Wasm export: webFree');
   assert(typeof wasmExports['SDL_free'] != 'undefined', 'missing Wasm export: SDL_free');
   assert(typeof wasmExports['SDL_malloc'] != 'undefined', 'missing Wasm export: SDL_malloc');
   assert(typeof wasmExports['SDL_calloc'] != 'undefined', 'missing Wasm export: SDL_calloc');
@@ -8695,6 +8767,8 @@ function assignWasmExports(wasmExports) {
   _webFreeStateBuffer = Module['_webFreeStateBuffer'] = createExportWrapper('webFreeStateBuffer', 1);
   _webSetChannelVolumes = Module['_webSetChannelVolumes'] = createExportWrapper('webSetChannelVolumes', 4);
   _webSetPalette = Module['_webSetPalette'] = createExportWrapper('webSetPalette', 4);
+  _webAllocate = Module['_webAllocate'] = createExportWrapper('webAllocate', 1);
+  _webFree = Module['_webFree'] = createExportWrapper('webFree', 1);
   _SDL_free = Module['_SDL_free'] = createExportWrapper('SDL_free', 1);
   _SDL_malloc = Module['_SDL_malloc'] = createExportWrapper('SDL_malloc', 1);
   _SDL_calloc = Module['_SDL_calloc'] = createExportWrapper('SDL_calloc', 2);

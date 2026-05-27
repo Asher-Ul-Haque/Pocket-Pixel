@@ -9,6 +9,7 @@ const consoleScreen = document.querySelector('.console-screen');
 const romUploadInput = document.getElementById('rom-upload');
 
 let isBooting = false;
+window.GlobalRomBuffer = null; 
 
 // --- 1. Startup: Load the Pre-computed Boxarts ---
 async function initializeLibrary() {
@@ -118,6 +119,7 @@ async function initiateBootSequence() {
         mainLayout.style.display = 'flex';
         
         if (savedCartridge) {
+            window.GlobalRomBuffer = savedCartridge.romData;
             renderCartridge(savedCartridge.fileName, savedCartridge.boxartUrl);
         }
 
@@ -134,3 +136,55 @@ window.addEventListener('keydown', (event) => {
 });
 
 initializeLibrary();
+
+// ==========================================
+// --- SETTINGS MODAL LOGIC ---
+// ==========================================
+
+const settingsBtn = document.getElementById('settings-btn');
+const settingsModal = document.getElementById('settings-modal');
+const closeSettingsBtn = document.getElementById('close-settings');
+
+// Open / Close functionality
+if (settingsBtn && settingsModal && closeSettingsBtn) {
+    settingsBtn.addEventListener('click', () => {
+        settingsModal.style.display = 'flex';
+    });
+    closeSettingsBtn.addEventListener('click', () => {
+        settingsModal.style.display = 'none';
+    });
+} else {
+    console.error("[UI] Settings Modal elements not found in the DOM!");
+}
+
+// --- Audio Mixer ---
+const volumes = { ch1: 1.0, ch2: 1.0, ch3: 1.0, ch4: 1.0 };
+
+function updateAudioMixer() {
+    if (window.PocketEngine && window.PocketEngine.isEngineRunning) {
+        window.PocketEngine.setChannelVolumes(volumes.ch1, volumes.ch2, volumes.ch3, volumes.ch4);
+    }
+}
+
+document.getElementById('vol-ch1')?.addEventListener('input', (e) => { volumes.ch1 = parseFloat(e.target.value); updateAudioMixer(); });
+document.getElementById('vol-ch2')?.addEventListener('input', (e) => { volumes.ch2 = parseFloat(e.target.value); updateAudioMixer(); });
+document.getElementById('vol-ch3')?.addEventListener('input', (e) => { volumes.ch3 = parseFloat(e.target.value); updateAudioMixer(); });
+document.getElementById('vol-ch4')?.addEventListener('input', (e) => { volumes.ch4 = parseFloat(e.target.value); updateAudioMixer(); });
+
+// --- DMG Themes ---
+const themes = {
+    classic: [0x9bbc0f, 0x8bac0f, 0x306230, 0x0f380f], 
+    bw:      [0xffffff, 0xaaaaaa, 0x555555, 0x000000], 
+    virtual: [0x000000, 0x550000, 0xaa0000, 0xff0000]  
+};
+
+document.querySelectorAll('.theme-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        const themeName = e.target.getAttribute('data-theme');
+        const colors = themes[themeName];
+        
+        if (window.PocketEngine && window.PocketEngine.isEngineRunning) {
+            window.PocketEngine.setPalette(colors[0], colors[1], colors[2], colors[3]);
+        }
+    });
+});

@@ -21,7 +21,6 @@ const diagBotRight = document.querySelector('.diag.bottom-right');
 // --- Virtual Keyboard Engine ---
 // We simulate actual hardware keyboard events so the C++ SDL3 layer catches them
 function sendKeyEvent(keyCode, isDown) {
-    console.log(`[JS Debug] Firing KeyboardEvent: ${keyCode} | isDown: ${isDown}`);
     const eventType = isDown ? 'keydown' : 'keyup';
     window.dispatchEvent(new KeyboardEvent(eventType, { code: keyCode }));
 }
@@ -204,4 +203,49 @@ pollGamepads();
 
 window.addEventListener("gamepadconnected", (e) => {
     console.log(`[Gamepad] Connected: ${e.gamepad.id}`);
+});
+
+// ==========================================
+// --- SAVE STATE HOTBAR ---
+// ==========================================
+
+const hotbarButtons = document.querySelectorAll('.hotbar button');
+const btnLoad = hotbarButtons[0]; // 📂
+const btnSave = hotbarButtons[3]; // 💾
+
+// Visual feedback helper
+function flashButton(btn, color) {
+    const originalColor = btn.style.backgroundColor;
+    btn.style.backgroundColor = color;
+    setTimeout(() => btn.style.backgroundColor = originalColor, 200);
+}
+
+btnSave.addEventListener('click', async () => {
+    if (window.PocketEngine && window.PocketEngine.isEngineRunning) {
+        const stateBuffer = window.PocketEngine.saveState();
+        if (stateBuffer) {
+            await window.PocketDB.saveQuickState(stateBuffer);
+            console.log(`[Save State] State cached to IndexedDB (${stateBuffer.byteLength} bytes)`);
+            flashButton(btnSave, 'var(--green)');
+        }
+    }
+});
+
+btnLoad.addEventListener('click', async () => {
+    if (window.PocketEngine && window.PocketEngine.isEngineRunning) {
+        const stateBuffer = await window.PocketDB.loadQuickState();
+        if (stateBuffer) {
+            const success = window.PocketEngine.loadState(stateBuffer);
+            if (success) {
+                console.log("[Save State] State successfully restored from IndexedDB");
+                flashButton(btnLoad, 'var(--green)');
+            } else {
+                console.error("[Save State] Engine rejected the save state (Invalid Size/Corrupted)");
+                flashButton(btnLoad, 'var(--error-red)');
+            }
+        } else {
+            console.warn("[Save State] No quick save found in database.");
+            flashButton(btnLoad, 'var(--error-red)');
+        }
+    }
 });

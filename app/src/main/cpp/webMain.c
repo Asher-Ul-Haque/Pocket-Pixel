@@ -202,3 +202,18 @@ void webSetPalette(u32 c0, u32 c1, u32 c2, u32 c3) {
         platform->video.setDmgPalette(p);
     }
 }
+
+// ==========================================
+// --- SAVE STATE BRIDGE ---
+// ==========================================
+
+// JS helpers to safely allocate/free memory inside the WebAssembly heap
+EMSCRIPTEN_KEEPALIVE
+void* webAllocate(u32 size) {
+    return malloc(size);
+}
+
+EMSCRIPTEN_KEEPALIVE
+void webFree(void* ptr) {
+    if (ptr) free(ptr);
+}
