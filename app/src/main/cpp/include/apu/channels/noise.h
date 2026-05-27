@@ -1,6 +1,12 @@
+/**
+ * @file apu/noise.h 
+ * @brief The noise channel of the Game boy APU
+*/
+
 #pragma once
 #include <common.h>
 
+/// @brief The definition of the noise channel
 typedef struct 
 {
   bool enabled;
@@ -28,7 +34,26 @@ typedef struct
   u8   outputVolume;
 } NoiseChannel;
 
+/**
+ * @brief Triggers the noise channel 
+ * @param CHANNEL the noise channel of the apu 
+*/
 void noiseTrigger       (NoiseChannel* CHANNEL);
+
+/**
+ * @brief Updates the clock for apu 
+ * @param CHANNEL the noise channel of the apu 
+*/
 void noiseClockLength   (NoiseChannel* CHANNEL);
+
+/**
+ * @brief Envelopes the apu clock 
+ * @param CHANNEL the noise channel of the apu 
+*/
 void noiseClockEnvelope (NoiseChannel* CHANNEL);
+
+/**
+ * @brief Step the apu noise timer 
+ * @param CHANNEL the noise channel of the apu
+*/
 void noiseStepTimer     (NoiseChannel* CHANNEL);

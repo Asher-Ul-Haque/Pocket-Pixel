@@ -2,6 +2,7 @@
  * @file common.h 
  * @brief Common way to include header files and macros without worrying
 */
+#pragma once
 #include <stdlib.h>
 #include <string.h>
 #include <defines.h>

@@ -1,7 +1,7 @@
-#include "apu/channels/noise.h"
-#include "apu/channels/pulse.h"
-#include "apu/channels/wave.h"
-#include "apu/internal.h"
+#include <apu/channels/noise.h>
+#include <apu/channels/pulse.h>
+#include <apu/channels/wave.h>
+#include <apu/internal.h>
 #include <platform.h>
 #include <apu/apu.h>
 

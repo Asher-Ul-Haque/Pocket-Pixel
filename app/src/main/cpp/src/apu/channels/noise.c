@@ -52,19 +52,16 @@ void noiseStepTimer(NoiseChannel* CHANNEL)
 
   if (!CHANNEL->enabled || !CHANNEL->dacEnabled)  return;
 
-  // THE FIX: Using a clock shift of 14 or 15 completely stops the LFSR from receiving clocks
-  if (CHANNEL->clockShift >= 14) return;
+  // - - - Using a clock shift of 14 or 15 completely stops the LFSR from receiving clocks
+  if (CHANNEL->clockShift >= NOISE_CLOCK_SHIFT_RESET) return;
 
-  if (CHANNEL->periodTimer > 0)                   CHANNEL->periodTimer--;
+  if (CHANNEL->periodTimer > 0) CHANNEL->periodTimer--;
   
   if (CHANNEL->periodTimer == 0) 
   {
-    // THE FIX: Calculate Period Timer based on hardware formula. 
-    // The standard formula (Divisor = 8 or r*16) is in T-Cycles (4.19 MHz).
-    // Because our APU ticks in M-Cycles (1.04 MHz), we must divide the final period by 4!
     u32 divisor = (CHANNEL->clockDivider == 0) ? 8 : (CHANNEL->clockDivider << 4);
     
-    // Shift right by 2 divides the T-Cycle period by 4, perfectly syncing it to our M-Cycle loop
+    // - - - Shift right by 2 divides the T-Cycle period by 4, perfectly syncing it to our M-Cycle loop
     CHANNEL->periodTimer = (divisor << CHANNEL->clockShift) >> 2;
 
     // - - - Advance the LFSR

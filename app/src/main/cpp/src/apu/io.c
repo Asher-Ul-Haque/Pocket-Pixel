@@ -1,4 +1,4 @@
-#include "apu/channels/noise.h"
+#include <apu/channels/noise.h>
 #include <apu/channels/wave.h>
 #include <apu/internal.h>
 #include <apu/apu.h>
