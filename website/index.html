@@ -4,77 +4,66 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pocket Pixel</title>
-    <link rel="icon" href="data:,">
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-    <div id="power-screen">
-        <div class="power-btn-text">CLICK TO POWER ON</div>
-    </div>
+    <audio id="startup-sound" src="assets/startup.mp3" preload="auto"></audio>
 
     <div id="boot-screen">
-        <img src="assets/gameboy.png" alt="Pocket Pixel Mascot" class="mascot" id="mascot-img">
+        <img src="assets/gameboy.png" alt="Pocket Pixel Mascot" id="mascot">
+        <div id="start-prompt" class="pulse-text">CLICK OR PRESS SPACE</div>
     </div>
 
-    <audio id="boot-sound" src="assets/splash.mp3"></audio>
-
-    <div id="library-screen">
-        <h1 class="app-title">Pocket Pixel</h1>
-
-        <div class="list-section" id="liked-games">
-            <h2>Liked Games</h2>
-            <div class="placeholder-text">No liked games yet...</div>
-        </div>
-
-        <div class="list-section" id="recent-games">
-            <h2>Recently Played</h2>
-            <div class="placeholder-text">Play a game to see it here...</div>
-        </div>
-
-        <div class="list-section" id="all-games">
-            <h2>All Games</h2>
-            <button id="scan-btn" class="power-btn-text" style="font-size: 1rem; padding: 10px 20px; margin-bottom: 15px; background: var(--dark-green); cursor: pointer;">Scan ROM Folder</button>
-            <div id="game-grid" style="display: flex; flex-wrap: wrap; gap: 15px;"></div>
-        </div>
-    </div>
-
-    <script>
-        const powerScreen = document.getElementById('power-screen');
-        const bootScreen = document.getElementById('boot-screen');
-        const mascot = document.getElementById('mascot-img');
-        const bootSound = document.getElementById('boot-sound');
-        const libraryScreen = document.getElementById('library-screen');
-
-        // Wait for the user to click the screen to start the app
-        powerScreen.addEventListener('click', () => {
+    <div id="main-layout" style="display: none;">  
+        <div class="side-pane left-pane">
+            <div class="dpad-grid">
+                <button class="dpad-btn diag top-left"></button>
+                <button class="dpad-btn dir up"></button>
+                <button class="dpad-btn diag top-right"></button>
+                
+                <button class="dpad-btn dir left"></button>
+                <div class="dpad-center"></div>
+                <button class="dpad-btn dir right"></button>
+                
+                <button class="dpad-btn diag bottom-left"></button>
+                <button class="dpad-btn dir down"></button>
+                <button class="dpad-btn diag bottom-right"></button>
+            </div>
             
-            // 1. Hide the power screen and show the boot screen
-            powerScreen.style.display = 'none';
-            bootScreen.style.display = 'flex';
+            <div class="pill-btn-container">
+                <button class="pill-btn">SELECT</button>
+            </div>
+        </div>
 
-            // 2. Play the sound immediately (browser allows this now!)
-            bootSound.play();
+        <div class="center-pane">
+            <div class="hotbar">
+                <button>📂</button>
+                <button>⏪</button>
+                <button>⏸️</button>
+                <button>💾</button>
+                <button>⏏️</button>
+            </div>
+            
+            <div class="console-screen">
+                <div class="cartridge-prompt pulse-text">INSERT CARTRIDGE</div>
+            </div>
+        </div>
 
-            // 3. Trigger the CSS slide animation
-            // A tiny timeout ensures the display:flex renders before the CSS transform starts
-            setTimeout(() => {
-                mascot.classList.add('slide-up');
-            }, 50);
+        <div class="side-pane right-pane">
+            <div class="settings-corner">
+                <button id="settings-btn">⚙️</button>
+            </div>
+            <div class="action-btn-container">
+                <button class="action-btn">B</button>
+                <button class="action-btn" style="margin-top: -40px;">A</button>
+            </div>
+            <div class="pill-btn-container">
+                <button class="pill-btn">START</button>
+            </div>
+        </div>
+    </div>
 
-            // 4. Automatically transition to the library when the boot sequence is over
-            // (Adjust 2500ms to perfectly match your startup.mp3 length)
-            setTimeout(() => {
-                bootScreen.style.opacity = '0';
-                
-                setTimeout(() => {
-                    bootScreen.style.display = 'none';
-                    libraryScreen.style.display = 'flex';
-                }, 500); 
-                
-            }, 2500); 
-        });
-    </script>
     <script src="js/ui.js"></script>
 </body>
 </html>

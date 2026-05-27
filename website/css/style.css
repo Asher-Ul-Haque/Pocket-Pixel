@@ -1,13 +1,14 @@
-/* --- 1. Global Retro Variables --- */
+/* --- Global Visual Language --- */
 :root {
     --dark-green: #0f380f;
     --medium-green: #306230;
     --green: #8bac0f;
     --light-green: #9bbc0f;
     --error-red: #76393f;
+    --pure-black: #000000;
+    --pure-white: #ffffff;
 }
 
-/* --- 2. Custom Font Loading --- */
 @font-face {
     font-family: 'Minecraft';
     src: url('../assets/minecraft.ttf') format('truetype');
@@ -15,118 +16,220 @@
     font-style: normal;
 }
 
-/* --- 3. Base Reset --- */
 * {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
-    border-radius: 0 !important; 
+    border-radius: 0 !important; /* Zero curves allowed */
 }
 
 body {
-    background-color: var(--dark-green);
-    color: var(--light-green);
-    /* Now uses your custom font! */
+    background-color: var(--light-green); /* Starts light for boot sequence */
+    color: var(--pure-white);
     font-family: 'Minecraft', 'Courier New', Courier, monospace;
     image-rendering: pixelated; 
     user-select: none; 
     height: 100vh;
     overflow: hidden;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    transition: background-color 1.5s ease-out; /* Smooth fade to dark */
 }
 
-/* --- 4. The Power Screen (Fixes the Audio Block) --- */
-#power-screen {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
+body.booted {
     background-color: var(--dark-green);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 10000;
-    cursor: pointer;
-    transition: opacity 0.3s;
 }
 
-.power-btn-text {
-    font-size: 2rem;
-    color: var(--green);
-    border: 4px solid var(--green);
-    padding: 20px 40px;
+.pulse-text {
     animation: pulse 1.5s infinite;
 }
-
 @keyframes pulse {
-    0% { opacity: 1; }
-    50% { opacity: 0.5; }
-    100% { opacity: 1; }
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.2; }
 }
 
-/* --- 5. The Boot Screen --- */
+/* --- Boot Screen --- */
 #boot-screen {
-    display: none; /* Hidden until power button is clicked */
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background-color: var(--light-green);
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
-    z-index: 9999;
-    transition: opacity 0.5s ease-out;
+    z-index: 1000;
 }
 
-.mascot {
-    width: 160px;
-    transform: translateY(100vh);
+#mascot {
+    width: 200px;
+    transition: transform 1.8s cubic-bezier(0.5, 0, 0.2, 1);
 }
 
-.mascot.slide-up {
-    transform: translateY(0);
-    transition: transform 2.0s cubic-bezier(0.1, 0.7, 0.1, 1);
+#mascot.slide-up {
+    transform: translateY(-100vh); /* Shoots up out of frame */
 }
 
-/* --- 6. The Main Library Layout --- */
-#library-screen {
-    display: none;
+#start-prompt {
+    margin-top: 40px;
+    font-size: 1.5rem;
+    color: var(--dark-green);
+}
+
+/* --- Main Layout --- */
+#main-layout {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    justify-content: space-between;
+    opacity: 0;
+    transition: opacity 1s ease-in;
+}
+
+.side-pane {
+    flex: 0 0 280px; 
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 40px 20px;
+}
+
+.center-pane {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    min-height: 0; /* CRITICAL: Allows the flex child to shrink properly */
+}
+
+/* --- Hotbar (Now on top) --- */
+.hotbar {
+    margin-bottom: 20px;
+    display: flex;
+    gap: 15px;
+}
+
+/* --- Console Screen --- */
+.console-screen {
     width: 100%;
     max-width: 800px;
-    height: 100%;
-    padding: 20px;
-    flex-direction: column;
+    max-height: 75vh; /* CRITICAL: Prevents it from pushing off the screen */
+    aspect-ratio: 10 / 9;
+    background-color: var(--pure-black);
+    border: 10px solid var(--medium-green);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
 }
 
-h1.app-title {
-    text-align: center;
-    font-size: 3rem;
-    color: var(--green);
-    border-bottom: 4px solid var(--medium-green);
-    padding-bottom: 10px;
-    margin-bottom: 30px;
-    text-transform: uppercase;
-}
-
-.list-section {
-    margin-bottom: 30px;
-}
-
-.list-section h2 {
+.cartridge-prompt {
+    color: var(--pure-white);
     font-size: 1.5rem;
-    color: var(--light-green);
-    background-color: var(--medium-green);
-    padding: 5px 10px;
-    margin-bottom: 10px;
-    border: 2px solid var(--green);
 }
 
-.placeholder-text {
+/* --- Unified Chunky Retro Button Styling --- */
+button {
+    font-family: inherit;
+    cursor: pointer;
+    border-radius: 0;
+    outline: none;
+}
+
+.action-btn, .pill-btn, .hotbar button {
+    background-color: var(--medium-green);
+    border: 4px solid var(--pure-black);
+    color: var(--pure-white);
+    box-shadow: 4px 4px 0 var(--pure-black);
+    transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.action-btn:active, .pill-btn:active, .hotbar button:active {
+    transform: translate(4px, 4px);
+    box-shadow: 0px 0px 0 var(--pure-black);
+}
+
+.hotbar button {
+    font-size: 1.5rem;
+    width: 50px;
+    height: 50px;
+}
+
+.action-btn-container { 
+    display: flex; 
+    gap: 20px; 
+    justify-content: center; 
+    margin-bottom: 50px; 
+}
+
+.action-btn { 
+    width: 70px; 
+    height: 70px; 
+    font-size: 2rem; 
+}
+
+.pill-btn-container { 
+    text-align: center; 
+}
+
+.pill-btn { 
+    width: 100px; 
+    height: 35px; 
+    font-size: 1rem; 
+}
+
+/* --- The 3x3 D-Pad --- */
+.dpad-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 55px);
+    grid-template-rows: repeat(3, 55px);
+    margin: 0 auto 50px;
+}
+
+.dpad-btn, .dpad-center {
+    width: 100%;
+    height: 100%;
+    background-color: var(--medium-green);
+}
+
+/* Make the visible cross pop */
+.dpad-btn.dir, .dpad-center {
+    border: 4px solid var(--pure-black);
+    box-shadow: 4px 4px 0 var(--pure-black);
+    transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.dpad-btn.dir:active {
+    transform: translate(4px, 4px);
+    box-shadow: 0px 0px 0 var(--pure-black);
+}
+
+/* Hide internal borders so it looks like one solid piece */
+.dpad-btn.up { border-bottom: none; box-shadow: none; }
+.dpad-btn.down { border-top: none; }
+.dpad-btn.left { border-right: none; box-shadow: none; }
+.dpad-btn.right { border-left: none; }
+.dpad-center { border: none; box-shadow: none; }
+
+/* The Sneaky Diagonal Buttons */
+.dpad-btn.diag {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    z-index: 10;
+}
+
+/* --- Settings --- */
+.settings-corner { 
+    position: absolute; 
+    top: 20px; 
+    right: 20px; 
+}
+#settings-btn { 
+    background: none; 
+    border: none; 
+    font-size: 2rem; 
+    color: var(--medium-green); 
+    box-shadow: none;
+}
+#settings-btn:hover {
     color: var(--green);
-    font-size: 1.2rem;
-    padding-left: 10px;
 }
