@@ -1,44 +1,54 @@
-#include <ppu/dma.h>
-#include <bus.h>
 #include <ppu/ppu.h>
-#include <string.h>
+#include <ppu/internal.h>
+#include <cartridge/cartridge.h>
+#include <bus.h>
 
-static DmaContext ctx;
-DmaContext* dmaGetContext(void) 
-{ return &ctx; }
-
-void dmaInit(void) 
-{ memset(&ctx, 0, sizeof(ctx)); }
-
-void dmaStart(u8 VALUE) 
+void ppuStepOamDma(void)
 {
-  ctx.active     = true;
-  ctx.sourceAddr = (u16)VALUE << 8;
-  ctx.byteIndex  = 0;
-  ctx.delay      = DMA_DELAY_CYCLES; // - - - Initial delay cycles
+  PpuContext* ctx = ppuGetContext();
+
+  if (!ctx->oamDma.active) return;
+
+  u16 absoluteSourceAddress = ctx->oamDma.source + ctx->oamDma.index;
+  u8  fetchedDataByte       = busRead(absoluteSourceAddress);
+
+  ctx->oam[ctx->oamDma.index] = fetchedDataByte;
+  ctx->oamDma.index++;
+
+  if (ctx->oamDma.index >= OAM_SIZE)
+  {
+    ctx->oamDma.active = false;
+    ctx->oamDma.index  = OAM_DMA_START_INDEX;
+    ctx->oamDma.source = OAM_DMA_START_INDEX;
+  }
 }
 
-bool dmaIsActive(void) 
-{ return ctx.active; }
-
-void dmaStepMCycle(void) 
+void ppuCheckHblankDma(void)
 {
-  if (!ctx.active) return;
+  PpuContext* ctx = ppuGetContext();
 
-  if (ctx.delay > 0) 
+  if (cartridgeGetContext()->mode == MODE_DMG_GAMEBOY) return;
+  if (!ctx->cgbDma.active)                             return;
+
+  // - - - A single HDMA blast transfers exactly one 16 byte aligned chunk
+  for (u8 byteOffset = 0; byteOffset < TILE_BYTES; byteOffset++)
   {
-    ctx.delay--;
-    return;
+    u8  sourceDataByte        = busRead(ctx->cgbDma.source);
+    u16 targetVramOffset      = (ctx->cgbDma.destination - BUS_ADDR_VRAM_START) & (VRAM_BANK_SIZE - 1);
+    u8  currentActiveVramBank = ctx->registers.vbk & BUS_BANK_BIT_MASK;
+
+    ctx->vram[currentActiveVramBank][targetVramOffset] = sourceDataByte;
+
+    ctx->cgbDma.source++;
+    ctx->cgbDma.destination++;
   }
 
-  // - - - Perform the transfer: 1 byte per M-cycle
-  u8 data = busReadRaw(ctx.sourceAddr + ctx.byteIndex);
-  ppuOAMWrite(DMA_OFFSET + ctx.byteIndex, data);
-
-  ctx.byteIndex++;
-
-  if (ctx.byteIndex >= DMA_TRANSFER_CYCLES) 
+  // THE FIX: Decrease the remaining length. 
+  // HDMA5 stores length-1. It underflows to 0xFF when the transfer is entirely complete.
+  ctx->registers.hdma5--;
+  
+  if (ctx->registers.hdma5 == 0xFF)
   {
-    ctx.active = false;
+    ctx->cgbDma.active = false;
   }
 }

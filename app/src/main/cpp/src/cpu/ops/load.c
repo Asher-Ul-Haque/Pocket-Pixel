@@ -1,333 +1,449 @@
-#include "cpu/registers.h"
-#include <cpu/cpu.h>
-#include <cpu/ops.h>
+#include <cpu/alu.h>
 #include <bus.h>
+#include <cpu/cpu.h>
 #include <cpu/instruction.h>
-#include <utils/asserts.h>
+#include <cpu/registers.h>
+#include <cpu/ops.h>
 
-/**
- * @file load.c
- * @brief Complete Load/store instruction family.
-*/
-
-static u8* reg8Ptr(RegisterFile* REGISTER, RegType TYPE) 
+ExecStatus instrLoadRegReg(void)
 {
-  switch (TYPE) 
-  {
-    case RT_A: return &REGISTER->a; 
-    case RT_B: return &REGISTER->b;
-    case RT_C: return &REGISTER->c; 
-    case RT_D: return &REGISTER->d;
-    case RT_E: return &REGISTER->e; 
-    case RT_H: return &REGISTER->h;
-    case RT_L: return &REGISTER->l;
-    default: 
-      return NULL;
-  }
+  CpuContext*         ctx   = cpuGetContext();
+  const Instruction*  instr = ctx->currentInstruction;
+
+  u8 val = cpuGetReg8(instr->reg2);
+  cpuSetReg8(instr->reg1, val);
+
+  return EXEC_STATUS_DONE_IMMEDIATE;
 }
 
-static void writeReg16(RegisterFile* REGISTER, RegType TYPE, u16 VALUE) 
+ExecStatus instrLoadReg8bitImm(void)
 {
-  switch (TYPE) 
+  CpuContext*         ctx   = cpuGetContext();
+  const Instruction*  instr = ctx->currentInstruction;
+
+  if (ctx->mCycle == M2)
   {
-    case RT_BC: cpuSetBC(REGISTER, VALUE);        break;
-    case RT_DE: cpuSetDE(REGISTER, VALUE);        break;
-    case RT_HL: cpuSetHL(REGISTER, VALUE);        break;
-    case RT_SP: REGISTER->stackPointer   = VALUE; break;
-    case RT_PC: REGISTER->programCounter = VALUE; break;
-    default: 
-      break;
+    u8 val = busRead(ctx->registers.programCounter++);
+    cpuSetReg8(instr->reg1, val);
+    return EXEC_STATUS_DONE;
   }
+
+  return EXEC_STATUS_CONTINUE;
 }
 
-
-// - - - Specialized Step Functions - - -
-
-/**
- * @brief Opcode 0x08: LD (a16), SP
- * Writes the 16-bit Stack Pointer to an absolute 16-bit address.
- * Takes 5 M-cycles (Fetch + 2 for imm16 + 2 for 16-bit write).
-*/
-void opsLoadSpToAddrStep(void) 
+ExecStatus instrLoadRegHL(void)
 {
-  CpuContext*   ctx  = cpuGetContext();
-  RegisterFile* regs = &ctx->registers;
+  CpuContext*         ctx   = cpuGetContext();
+  const Instruction*  instr = ctx->currentInstruction;
 
-  // - - - M1-M3: Handled by Fetch/Decode (Opcode + Imm16)
-  // - - - M4: Write SP Low Byte
-  if (ctx->microState == 0) 
+  // - - - M2: Address Bus = HL, Data Bus = [HL]
+  if (ctx->mCycle == M2)
   {
-    busWrite(ctx->imm16, cpuLo8(regs->stackPointer));
-    ctx->microState = 1;
-    return;
+    u16 addr = cpuGetReg16(RT_HL);
+    u8  data = busRead(addr);
+
+    cpuSetReg8(instr->reg1, data);
+    return EXEC_STATUS_DONE;
+  }
+
+  return EXEC_STATUS_CONTINUE;
+}
+
+ExecStatus instrLoadHLReg(void)
+{
+  CpuContext*         ctx   = cpuGetContext();
+  const Instruction*  instr = ctx->currentInstruction;
+
+  if (ctx->mCycle == M2) 
+  {
+    // - - - M2: Address Bus = HL, Data Bus = Register (reg2)
+    u16 address = cpuGetReg16(RT_HL);
+    u8  val     = cpuGetReg8(instr->reg2);
+  
+    busWrite(address, val);
+    return EXEC_STATUS_DONE;
+  }
+
+  return EXEC_STATUS_CONTINUE;
+}
+
+ExecStatus instrLoadHL8bitImm(void)
+{
+  CpuContext* ctx = cpuGetContext();
+
+  // - - - M2: Fetch the immediate byte into latch 
+  if (ctx->mCycle == M2)
+  {
+    ctx->latchedVal8 = busRead(ctx->registers.programCounter++);
+    return EXEC_STATUS_CONTINUE;
+  }
+
+  // - - - M3: Write the latched byte to [HL] 
+  if (ctx->mCycle == M3)
+  {
+    u16 addr = cpuGetReg16(RT_HL);
+    busWrite(addr, ctx->latchedVal8);
+    return EXEC_STATUS_DONE;
+  }
+
+  return EXEC_STATUS_CONTINUE;
+}
+
+ExecStatus instrLoadReg16A(void)
+{
+  CpuContext*         ctx   = cpuGetContext();
+  const Instruction*  instr = ctx->currentInstruction;
+
+  if (ctx->mCycle == M2) 
+  { 
+    u16 addr = cpuGetReg16(instr->reg1);
+    busWrite(addr, ctx->registers.a);
+    return EXEC_STATUS_DONE;
+  }
+
+  return EXEC_STATUS_CONTINUE;
+}
+
+ExecStatus instrLoadAReg16(void)
+{
+  CpuContext*         ctx   = cpuGetContext();
+  const Instruction*  instr = ctx->currentInstruction;
+
+  if (ctx->mCycle == M2)
+  {
+    u16 addr          = cpuGetReg16(instr->reg2);
+    ctx->registers.a  = busRead(addr);
+    return EXEC_STATUS_DONE;
+  }
+
+  return EXEC_STATUS_CONTINUE;
+}
+
+ExecStatus instrLoad16BitImmA(void)
+{
+  CpuContext* ctx = cpuGetContext();
+
+  // - - - cycle 2: (M2): Addr = PC, Data = Z <= mem, PC++
+  if (ctx->mCycle == M2)
+  {
+    ctx->latchedAddr16 = busRead(ctx->registers.programCounter++);
+    return EXEC_STATUS_CONTINUE;
+  }
+
+  // - - - cycle 3 (M3): Addr = PC, Data = W <= mem, PC++
+  if (ctx->mCycle == M3)
+  {
+    u16 msb = busRead(ctx->registers.programCounter++);
+    ctx->latchedAddr16 |= (msb << 8);
+    return EXEC_STATUS_CONTINUE;
+  }
+
+  // - - - cycle 4 (M4): Addr = WZ, Data = mem <- A 
+  if (ctx->mCycle == M4)
+  {
+    busWrite(ctx->latchedAddr16, ctx->registers.a);
+    return EXEC_STATUS_DONE;
+  }
+
+  return EXEC_STATUS_CONTINUE;
+}
+
+ExecStatus instrLoadA16BitImm(void)
+{
+  CpuContext* ctx = cpuGetContext();
+
+  if (ctx->mCycle == M2)
+  {
+    ctx->latchedAddr16 = busRead(ctx->registers.programCounter++);
+    return EXEC_STATUS_CONTINUE;
+  }
+
+  if (ctx->mCycle == M3)
+  {
+    u16 msb = busRead(ctx->registers.programCounter++);
+    ctx->latchedAddr16 |= (msb << 8);
+    return EXEC_STATUS_CONTINUE;
+  }
+
+  if (ctx->mCycle == M4)
+  {
+    ctx->registers.a = busRead(ctx->latchedAddr16);
+    return EXEC_STATUS_DONE;
+  }
+
+  return EXEC_STATUS_CONTINUE;
+}
+
+ExecStatus instrLoadHighAC(void)
+{
+  CpuContext* ctx = cpuGetContext();
+
+  // - - - M2: Read from [0xFF00 + C] into A
+  if (ctx->mCycle == M2)
+  {
+    u16 addr          = 0xFF00 | ctx->registers.c;
+    ctx->registers.a  = busRead(addr);
+    return EXEC_STATUS_DONE;
+  }
+  return EXEC_STATUS_CONTINUE;
+}
+
+ExecStatus instrLoadHighCA(void)
+{
+  CpuContext* ctx = cpuGetContext();
+
+  // - - - M2: Write A into [0xFF00 + C]
+  if (ctx->mCycle == M2)
+  {
+    u16 addr = 0xFF00 | ctx->registers.c;
+    busWrite(addr, ctx->registers.a);
+    return EXEC_STATUS_DONE;
+  }
+
+  return EXEC_STATUS_CONTINUE;
+}
+
+ExecStatus instrLoadHighA8BitImm(void)
+{
+  CpuContext* ctx = cpuGetContext();
+
+  // - - - M2: Fetch the offset byte
+  if (ctx->mCycle == M2)
+  {
+    ctx->latchedVal8 = busRead(ctx->registers.programCounter++);
+    return EXEC_STATUS_CONTINUE;
+  }
+
+  // - - - M3: Address Bus = 0xFF00 + Z, Data Bus = A <= mem 
+  if (ctx->mCycle == M3)
+  {
+    u16 addr = 0xFF00 | ctx->latchedVal8;
+    ctx->registers.a = busRead(addr);
+    return EXEC_STATUS_DONE;
+  }
+
+  return EXEC_STATUS_CONTINUE;
+}
+
+ExecStatus instrLoadHigh8BitImmA(void)
+{
+  CpuContext* ctx = cpuGetContext();
+
+  // - - - M2:Fetch the offset byte 
+  if (ctx->mCycle == M2)
+  {
+    ctx->latchedVal8 = busRead(ctx->registers.programCounter++);
+    return EXEC_STATUS_CONTINUE;
+  }
+
+  // - - - M3: Address Bus = 0xFF00 + Z, Data bus = mem <= A
+  if (ctx->mCycle == M3)
+  {
+    u16 addr = 0xFF00 | ctx->latchedVal8;
+    busWrite(addr, ctx->registers.a);
+    return EXEC_STATUS_DONE;
+  }
+
+  return EXEC_STATUS_CONTINUE;
+}
+
+ExecStatus instrLoadAHLIncDec(void)
+{
+  CpuContext*         ctx   = cpuGetContext();
+  const Instruction*  instr = ctx->currentInstruction;
+
+  // - - - M2: Read from [HL]
+  if (ctx->mCycle == M2)
+  {
+    u16 addr          = cpuGetReg16(RT_HL);
+    ctx->registers.a  = busRead(addr);
+  
+    if (instr->opcode == OP_LOAD_A_HL_INCR) cpuSetReg16(RT_HL, addr + 1);
+    else                                    cpuSetReg16(RT_HL, addr - 1);
+
+    return EXEC_STATUS_DONE;
+  }
+
+  return EXEC_STATUS_CONTINUE;
+}
+
+ExecStatus instrLoadHLIncDecA(void)
+{
+  CpuContext*         ctx   = cpuGetContext();
+  const Instruction*  instr = ctx->currentInstruction;
+
+  // - - - M2: Bus access 
+  if (ctx->mCycle == M2)
+  {
+    u16 addr = cpuGetReg16(RT_HL);
+    busWrite(addr, ctx->registers.a);
+
+    // - - - M2: IDU Action
+    if (instr->opcode == OP_LOAD_HL_INCR_A) cpuSetReg16(RT_HL, addr + 1);
+    else                                    cpuSetReg16(RT_HL, addr - 1);
+
+    return EXEC_STATUS_DONE;
+  }
+
+  return EXEC_STATUS_CONTINUE;
+}
+
+ExecStatus instrLoad16BitReg16BitImm(void)
+{
+  CpuContext*         ctx   = cpuGetContext();
+  const Instruction*  instr = ctx->currentInstruction;
+
+  // - - - M2: Read LSB (Z)
+  if (ctx->mCycle == M2)
+  {
+    ctx->latchedAddr16 = busRead(ctx->registers.programCounter++);
+    return EXEC_STATUS_CONTINUE;
+  }
+
+  // - - - M3: Read MSB (W) and commit 
+  if (ctx->mCycle == M3)
+  {
+    u16 msb       = busRead(ctx->registers.programCounter++);
+    u16 fullValue = (msb << 8) | ctx->latchedAddr16;
+    cpuSetReg16(instr->reg1, fullValue);
+    return EXEC_STATUS_DONE;
+  }
+
+  return EXEC_STATUS_CONTINUE;
+}
+
+ExecStatus instrLoad16BitImmSP(void)
+{
+  CpuContext* ctx = cpuGetContext();
+
+  // - - - M2: Read LSB of address 
+  if (ctx->mCycle == M2)
+  {
+    ctx->latchedAddr16 = busRead(ctx->registers.programCounter++);
+    return EXEC_STATUS_CONTINUE;
+  }
+
+  // - --  M3: Read MSB of address 
+  if (ctx->mCycle == M3)
+  {
+    u16 msb = busRead(ctx->registers.programCounter++);
+    ctx->latchedAddr16 |= (msb << 8);
+    return EXEC_STATUS_CONTINUE;
+  }
+
+  // - - - M4: Write SP Low byte to [nn], then nn++
+  if (ctx->mCycle == M4)
+  {
+    busWrite(ctx->latchedAddr16, (u8) (ctx->registers.stackPointer & 0x0FF));
+    return EXEC_STATUS_CONTINUE;
+  }
+
+  // - - - M5: Write SP High byte to [nn + 1]
+  if (ctx->mCycle == M5)
+  {
+    busWrite(ctx->latchedAddr16 + 1, (u8) (ctx->registers.stackPointer >> 8));
+    return EXEC_STATUS_DONE;
+  }
+
+  return EXEC_STATUS_CONTINUE;
+}
+
+ExecStatus instrLoadSpHl(void)
+{
+  CpuContext* ctx = cpuGetContext();
+
+  // - - - M2: Perform the 16-bit transfer 
+  if (ctx->mCycle == M2)
+  {
+    ctx->registers.stackPointer = cpuGetReg16(RT_HL);
+    return EXEC_STATUS_DONE;
+  }
+
+  return EXEC_STATUS_CONTINUE;
+}
+
+ExecStatus instrPop(void)
+{
+  CpuContext*         ctx   = cpuGetContext();
+  const Instruction*  instr = ctx->currentInstruction;
+
+  // - - - M2: Read LSB (Z), then SP <= SP + 1
+  if (ctx->mCycle == M2) 
+  {
+    ctx->latchedVal8 = busRead(ctx->registers.stackPointer++);
+    return EXEC_STATUS_CONTINUE;
+  }
+
+  // - - - M3: Read MSB (W), then SP <= SP + 1 
+  if (ctx->mCycle == M3)
+  {
+    u8  msb     = busRead(ctx->registers.stackPointer++);
+    u16 fullVal = (msb << 8) | ctx->latchedVal8;
+
+    if (instr->reg1 == RT_AF) cpuSetReg16(RT_AF, fullVal & 0xFFF0);
+    else                      cpuSetReg16(instr->reg1, fullVal);
+
+    return EXEC_STATUS_DONE;
+  }
+
+  return EXEC_STATUS_CONTINUE;
+}
+
+ExecStatus instrPush(void)
+{
+  CpuContext*         ctx   = cpuGetContext();
+  const Instruction*  instr = ctx->currentInstruction;
+  u16                 val   = cpuGetReg16(instr->reg1);
+
+  if (ctx->mCycle == M2)
+  {
+    ctx->registers.stackPointer--;
+    return EXEC_STATUS_CONTINUE;
+  }
+
+  if (ctx->mCycle == M3)
+  {
+    busWrite(ctx->registers.stackPointer, (u8)(val >> 8));
+    ctx->registers.stackPointer--;
+    return EXEC_STATUS_CONTINUE;
+  }
+
+  if (ctx->mCycle == M4)
+  {
+    busWrite(ctx->registers.stackPointer, (u8)(val & 0xFF));
+    return EXEC_STATUS_DONE;
+  }
+
+  return EXEC_STATUS_CONTINUE;
+}
+
+ExecStatus instrLoadHlSpE8(void)
+{
+  CpuContext* ctx = cpuGetContext();
+
+  // - - - M2: Fetch signed immediate 'e' into latch Z
+  if (ctx->mCycle == M2)
+  {
+    ctx->latchedVal8 = busRead(ctx->registers.programCounter++);
+    return EXEC_STATUS_CONTINUE;
+  }
+
+  // - - - M3: Perform the calculation 
+  if (ctx->mCycle == M3)
+  {
+    i8  offset = (i8) ctx->latchedVal8;
+    u16 sp     = ctx->registers.stackPointer;
+
+    AluResult16 res = aluAdd16Sp(sp, offset);
+    cpuSetReg16(RT_HL, res.result);
+
+    // - - - Apply flags, Z = 0, N = 0, H and C from ALU 
+    ctx->registers.f = 0;
+    if (res.halfCarry) ctx->registers.f |= FLAG_H;
+    if (res.carry)     ctx->registers.f |= FLAG_C;
+
+    return EXEC_STATUS_DONE;
   }
   
-  // - - - M5: Write SP High Byte
-  if (ctx->microState == 1) 
-  {
-    busWrite(ctx->imm16 + 1, cpuHi8(regs->stackPointer));
-  }
-    
-  cpuFinishInstruction();
-}
-
-void opsLoadHighStep(void) 
-{
-  CpuContext*        ctx  = cpuGetContext();
-  RegisterFile*      regs = &ctx->registers;
-  const Instruction* ins  = ctx->instr;
-
-  if (ctx->microState == 0) 
-  {
-    // - - - 1. Determine address ($FF00 + imeddiate OR $FF00 + C)
-    u16 addr = 0xFF00 + ((ins->mode == AM_R_A8 || ins->mode == AM_A8_R) ? ctx->imm8 : regs->c);
-
-    // - - - 2, Direction check based on Addressing Mode
-
-    // - - - Read modes: AM_R_A8 or AM_R_MR_C, Register 1 is the destination
-    if (ins->mode == AM_R_A8 || ins->mode == AM_R_MR_C)
-    {
-      regs->a = busRead(addr);
-    }
-    
-    // - - - Write mode: AM_A8_R or AM_MR_C (Memory is the destination)
-    else 
-    {
-      busWrite(addr, regs->a);
-    }
-
-    ctx->microState = 1;
-    return;
-  }
-  cpuFinishInstruction();
-}
-
-
-// - - - Dispatcher - - -
-
-void opsPushStep(void)
-{
-  CpuContext*   ctx   = cpuGetContext();
-  RegisterFile* regs  = &ctx->registers;
-  u16           val   = 0;
-
-  switch (ctx->instr->reg1)
-  {
-    case RT_BC: val = cpuGetBC(regs); break;
-    case RT_DE: val = cpuGetDE(regs); break;
-    case RT_HL: val = cpuGetHL(regs); break;
-    case RT_AF: val = cpuGetAF(regs); break;
-    default:
-      FORGE_ASSERT_DEBUG(false, "Unsupported register pair in opsPushStep");
-      break;
-  }
-
-  if (ctx->microState == 0)
-  {
-    ctx->microState = 1;
-    return;
-  }
-
-  if (ctx->microState == 1)
-  {
-    cpuStackWriteHi(val);
-    ctx->microState = 2;
-    return;
-  }
-
-  if (ctx->microState == 2)
-  {
-    cpuStackWriteLo(val);
-  }
-
-  cpuFinishInstruction();
-}
-
-
-void opsPopStep(void) 
-{
-  CpuContext*   ctx   = cpuGetContext();
-  RegisterFile* regs  = &ctx->registers;
-  u16           val   = 0;
-
-  // - - - M2: Read low
-  if (ctx->microState == 0) 
-  { 
-    ctx->readData   = cpuStackReadLo();
-    ctx->microState = 1;
-    return;
-  }
-
-  // - - - M3: Read High
-  if (ctx->microState == 1) 
-  { 
-    // - - - M3: Read High
-    u8 hi = cpuStackReadHi();
-    val   = (hi << 8) | (ctx->readData & 0xFF);
-    
-    switch(ctx->instr->reg1) 
-    {
-        case RT_AF: cpuSetAF(regs, val); break; 
-        case RT_BC: cpuSetBC(regs, val); break;
-        case RT_DE: cpuSetDE(regs, val); break;
-        case RT_HL: cpuSetHL(regs, val); break;
-        default: break;
-    }
-  }
-  cpuFinishInstruction();
-}
-
-void opsLoadStep(void) 
-{
-  CpuContext*        ctx  = cpuGetContext();
-  RegisterFile*      regs = &ctx->registers;
-  const Instruction* ins  = ctx->instr;
-
-  ctx->mCycleInInstr++;
-
-  switch (ins->mode) 
-  {
-    // - - - LD r, r (1 M-cycle)
-    case AM_R_R: 
-      if (ins->reg1 == RT_SP && ins->reg2 == RT_HL) 
-      {
-        if (ctx->microState == 0) 
-        { 
-          ctx->microState = 1; 
-          return; 
-        } 
-        regs->stackPointer = cpuGetHL(regs);
-        cpuFinishInstruction();
-        return;
-      }
-
-      u8* dst = reg8Ptr(regs, ins->reg1);
-      u8* src = reg8Ptr(regs, ins->reg2);
-      if (dst && src) *dst = *src;
-
-      cpuFinishInstruction();
-      break;
-
-    // - - - LD, r, n8 (2 M-cycles)
-    case AM_R_D8: 
-      if (ctx->microState == 0) 
-      { 
-        ctx->microState = 1; 
-        return; 
-      }
-      *reg8Ptr(regs, ins->reg1) = ctx->imm8;
-      cpuFinishInstruction();
-      break;
-
-    // - - - LD rr, n16 (3 M-cycles)
-    case AM_R_D16: 
-      if (ctx->microState == 0) 
-      { 
-        ctx->microState = 1; 
-        return; 
-      }
-      writeReg16(regs, ins->reg1, ctx->imm16);
-      cpuFinishInstruction();
-      break;
-
-    // - - - LD (HL), r or  LD (BC), A etc. (2 M-cycles)
-    case AM_MR_R:
-      if (ctx->microState == 0) 
-      { 
-        ctx->microState = 1; 
-        return; 
-      }
-      u16 destAddr =  (ins->reg1 == RT_HL) ? cpuGetHL(regs) : 
-                      (ins->reg1 == RT_BC) ? cpuGetBC(regs) : cpuGetDE(regs);
-      busWrite(destAddr, *reg8Ptr(regs, ins->reg2));
-
-      // - - - Hanlde HL+/HL- (param is 1 or -1)
-      if (ins->reg1 == RT_HL && ins->param != 0)
-      {
-        cpuSetHL(regs, cpuGetHL(regs) + (i8)ins->param);
-      }
-      cpuFinishInstruction();
-      break;
-
-    // - - - LD r, (HL) or LD A, (BC) etc. (2 M-cycles)
-    case AM_R_MR: 
-      if (ctx->microState == 0) 
-      { 
-        ctx->microState = 1; 
-        return; 
-      }
-      u16 srcAddr = (ins->reg2 == RT_HL) ? cpuGetHL(regs) : 
-                    (ins->reg2 == RT_BC) ? cpuGetBC(regs) : cpuGetDE(regs);
-      *reg8Ptr(regs, ins->reg1) = busRead(srcAddr);
-
-      // - - - Handle HL+/HL- (param is 1 or -1)
-      if (ins->reg2 == RT_HL && ins->param != 0)
-      {
-        cpuSetHL(regs, cpuGetHL(regs) + (i8)ins->param);
-      }
-
-      cpuFinishInstruction();
-      break;
-
-    // - - - LD (a16), A or LD (a16), SP
-    case AM_A16_R: 
-      if (ins->reg1 == RT_SP) opsLoadSpToAddrStep();
-      else 
-      {
-        if (ctx->microState == 0) 
-        { 
-          ctx->microState = 1; 
-          return; 
-        }
-        busWrite(ctx->imm16, regs->a);
-        cpuFinishInstruction();
-      }
-      break;
-
-    // - - - LD A, (a16)
-    case AM_R_A16: 
-      if (ctx->microState == 0) 
-      { 
-        ctx->microState = 1; 
-        return; 
-      }
-      regs->a = busRead(ctx->imm16);
-      cpuFinishInstruction();
-      break;
-
-    case AM_A8_R: 
-    case AM_R_A8: 
-    case AM_MR_C: 
-    case AM_R_MR_C:
-      opsLoadHighStep();
-      break;
-
-    case AM_R:
-      if      (ins->type == IN_PUSH) opsPushStep();
-      else if (ins->type == IN_POP)  opsPopStep();
-      break;
-
-    case AM_MR_D8:
-      {
-        // - --  M2
-        if (ctx->microState == 0) 
-        { 
-          ctx->microState = 1; 
-          return; 
-        }
-
-        // - - - M3:
-        if (ctx->microState == 1)
-        {
-          busWrite(cpuGetHL(regs), ctx->imm8);
-        }
-        cpuFinishInstruction();
-        break;
-      }
-
-    default:
-      FORGE_LOG_DEBUG("Unsupported addressing mode in opsLoadStep: %d", ins->mode);
-      FORGE_ASSERT_DEBUG(false, "Unsupported addressing mode in opsLoadStep");
-      break;
-  }
+  return EXEC_STATUS_CONTINUE;
 }

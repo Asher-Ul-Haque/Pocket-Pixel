@@ -1,100 +1,176 @@
-#pragma once
-#include <ppu/ppu.h>
+#pragma once 
+#include <common.h>
 
-/**
- * @file internal.h
- * @brief Internal helper functions and definitions for the PPU module.
- * @note Not to be included outside of PPU implementation files.
-*/
+#define WIDTH  160
+#define HEIGHT 144
 
-// - - - Internal module communication
-void ppuPipelineTick    (void);
-void ppuOamSearchTick   (void);
-void ppuHandleLyc       (void);
+#define CGB_PALETTE_COUNT       8
+#define CGB_PALETTE_COLOR_COUNT 4
 
-// - - - Color management
-u32 ppuGetColorDMG(u8 PALETTE, u8 COLOR_ID);
-u32 ppuGetColorCGB(u8 PALETTE_IDX, u8 COLOR_ID, bool IS_OBJ);
+#define VRAM_BANK_SIZE  0x2000
+#define VRAM_BANK_COUNT 2 
+#define OAM_SIZE        160
 
-void fifoPush(PpuFifo* FIFO, PpuPixel PIXEL);
-PpuPixel fifoPop(PpuFifo* FIFO);
+#define PALETTE_RAM_SIZE            64
+#define PALETTE_DATA_MASK           0x3F
+#define PALETTE_AUTO_INCREMENT_BIT  0x80
 
-// - - - Helper macros
-#define VRAM_START            0x8000
-#define VRAM_END              0x9FFF
-#define OAM_START             0xFE00
-#define OAM_END               0xFE9F
-#define VRAM_MASK             0x1FFF
-#define OAM_MASK              0xFF
-#define PALLETE_MASK          0x3F
-#define STAT_MASK             0x80
-#define LCD_CONTROL_REG       0xFF40
-#define LCD_STATUS_REG        0xFF41
-#define SCROLL_Y_REG          0xFF42
-#define SCROLL_X_REG          0xFF43
-#define LCD_Y_REG             0xFF44 
-#define LCD_Y_COMPARE_REG     0xFF45
-#define BG_PALETTE_REG        0xFF47
-#define OBJ_PALETTE0_REG      0xFF48
-#define OBJ_PALETTE1_REG      0xFF49
-#define WINDOW_Y_REG          0xFF4A
-#define WINDOW_X_REG          0xFF4B
-#define VBK_REG               0xFF4F 
-#define BG_PALLETE_INDEX_REG  0xFF68
-#define BG_PALLETE_DATA_REG   0xFF69
-#define OBJ_PALLETE_INDEX_REG 0xFF6A
-#define OBJ_PALLETE_DATA_REG  0xFF6B
-#define DMA_TRIGGER           0xFF46
+#define TILE_SIDE     8
+#define TILE_COUNT_X  16
+#define TILE_COUNT_Y  24
 
-// - - - Memory Map Addresses 
-#define VRAM_BASE_ADDR             0x8000
-#define VRAM_MAP_0_ADDR            0x9800
-#define VRAM_MAP_1_ADDR            0x9C00
-#define VRAM_TILE_DATA_0_ADDR      0x8800  /// Signed addressing area
-#define VRAM_TILE_DATA_1_ADDR      0x8000  /// Unsigned addressing area
+#define PPU_DOTS_PER_SCANLINE 456
+#define PPU_DOTS_PER_FRAME    70224
 
-// - - - Addressing Logic
-#define TILE_DATA_SIGNED_OFFSET    128     /// Offset for 0x8800-0x97FF
-#define TILE_DATA_SIZE_BYTES       16      /// 8x8 pixels, 2bpp 
-#define TILE_PIXEL_WIDTH           8       /// Width of one tile 
-#define MAP_ROW_SIZE_TILES         32      /// Tiles per row in a map 
+#define DOT_OAM_SCAN        80
+#define DOTS_DRAWING        172
+#define DOTS_DRAWING_MAX    289
+#define DOTS_HBLANK_DURATION (PPU_DOTS_PER_SCANLINE - DOT_OAM_SCAN - DOTS_DRAWING)
+#define DOTS_TRANSFER_START DOT_OAM_SCAN
+#define DOTS_HBLANK_START   (DOT_OAM_SCAN + DOTS_DRAWING)
 
-// - - - Timing and Thresholds
-#define T_CYCLES_MODE_2            80      /// OAM Search duration
-#define T_CYCLES_SCANLINE          456     /// Total line duration
-#define T_CYCLE_STEP               2       /// Fetcher steps every 2 T-cycles
-#define FIFO_REFILL_THRESHOLD      8       /// Min pixels before fetcher pauses
-#define FIFO_MASK                  15      /// Mask for circular FIFO indexing (size 16)
+#define LY_VBLANK_START 144 
+#define LY_MAX          153
+#define LY_PER_FRAME    154
 
-// - - - Coordinate Adjustments
-#define WINDOW_X_REG_BIAS          7       /// WX=7 is screen X=0 
-#define SPRITE_X_REG_BIAS          8       /// Sprite X-reg 8 is screen X=0
-#define SPRITE_Y_REG_BIAS          16      /// Sprite Y-reg 16 is screen Y=0
-                                           
-// - - - OAM
-#define OAM_ENTRY_COUNT            40
-#define MAX_SPRITES_SCANLINE       10
-#define SPRITE_Y_OFFSET            16   /// Register Y - 16 = Screen Y 
-#define SPRITE_X_OFFSET            8    /// Register X - 8 = Screen X 
-#define SPRITE_SIZE_BYTES          4    /// Each OAM entry is 4 bytes
-#define SPRITE_X_ATTR_OFFSET       1    /// X coordinate is at byte 1
-#define SPRITE_TILE_ATTR_OFFSET    2    /// Tile index is at byte 2
-#define SPRITE_FLAGS_ATTR_OFFSET   3    /// Attributes are at byte 3
-                                        
-#define RGB555_R_MASK              0x001F  
-#define RGB555_G_MASK              0x03E0  
-#define RGB555_B_MASK              0x7C00  
-#define RGB555_G_SHIFT             5       
-#define RGB555_B_SHIFT             10      
+#define CGB_DMA_BLOCKS_LEFT_EDGE 0xFF 
 
-#define ARGB_ALPHA_OPAQUE          0xFF000000
-#define CGB_PALETTE_SIZE           8       /// 8 Background, 8 Object
-#define COLORS_PER_PALETTE         4       /// 4 colors per palette 
-                                           
-// - - - Hardware defaults
-#define DEFAULT_LCDC               0x91    /// LCD On, BG & Window enabled, Obj enabled, 8x8 sprites 
-#define DEFAULT_STAT               0x85    /// LY=LYC interrupt enabled, Mode 2 OAM interrupt enabled
+#define BG_SCROLLING_PENALTY 6
+#define SPRITE_X_0_PENALTY   11
+#define VRAM_DATA_FETCH      6
 
-#define SCREEN_PIXELS_X     160
-#define SCREEN_PIXELS_Y     144
-#define VBLANK_END_LINE     153
+#define BG_MAP_0_OFFSET 0x1800
+#define BG_MAP_1_OFFSET 0x1C00
+#define TILE_DATA_8000  0x0000
+#define TILE_DATA_8800  0x1000
+#define TILE_BYTES      16
+#define TILE_MAP_WIDTH  32
+#define TILE_MAP_MASK   0x1F
+#define TILE_ROW_SHIFT  3
+
+#define LCDC_BG_WIN_ENABLE_MASK 0x01
+#define LCDC_OBJ_ENABLE_MASK    0x02
+#define LCDC_OBJ_SIZE_MASK      0x04
+#define LCDC_BG_TILE_MAP_MASK   0x08
+#define LCDC_BG_WIN_DATA_MASK   0x10
+#define LCDC_WIN_ENABLE_MASK    0x20
+#define LCDC_WIN_TILE_MAP_MASK  0x40
+#define LCDC_ENABLE_MASK        0x80
+
+#define STAT_MODE_BITS_MASK      0x03
+#define STAT_LYC_EQUALS_MASK     0x04
+#define STAT_HBLANK_INT_MASK     0x08
+#define STAT_VBLANK_INT_MASK     0x10
+#define STAT_OAM_INT_MASK        0x20
+#define STAT_LYC_INT_MASK        0x40
+#define STAT_UNUSED_HIGH_BIT     0x80
+#define STAT_WRITABLE_BITS_MASK  (STAT_HBLANK_INT_MASK | STAT_VBLANK_INT_MASK | STAT_OAM_INT_MASK | STAT_LYC_INT_MASK)
+
+#define WINDOW_X_OFFSET         7
+#define WINDOW_WX_MAX           166
+
+#define SPRITE_COUNT              40
+#define SPRITE_OAM_ENTRY_BYTES    4
+#define SPRITE_WIDTH              8
+#define SPRITE_HEIGHT_8           8
+#define SPRITE_HEIGHT_16          16
+#define SPRITE_MAX_PER_SCANLINE   10
+#define SPRITE_Y_OFFSET           16
+#define SPRITE_X_OFFSET           8
+
+#define OAM_Y_OFFSET          0
+#define OAM_X_OFFSET          1
+#define OAM_TILE_OFFSET       2
+#define OAM_ATTR_OFFSET       3
+
+#define OBJ_ATTR_BG_PRIORITY_MASK   0x80
+#define OBJ_ATTR_Y_FLIP_MASK        0x40
+#define OBJ_ATTR_X_FLIP_MASK        0x20
+#define OBJ_ATTR_DMG_PALETTE_MASK   0x10
+#define OBJ_ATTR_VRAM_BANK_MASK     0x08
+#define OBJ_ATTR_CGB_PALETTE_MASK   0x07
+
+#define BG_ATTR_PRIORITY_MASK       0x80
+#define BG_ATTR_Y_FLIP_MASK         0x40
+#define BG_ATTR_X_FLIP_MASK         0x20
+#define BG_ATTR_VRAM_BANK_MASK      0x08
+#define BG_ATTR_CGB_PALETTE_MASK    0x07
+
+#define BOOT_LCDC 0x91
+#define BOOT_STAT 0x85
+#define BOOT_BGP  0xFC
+#define BOOT_OBP0 0xFF
+#define BOOT_OBP1 0xFF
+
+#define TILE_LINE_BYTES          2
+#define TILE_PIXEL_MASK          (TILE_SIDE - 1)
+#define PIXEL_COLOR_MASK         0x01
+#define DMG_OBJ_PALETTE_0        0
+#define DMG_OBJ_PALETTE_1        1
+#define LAYER_OBJECT             1
+#define DEFAULT_VRAM_BANK        0
+#define SPRITE_TILE_MASK_8X16    0xFE
+#define INVALID_SPRITE_INDEX     0xFF
+#define INVALID_SCREEN_X         0xFF
+#define EMPTY_PIXEL_COLOR        0
+#define DEFAULT_BG_PALETTE       0
+#define DEFAULT_LAYER_BACKGROUND 0
+
+#define VRAM_START_ADDR             0x8000u
+#define HDMA_SRC_HIGH_SHIFT         8
+#define HDMA_SRC_LOW_ALIGN_MASK     0xF0u
+#define HDMA_DEST_HIGH_SHIFT        8
+#define HDMA_DEST_LOW_ALIGN_MASK    0xF0u
+#define HDMA_DEST_WINDOW_MASK       0x1Fu
+#define HDMA_MODE_BIT_MASK          0x80u
+#define HDMA_BLOCKS_LIMIT_MASK      0x7Fu
+#define HDMA_FINISHED_STATUS        0xFFu
+
+#define OAM_DMA_SRC_SHIFT           8
+#define OAM_DMA_START_INDEX         0
+#define CGB_DMA_START_INDEX         0
+#define BUS_BANK_BIT_MASK           0x01
+
+#define FETCH_STEP_DOTS             2
+#define FETCH_CLOCK_RESET           0
+
+#define MAP_START_0                 0x9800u
+#define MAP_START_1                 0x9C00u
+#define MAP_DATA_MASK               0x03FFu
+
+#define TILE_DATA_MODE_0_START      0x9000  ///< Address $8800 signed indexing base midpoint
+#define TILE_DATA_MODE_1_START      0x8000u ///< Address $8000 unsigned indexing base
+
+#define ATTR_PALETTE_MASK           0x07u
+#define ATTR_VRAM_BANK_MASK         0x08u
+#define ATTR_X_FLIP_MASK            0x20u
+#define ATTR_Y_FLIP_MASK            0x40u
+#define ATTR_PRIORITY_MASK          0x80u
+
+#define FIFO_MAX_CAPACITY           8
+#define PIXEL_BIT_WIDTH             8
+
+#define FIFO_CAPACITY               8
+#define MAX_SCREEN_X                160
+#define PIXEL_COLOR_TRANSPARENT     0
+#define PIXEL_COLOR_OPAQUE_MIN      1
+
+#define LCDC_MASTER_ENABLE_MASK     0x01
+
+#define FIFO_EMPTY_COUNT            0
+#define PIXEL_BIT_WIDTH             8
+#define PIXEL_SHIFT_HIGH_BIT        1
+
+#define BIT_MASK_BASE               0x01
+
+#define COLOR_BYTES_PER_PALETTE     8
+#define COLOR_BYTES_PER_INDEX       2
+
+#define REG_BGP_ADDR                0xFF47u
+#define REG_OBP0_ADDR               0xFF48u
+#define REG_OBP1_ADDR               0xFF49u
+
+#define COLOR_BYTES_PER_PALETTE     8
+#define COLOR_BYTES_PER_INDEX       2
+
+#define DMG_SHADE_LIGHTEST          0

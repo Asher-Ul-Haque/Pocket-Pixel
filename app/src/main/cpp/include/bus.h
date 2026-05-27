@@ -31,6 +31,8 @@
 
 #define BUS_ADDR_IE             0xFFFF
 
+#define BUS_ADDR_APU_START      0xFF10 
+#define BUS_ADDR_APU_END        0xFF3F
 /**
  * @brief Reads a byte from the bus at the specified address.
  * @param ADDRESS The 16-bit address to read from.
