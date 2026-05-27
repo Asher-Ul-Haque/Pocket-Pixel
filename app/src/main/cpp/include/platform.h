@@ -1,3 +1,8 @@
+/**
+ * @file platform.h 
+ * @brief this is to provide the emulator to access to specific platform functions like file io, sound io, graphics, keyboard input etc
+*/
+
 #pragma once 
 #include <common.h>
 #include <ppu/ppu.h>
@@ -22,13 +27,15 @@ typedef struct DmgPalette
 
 // - - - SUBSYSTEM INTERFACES - - - 
 
+/// @brief File IO access provided to emulator
 typedef struct CartridgeFileIO 
 {
-  bool (*saveRamToFile)       (const u8*  ramData,        u32 ramSize);
-  bool (*loadRamFromFile)     (u8*        ramDataBuffer,  u32 bufferSize);
+  bool (*saveRamToFile)       (const u8*  RAM_DATA,        u32 RAM_SIZE);
+  bool (*loadRamFromFile)     (u8*        RAM_DATA_BUFFER, u32 BUFFER_SIZE);
   u32  (*getExpectedSaveSize) (void);
 } CartridgeFileIO;
 
+/// @brief Graphics access provided to the emulator
 typedef struct RendererSystem 
 {
   bool (*init)(void);
@@ -38,17 +45,22 @@ typedef struct RendererSystem
   void (*enableShader) (bool        ENABLE);
 
   // - - - Core Interaction Hook
-  void (*renderFrame)(const PpuFrame* FRAME);
-  void (*drawTileView)(const u8* VBK0, const u8* VBK1);
+  void (*renderFrame) (const PpuFrame* FRAME);
+
+  #ifdef DEBUG 
+    void (*drawTileView)(const u8* VBK0, const u8* VBK1); 
+  #endif
   void (*present)(void);
   void (*cleanup)(void);
 } RendererSystem;
 
+/// @brief Keyboard / Gamepad access to the emulator
 typedef struct InputSystem
 {
   void (*poll)(bool* IS_RUNNING);
 } InputSystem;
 
+/// @brief Audio access to the emulator
 typedef struct AudioSystem
 {
   bool (*init)        (void);
@@ -56,8 +68,7 @@ typedef struct AudioSystem
   void (*cleanup)     (void);
 } AudioSystem;
 
-// - - - MASTER PLATFORM CONTEXT - - -
-
+/// @brief: MASTER PLATFORM CONTEXT
 typedef struct PlatformContext 
 {
   const char*       name;
@@ -70,5 +81,12 @@ typedef struct PlatformContext
 
 // - - - Architecture Endpoints - - -
 
+/**
+ * @brief Global access to platform layer to the emualtor 
+ * @return a pointer to the platform 
+ * @note This will never be a null pointer
+*/
 PlatformContext* platformGetContext(void);
+
+/// @brief Initialize platform systems 
 void             platformInit(void);

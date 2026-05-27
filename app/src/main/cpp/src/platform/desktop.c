@@ -303,7 +303,9 @@ void platformInit(void)
   gPlatformCtx.video.setDmgPalette  = sdlSetDmgPalette;
   gPlatformCtx.video.enableShader   = sdlSetShader;
   gPlatformCtx.video.renderFrame    = sdlRenderFrame;
-  gPlatformCtx.video.drawTileView   = sdlDrawTileView;
+  #ifdef DEBUG 
+    gPlatformCtx.video.drawTileView   = sdlDrawTileView;
+  #endif
   gPlatformCtx.video.present        = sdlPresent;
   gPlatformCtx.video.cleanup        = sdlCleanup;
 
