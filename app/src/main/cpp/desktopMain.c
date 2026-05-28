@@ -63,6 +63,11 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[]) {
     u64 romSize = ftell(file);
     fseek(file, 0, SEEK_SET);
 
+    if (romSize == 0 || romSize > 64 * 1024 * 1024) {
+        fclose(file);
+        return 1;
+    }
+
     u8* romData = (u8*)malloc(romSize);
     if (!romData) {
         fclose(file);
