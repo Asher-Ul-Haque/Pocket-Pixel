@@ -8692,6 +8692,7 @@ var _webSetPaused = Module['_webSetPaused'] = makeInvalidEarlyAccess('_webSetPau
 var _webIsPaused = Module['_webIsPaused'] = makeInvalidEarlyAccess('_webIsPaused');
 var _webCheckAndClearSaveUpdated = Module['_webCheckAndClearSaveUpdated'] = makeInvalidEarlyAccess('_webCheckAndClearSaveUpdated');
 var _webSetPalette = Module['_webSetPalette'] = makeInvalidEarlyAccess('_webSetPalette');
+var _webCaptureFrameBuffer = Module['_webCaptureFrameBuffer'] = makeInvalidEarlyAccess('_webCaptureFrameBuffer');
 var _SDL_free = Module['_SDL_free'] = makeInvalidEarlyAccess('_SDL_free');
 var _SDL_malloc = Module['_SDL_malloc'] = makeInvalidEarlyAccess('_SDL_malloc');
 var _SDL_calloc = Module['_SDL_calloc'] = makeInvalidEarlyAccess('_SDL_calloc');
@@ -8737,6 +8738,7 @@ function assignWasmExports(wasmExports) {
   assert(typeof wasmExports['webIsPaused'] != 'undefined', 'missing Wasm export: webIsPaused');
   assert(typeof wasmExports['webCheckAndClearSaveUpdated'] != 'undefined', 'missing Wasm export: webCheckAndClearSaveUpdated');
   assert(typeof wasmExports['webSetPalette'] != 'undefined', 'missing Wasm export: webSetPalette');
+  assert(typeof wasmExports['webCaptureFrameBuffer'] != 'undefined', 'missing Wasm export: webCaptureFrameBuffer');
   assert(typeof wasmExports['SDL_free'] != 'undefined', 'missing Wasm export: SDL_free');
   assert(typeof wasmExports['SDL_malloc'] != 'undefined', 'missing Wasm export: SDL_malloc');
   assert(typeof wasmExports['SDL_calloc'] != 'undefined', 'missing Wasm export: SDL_calloc');
@@ -8778,6 +8780,7 @@ function assignWasmExports(wasmExports) {
   _webIsPaused = Module['_webIsPaused'] = createExportWrapper('webIsPaused', 0);
   _webCheckAndClearSaveUpdated = Module['_webCheckAndClearSaveUpdated'] = createExportWrapper('webCheckAndClearSaveUpdated', 0);
   _webSetPalette = Module['_webSetPalette'] = createExportWrapper('webSetPalette', 4);
+  _webCaptureFrameBuffer = Module['_webCaptureFrameBuffer'] = createExportWrapper('webCaptureFrameBuffer', 0);
   _SDL_free = Module['_SDL_free'] = createExportWrapper('SDL_free', 1);
   _SDL_malloc = Module['_SDL_malloc'] = createExportWrapper('SDL_malloc', 1);
   _SDL_calloc = Module['_SDL_calloc'] = createExportWrapper('SDL_calloc', 2);

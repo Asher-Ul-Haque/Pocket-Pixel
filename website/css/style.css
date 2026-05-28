@@ -64,14 +64,14 @@ button { font-family: inherit; cursor: pointer; border-radius: 0; outline: none;
     background-color: var(--medium-green);
     border: 4px solid var(--green); /* Updated to Green Trim */
     color: var(--pure-white);
-    box-shadow: 4px 4px 0 var(--green); /* Updated to Green Shadow */
+    box-shadow: 4px 4px 0 var(--pure-black); /* Updated to Green Shadow */
     transition: transform 0.05s, box-shadow 0.05s;
 }
 
 .top-right-corner { position: absolute; top: 20px; right: 20px; z-index: 5000; display: flex; gap: 15px; }
 
 .hotbar button, .top-right-corner button {
-    background-color: transparent; border: none; box-shadow: 4px 4px 0 var(--green); /* Updated to Green Shadow */
+    background-color: transparent; border: none; box-shadow: 4px 4px 0 var(--pure-black); /* Updated to Green Shadow */
     transition: transform 0.05s, box-shadow 0.05s; display: flex; justify-content: center; align-items: center; padding: 0;
 }
 .hotbar button img, .top-right-corner button img { width: 100%; height: 100%; object-fit: cover; }
@@ -90,7 +90,7 @@ button { font-family: inherit; cursor: pointer; border-radius: 0; outline: none;
 
 .dpad-grid { width: 80%; aspect-ratio: 1; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); margin: 0 auto 50px; }
 .dpad-btn, .dpad-center { width: 100%; height: 100%; background-color: var(--medium-green); }
-.dpad-btn.dir, .dpad-center { border: 4px solid var(--green); box-shadow: 4px 4px 0 var(--green); transition: transform 0.05s, box-shadow 0.05s; }
+.dpad-btn.dir, .dpad-center { border: 4px solid var(--green); box-shadow: 4px 4px 0 var(--pure-black); transition: transform 0.05s, box-shadow 0.05s; }
 .dpad-btn.dir:active, .dpad-btn.dir.pressed { transform: translate(4px, 4px); box-shadow: 0px 0px 0 var(--green); }
 .dpad-btn.up { border-bottom: none; box-shadow: none; }
 .dpad-btn.down { border-top: none; }
@@ -135,11 +135,42 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px;
 .custom-theme-picker input[type="color"]::-webkit-color-swatch { border: none; }
 
 /* --- Keybinding --- */
-.keybind-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
-.keybind-row { display: flex; justify-content: space-between; align-items: center; background: var(--dark-green); padding: 8px 12px; color: var(--pure-white); font-size: 1.1rem; }
-.keybind-btn { background: var(--pure-black); color: var(--pure-white); border: 2px solid var(--light-green); padding: 8px; width: 95px; font-size: 0.85rem; box-shadow: none; transition: all 0.2s; }
-.keybind-btn:hover { background: var(--medium-green); }
-.keybind-btn.listening { background: var(--error-red); border-color: var(--pure-white); animation: pulse 1s infinite; }
+.keybind-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.keybind-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--dark-green);
+  padding: 6px 10px;
+  color: var(--pure-white);
+  font-size: 0.95rem;
+}
+
+.keybind-btn {
+  background: var(--pure-black);
+  color: var(--pure-white);
+  border: 2px solid var(--light-green);
+  padding: 5px 7px;
+  width: 80px;
+  font-size: 0.75rem;
+  box-shadow: none;
+  transition: all 0.2s;
+}
+
+.keybind-btn:hover {
+  background: var(--medium-green);
+}
+
+.keybind-btn.listening {
+  background: var(--error-red);
+  border-color: var(--pure-white);
+  animation: pulse 1s infinite;
+}
 
 /* --- Save States --- */
 .state-grid { display: flex; flex-direction: column; gap: 10px; max-height: 60vh; overflow-y: auto; padding-right: 10px;}

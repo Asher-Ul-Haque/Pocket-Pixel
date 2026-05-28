@@ -29,7 +29,7 @@ static bool sdlVideoInit(void)
 {
   if (!SDL_Init(SDL_INIT_VIDEO)) return false; 
 
-  gWindow = SDL_CreateWindow("Game Boy Emulator", WIDTH * 4, HEIGHT * 4, SDL_WINDOW_RESIZABLE);
+  gWindow = SDL_CreateWindow("Pocket Pixel", WIDTH * 4, HEIGHT * 4, SDL_WINDOW_RESIZABLE);
   if (!gWindow) return false; 
 
   gRenderer = SDL_CreateRenderer(gWindow, NULL);

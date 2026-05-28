@@ -99,7 +99,20 @@ window.PocketEngine = {
         const ctx = offscreenCanvas.getContext('2d');
         const imgData = ctx.createImageData(160, 144);
 
-        imgData.data.set(view);
+        // SWIZZLE LAYER: Rearrange the incoming ABGR raw heap bytes into Canvas RGBA format
+        for (let i = 0; i < size; i += 4) {
+            let r = view[i + 0];
+            let g = view[i + 1];
+            let b = view[i + 2];
+            let a = view[i + 3];
+
+            // Re-order the flipped color channels explicitly to match Canvas primitives
+            imgData.data[i + 0] = b; // True Red channel maps out of index 2
+            imgData.data[i + 1] = g; // Green channel stays consistent at index 1
+            imgData.data[i + 2] = r; // True Blue channel maps out of index 0
+            imgData.data[i + 3] = a; // Alpha channel stays solid at index 3
+        }
+
         ctx.putImageData(imgData, 0, 0);
 
         const dataUrl = offscreenCanvas.toDataURL('image/jpeg', 0.85);

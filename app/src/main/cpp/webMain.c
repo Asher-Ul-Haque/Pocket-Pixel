@@ -261,6 +261,7 @@ void webSetPalette(u32 c0, u32 c1, u32 c2, u32 c3) {
     }
 }
 
+EMSCRIPTEN_KEEPALIVE
 u32* webCaptureFrameBuffer(void) {
     if (!ppu) return NULL;
     u32* buffer = (u32*)malloc(160 * 144 * sizeof(u32));
@@ -279,12 +280,19 @@ u32* webCaptureFrameBuffer(void) {
                     case 1: buffer[index] = current_c1; break;
                     case 2: buffer[index] = current_c2; break;
                     case 3: buffer[index] = current_c3; break;
-                    default: buffer[index] = 0xFF00FFFF; break;
+                    default: buffer[index] = 0xFFFF00FF; break;
                 }
             } else {
-                u8 r5 = (rawCoreData & 0x001F); u8 g5 = (rawCoreData & 0x03E0) >> 5; u8 b5 = (rawCoreData & 0x7C00) >> 10;
-                u8 r8 = (r5 << 3) | (r5 >> 2); u8 g8 = (g5 << 3) | (g5 >> 2); u8 b8 = (b5 << 3) | (b5 >> 2);
-                buffer[index] = (r8 << 24) | (g8 << 16) | (b8 << 8) | 0xFF;
+                u8 r5 = (rawCoreData & 0x001F); 
+                u8 g5 = (rawCoreData & 0x03E0) >> 5; 
+                u8 b5 = (rawCoreData & 0x7C00) >> 10;
+                
+                u8 r8 = (r5 << 3) | (r5 >> 2); 
+                u8 g8 = (g5 << 3) | (g5 >> 2); 
+                u8 b8 = (b5 << 3) | (b5 >> 2);
+
+                // FIXED: Swizzled channel output to guarantee perfect little-endian interpretation
+                buffer[index] = (0xFF << 24) | (b8 << 16) | (g8 << 8) | r8;
             }
         }
     }
