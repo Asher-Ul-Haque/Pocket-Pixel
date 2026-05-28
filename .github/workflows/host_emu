@@ -1,0 +1,24 @@
+name: Deploy Pocket Pixel Frontend
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+# Set up clean write permissions to allow the runner to push to GitHub Pages
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Deploy Subdirectory to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: website # <--- Directs the action to treat the 'website' folder as the root directory of your site!
+          branch: gh-pages # Deploys compiling branches safely onto an isolated gh-pages branch
