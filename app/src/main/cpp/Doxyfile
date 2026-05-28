@@ -1,0 +1,61 @@
+# Doxyfile for C Project
+
+# Project
+PROJECT_NAME           = "Pixel Pocket Core"
+PROJECT_BRIEF          = "Implementation of Game Boy Emulator C core"
+OUTPUT_DIRECTORY       = docs
+CREATE_SUBDIRS         = NO
+
+# Input
+INPUT                  = src include
+FILE_PATTERNS          = *.c *.h *.cpp *.hpp
+RECURSIVE              = YES
+
+# Build
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = YES
+EXTRACT_STATIC         = YES
+
+# Parsing
+OPTIMIZE_OUTPUT_FOR_C  = YES
+EXTENSION_MAPPING      = h=C
+
+# Documentation style
+JAVADOC_AUTOBRIEF      = YES
+MULTILINE_CPP_IS_BRIEF = YES
+QT_AUTOBRIEF           = NO
+
+# Warnings
+WARN_IF_UNDOCUMENTED   = YES
+WARN_IF_DOC_ERROR      = YES
+WARN_NO_PARAMDOC       = NO
+
+# Source browsing
+SOURCE_BROWSER         = YES
+INLINE_SOURCES         = NO
+
+# Output formats
+GENERATE_HTML          = YES
+HTML_OUTPUT            = html
+
+GENERATE_LATEX         = NO
+
+# Graphs (requires Graphviz)
+HAVE_DOT               = YES
+CALL_GRAPH             = YES
+CALLER_GRAPH           = YES
+
+# Preprocessor
+ENABLE_PREPROCESSING   = YES
+MACRO_EXPANSION        = YES
+EXPAND_ONLY_PREDEF     = NO
+
+# Include paths
+INCLUDE_PATH           = include 
+INCLUDE_FILE_PATTERNS  = *.h *.hpp
+
+# Misc
+QUIET                  = NO
+GENERATE_TREEVIEW      = YES
+FULL_PATH_NAMES        = NO
+STRIP_FROM_PATH        = src include

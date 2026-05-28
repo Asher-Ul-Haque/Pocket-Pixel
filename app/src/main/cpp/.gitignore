@@ -1,0 +1,18 @@
+# Documentation
+*docs/
+*.docs/
+
+# Test Roms
+testRoms/PokeCrystal.gbc
+testRoms/SuperMarioLand.gb
+
+
+# Build
+/build/
+.build/
+
+# Binaries
+bin/
+.bin/
+*.o
+.cache/

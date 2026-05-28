@@ -1,6 +1,6 @@
 package just.somebody.templates.presentation.viewModels
 
-import androidx.compose.ui.res.stringResource
+import android.view.View
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import just.somebody.templates.App
@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+
 data class BrowseUIState
 (
   val selectedIndex  : Int,
@@ -18,6 +19,17 @@ data class BrowseUIState
   val showSettings   : Boolean,
   val showBars       : Boolean,
 )
+
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
+
+private fun hideSystemUI() {
+  WindowInsetsControllerCompat(window, window.decorView).let { controller ->
+    controller.hide(WindowInsetsCompat.Type.systemBars())
+    controller.systemBarsBehavior =
+      WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+  }
+}
 
 class BrowseViewModel : ViewModel()
 {

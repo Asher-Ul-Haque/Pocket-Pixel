@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pocket Pixel</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" type="image/svg+xml" href="assets/gameboy.png">
+</head>
+<body>
+    <div id="save-toast">GAME SAVED</div>
+    <audio id="startup-sound" src="assets/startup.mp3" preload="auto"></audio>
+
+    <div id="boot-screen">
+        <img src="assets/gameboy.png" alt="Pocket Pixel Mascot" id="mascot">
+        <div id="start-prompt" class="pulse-text">CLICK OR PRESS SPACE</div>
+    </div>
+
+    <div id="main-layout" style="display: none;">
+        
+        <div class="side-pane left-pane">
+            <div class="dpad-grid">
+                <button class="dpad-btn diag top-left"></button>
+                <button class="dpad-btn dir up"></button>
+                <button class="dpad-btn diag top-right"></button>
+                
+                <button class="dpad-btn dir left"></button>
+                <div class="dpad-center"></div>
+                <button class="dpad-btn dir right"></button>
+                
+                <button class="dpad-btn diag bottom-left"></button>
+                <button class="dpad-btn dir down"></button>
+                <button class="dpad-btn diag bottom-right"></button>
+            </div>
+            
+            <div class="pill-btn-container">
+                <button class="pill-btn" id="btn-select">SELECT</button>
+            </div>
+        </div>
+
+        <div class="center-pane">
+            <div class="hotbar-container">
+                <div class="hotbar">
+                    <button id="btn-load" title="Load State"><img src="assets/icons/svg/folder.svg" alt="Load"></button>
+                    <button id="btn-ff" title="Fast Forward"><img src="assets/icons/svg/fast.svg" alt="Fast Forward"></button>
+                    <button id="btn-play-pause" title="Play / Pause"><img src="assets/icons/svg/play.svg" alt="Play"></button>
+                    <button id="btn-save" title="Save State"><img src="assets/icons/svg/save.svg" alt="Save"></button>
+                    <button id="btn-eject" title="Eject Cartridge"><img src="assets/icons/svg/eject.svg" alt="Eject"></button>
+                </div>
+            </div>
+            
+            <div class="console-screen">
+                <div class="cartridge-prompt pulse-text">INSERT CARTRIDGE</div>
+            </div>
+        </div>
+
+        <div class="side-pane right-pane">
+            
+            <div class="top-right-corner">
+                <button id="github-btn" title="Support on GitHub"><img src="assets/icons/svg/github.svg" alt="GitHub"></button>
+                <button id="playstore-btn" title="Rate on Play Store"><img src="assets/icons/svg/playstore.svg" alt="Play Store"></button>
+                <button id="settings-btn" title="Settings"><img src="assets/icons/svg/settings.svg" alt="Settings"></button>
+            </div>
+
+            <div class="action-btn-container">
+                <button class="action-btn" id="btn-b">B</button>
+                <button class="action-btn" id="btn-a" style="margin-top: -40px;">A</button>
+            </div>
+            <div class="pill-btn-container">
+                <button class="pill-btn" id="btn-start">START</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="settings-modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>SETTINGS</h2>
+                <button class="close-modal" id="close-settings">X</button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="modal-col">
+                    <div class="settings-section">
+                        <h3>AUDIO MIXER</h3>
+                        <div class="slider-group">
+                            <label>CH1 (SQUARE 1) <input type="range" id="vol-ch1" min="0" max="1" step="0.1" value="1"></label>
+                            <label>CH2 (SQUARE 2) <input type="range" id="vol-ch2" min="0" max="1" step="0.1" value="1"></label>
+                            <label>CH3 (WAVE) <input type="range" id="vol-ch3" min="0" max="1" step="0.1" value="1"></label>
+                            <label>CH4 (NOISE) <input type="range" id="vol-ch4" min="0" max="1" step="0.1" value="1"></label>
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <h3>DMG THEMES</h3>
+                        <div id="theme-list" class="theme-list"></div>
+                        <h4 style="margin-top: 15px; margin-bottom: 5px; color: var(--dark-green);">CUSTOM PALETTE</h4>
+                        <div class="custom-theme-picker">
+                            <input type="color" id="custom-c0" value="#ffffff" title="Lightest (Background)">
+                            <input type="color" id="custom-c1" value="#aaaaaa" title="Light Shadow">
+                            <input type="color" id="custom-c2" value="#555555" title="Dark Shadow">
+                            <input type="color" id="custom-c3" value="#000000" title="Darkest (Outlines)">
+                            <button id="btn-apply-custom" class="pill-btn" style="width: 80px; height: 35px; font-size: 0.8rem; margin-left: 10px;">APPLY</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-col">
+                    <div class="settings-section" style="height: 100%;">
+                        <h3>KEYBINDINGS</h3>
+                        <div class="keybind-grid">
+                            <div class="keybind-row" style="background: transparent; border-bottom: 2px solid var(--dark-green); margin-bottom: 5px; padding-top: 0; padding-bottom: 5px;">
+                                <span style="color: var(--dark-green); font-weight: bold;">ACTION</span>
+                                <div style="display:flex; gap:10px;">
+                                    <span style="width: 95px; text-align: center; color: var(--dark-green); font-weight: bold;">KEY</span>
+                                    <span style="width: 95px; text-align: center; color: var(--dark-green); font-weight: bold;">PAD</span>
+                                </div>
+                            </div>
+                            <div class="keybind-row"><span>UP</span><div style="display:flex; gap:10px;"><button class="keybind-btn kb" data-action="Up">ArrowUp</button><button class="keybind-btn gp" data-action="Up">Btn 12</button></div></div>
+                            <div class="keybind-row"><span>DOWN</span><div style="display:flex; gap:10px;"><button class="keybind-btn kb" data-action="Down">ArrowDown</button><button class="keybind-btn gp" data-action="Down">Btn 13</button></div></div>
+                            <div class="keybind-row"><span>LEFT</span><div style="display:flex; gap:10px;"><button class="keybind-btn kb" data-action="Left">ArrowLeft</button><button class="keybind-btn gp" data-action="Left">Btn 14</button></div></div>
+                            <div class="keybind-row"><span>RIGHT</span><div style="display:flex; gap:10px;"><button class="keybind-btn kb" data-action="Right">ArrowRight</button><button class="keybind-btn gp" data-action="Right">Btn 15</button></div></div>
+                            <div class="keybind-row"><span>A</span><div style="display:flex; gap:10px;"><button class="keybind-btn kb" data-action="A">KeyZ</button><button class="keybind-btn gp" data-action="A">Btn 1</button></div></div>
+                            <div class="keybind-row"><span>B</span><div style="display:flex; gap:10px;"><button class="keybind-btn kb" data-action="B">KeyX</button><button class="keybind-btn gp" data-action="B">Btn 0</button></div></div>
+                            <div class="keybind-row"><span>START</span><div style="display:flex; gap:10px;"><button class="keybind-btn kb" data-action="Start">Enter</button><button class="keybind-btn gp" data-action="Start">Btn 9</button></div></div>
+                            <div class="keybind-row"><span>SELECT</span><div style="display:flex; gap:10px;"><button class="keybind-btn kb" data-action="Select">ShiftRight</button><button class="keybind-btn gp" data-action="Select">Btn 8</button></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="savestate-modal" style="display: none;">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2 id="savestate-title">SAVE STATE</h2>
+                <button class="close-modal" id="close-savestate">X</button>
+            </div>
+            <div class="state-grid" id="state-grid"></div>
+        </div>
+    </div>
+
+    <div id="nag-modal" style="display: none;">
+        <div class="modal-content" style="max-width: 450px; text-align: center;">
+            <h2 style="color: var(--dark-green); margin-bottom: 15px;">SUPPORT POCKET PIXEL</h2>
+            <p style="margin-bottom: 25px; line-height: 1.5; font-size: 1.1rem;">Enjoying the emulator? Please consider starring it on GitHub or rating it on the Play Store. It keeps the project alive!</p>
+            <div style="display: flex; gap: 15px; justify-content: center; flex-direction: column;">
+                <div style="display: flex; gap: 15px; justify-content: center;">
+                    <button id="nag-github-btn" class="pill-btn" style="width: 150px; background: var(--pure-black); color: var(--pure-white); border-color: var(--light-green);">GITHUB</button>
+                    <button id="nag-playstore-btn" class="pill-btn" style="width: 150px; background: var(--pure-black); color: var(--pure-white); border-color: var(--light-green);">PLAY STORE</button>
+                </div>
+                <button id="nag-later-btn" style="margin: 15px auto 0; background: transparent; color: var(--dark-green); border: none; font-weight: bold; font-family: inherit; font-size: 0.9rem; cursor: pointer; text-decoration: underline;">MAYBE LATER</button>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="rom-upload" accept=".gb,.gbc" style="display: none;">
+    <script src="js/db.js"></script>
+    <script src="js/engine.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/input.js"></script>
+</body>
+</html>

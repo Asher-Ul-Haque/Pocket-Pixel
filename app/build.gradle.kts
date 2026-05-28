@@ -35,7 +35,7 @@ android {
     applicationId = "just.somebody.templates"
     minSdk = 24
     targetSdk = 35
-    versionCode = 7
+    versionCode = 8
     versionName = "1.5"
     androidResources {
       localeFilters.add("en") // Keep only English

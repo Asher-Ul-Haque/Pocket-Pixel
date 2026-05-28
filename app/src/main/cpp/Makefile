@@ -1,78 +1,163 @@
-# Directories
-GAMEBOY_SRC := GameBoy/implement
-FORGE_SRC   := ForgeLibrary/implement
-GAMEBOY_INC := GameBoy/include
-FORGE_INC   := ForgeLibrary/include
-BUILD_DIR   := build
+# - - - Directories
+SRC_DIR         := src
+INCLUDE_DIR     := include
+TESTS_DIR       := tests
+BUILD_DIR       := .build
+BIN_DIR         := bin
+DOCS_DIR        := docs
+TEST_BIN_DIR    := $(BIN_DIR)/tests
 
-# Compilers
-CXX := clang++
-CC  := clang
+# - - - Compilers & Native Defaults
+CC          := clang
+CXX         := clang++
+SDL3_CFLAGS := $(shell pkg-config --cflags sdl3)
+SDL3_LIBS   := $(shell pkg-config --libs sdl3)
 
-# Compiler flags
-CXXFLAGS := -I$(GAMEBOY_INC) -I$(FORGE_INC) -I/usr/include/SFML
-CFLAGS   := -I$(GAMEBOY_INC) -I$(FORGE_INC) -std=c11
+# - - - Native Flags (Defined BEFORE the override)
+CFLAGS      := -I$(INCLUDE_DIR) $(SDL3_CFLAGS) -Wall -Werror -Wextra -Wpedantic -DDEBUG -O1 -MMD -MP 
+CXXFLAGS    := -I$(INCLUDE_DIR) $(SDL3_CFLAGS) -Wall -Werror -Wextra -Wpedantic -DDEBUG -O1 -MMD -MP
+LDFLAGS     := $(SDL3_LIBS)
+RPATH       := 
 
-# SFML link flags
-SFML_LIBS := -lsfml-graphics -lsfml-window -lsfml-system -lsfml-audio
+# - - - Root project name & Target
+ROOT_NAME   := pixel_pocket_core
+TARGET      := $(BIN_DIR)/$(ROOT_NAME)
 
-# Source files
-CPP_SRC := $(shell find $(GAMEBOY_SRC) $(FORGE_SRC) -name '*.cpp')
-C_SRC   := $(shell find $(FORGE_SRC) -name '*.c')
-MAIN_SRC := LocalBridge.cpp
-CORE_SRC := GameBoyCore.cpp
+# - - - WebAssembly Override - - -
+ifeq ($(PLATFORM), web)
+  CC          := emcc
+  CXX         := em++
+  
+  # 1. Override SDL3 flags for Emscripten
+  SDL3_CFLAGS := -s USE_SDL=3
+  SDL3_LIBS   := -s USE_SDL=3
+  
+  # 2. Hard-overwrite the CFLAGS to include the new SDL3 flags AND the warning bypass
+  CFLAGS      := -I$(INCLUDE_DIR) $(SDL3_CFLAGS) -Wall -Werror -Wextra -Wpedantic -DDEBUG -O1 -MMD -MP -Wno-experimental
+  CXXFLAGS    := -I$(INCLUDE_DIR) $(SDL3_CFLAGS) -Wall -Werror -Wextra -Wpedantic -DDEBUG -O1 -MMD -MP -Wno-experimental
+  
+  # 3. Add WebAssembly specific linker flags (Export JS functions for the HTML shell)
+  LDFLAGS     := $(SDL3_LIBS) -s ALLOW_MEMORY_GROWTH=1 -s EXPORTED_RUNTIME_METHODS='["FS", "callMain", "ccall", "HEAPU32", "HEAPU8"]' -s INVOKE_RUN=0
+  
+  # 4. Redirect the output to a JavaScript module
+  TARGET      := $(BIN_DIR)/pixel_pocket.js
+endif
 
-# Object files
-CPP_OBJ := $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(CPP_SRC))
-C_OBJ   := $(patsubst %.c,   $(BUILD_DIR)/%.o, $(C_SRC))
-MAIN_OBJ := $(BUILD_DIR)/LocalBridge.o
-CORE_OBJ := $(BUILD_DIR)/GameBoyCore.o
-OBJ_FILES := $(CPP_OBJ) $(C_OBJ) $(MAIN_OBJ) $(CORE_OBJ)
+# - - - Colors
+GREEN  := \033[0;32m
+RED    := \033[0;31m
+YELLOW := \033[1;33m
+PURPLE := \033[1;35m
+PINK   := \033[95m
+BLUE   := \033[0;34m
+RESET  := \033[0m
 
-# Executable
-OUTPUT := gameboy
+# - - - Main
+# Make sure your main.c is placed in the src/ directory or root so this picks it up!
+MAIN_SRC := $(wildcard main.c main.cpp)
+MAIN_OBJ := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(MAIN_SRC))
+MAIN_OBJ := $(patsubst %.c,$(BUILD_DIR)/%.o,$(MAIN_OBJ))
 
-# Default target
-all: $(OUTPUT)
+# - - - Application sources (excluding main)
+# We filter out desktopMain.c and webMain.c because they are strictly included via main.c
+SRC_FILES_C    := $(shell find $(SRC_DIR) -name "*.c" ! -name "*Main.c")
+SRC_FILES_CPP  := $(shell find $(SRC_DIR) -name "*.cpp" ! -name "*Main.cpp")
+OBJ_FILES_C    := $(patsubst $(SRC_DIR)/%.c,  $(BUILD_DIR)/%.o, $(SRC_FILES_C))
+OBJ_FILES_CPP  := $(patsubst $(SRC_DIR)/%.cpp,$(BUILD_DIR)/%.o, $(SRC_FILES_CPP))
+OBJ_FILES      := $(OBJ_FILES_C) $(OBJ_FILES_CPP)
 
-# Compile C++ sources
-$(BUILD_DIR)/%.o: %.cpp
-	@mkdir -p $(dir $@)
-	@echo "Compiling C++: $<"
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+# - - - Tests
+TEST_FILES_C   := $(shell find $(TESTS_DIR) -name "*.c")
+TEST_FILES_CPP := $(shell find $(TESTS_DIR) -name "*.cpp")
 
-# Compile C sources
+# - - - Default target
+all: banner sources $(MAIN_OBJ) tests $(TARGET) docs finished
+
+banner:
+	@clear
+	@echo "$(PURPLE) - - - | Building Project $(ROOT_NAME) | - - -$(RESET)"
+	@echo ""
+	@echo ""
+
+sourceBanner:
+	@echo "$(PINK)- - - Building Source - - -$(RESET)"
+	@echo ""
+	@echo ""
+
+sources: sourceBanner $(OBJ_FILES)
+	@echo "$(GREEN)- - - Finished Building Source - - -$(RESET)"
+	@echo ""
+	@echo ""
+
+# - - - Compile main
 $(BUILD_DIR)/%.o: %.c
 	@mkdir -p $(dir $@)
-	@echo "Compiling C:   $<"
-	$(CC) $(CFLAGS) -c $< -o $@
+	@echo " |_ Compiling (C) : $<"
+	@$(CC) $(CFLAGS) -c $< -o $@ >/dev/null 2>&1 \
+		&& echo "    $(GREEN)✓ Success$(RESET)" \
+		|| (echo "    $(RED)✗ Error compiling $<$(RESET)"; $(CC) $(CFLAGS) -c $< -o $@; exit 1)
 
-# Compile main file
-$(MAIN_OBJ): $(MAIN_SRC)
+$(BUILD_DIR)/%.o: %.cpp
 	@mkdir -p $(dir $@)
-	@echo "Compiling Main: $<"
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+	@echo " |_ Compiling (C++) : $<"
+	@$(CXX) $(CXXFLAGS) -c $< -o $@ >/dev/null 2>&1 \
+		&& echo "    $(GREEN)✓ Success$(RESET)" \
+		|| (echo "    $(RED)✗ Error compiling $<$(RESET)"; $(CXX) $(CXXFLAGS) -c $< -o $@; exit 1)
 
-# Compile GameBoyCore.cpp
-$(CORE_OBJ): $(CORE_SRC)
+# - - - Compile src
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
 	@mkdir -p $(dir $@)
-	@echo "Compiling Core: $<"
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+	@echo " |_ Compiling (C) : $<"
+	@$(CC) $(CFLAGS) -c $< -o $@ >/dev/null 2>&1 \
+		&& echo "    $(GREEN)✓ Success$(RESET)" \
+		|| (echo "    $(RED)✗ Error compiling $<$(RESET)"; $(CC) $(CFLAGS) -c $< -o $@; exit 1)
 
-# Link all object files into executable
-$(OUTPUT): $(OBJ_FILES)
-	@echo "Linking executable: $@"
-	$(CXX) $(OBJ_FILES) -o $@ $(SFML_LIBS)
-	@echo "Build complete -> $(OUTPUT)"
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp
+	@mkdir -p $(dir $@)
+	@echo " |_ Compiling (C++) : $<"
+	@$(CXX) $(CXXFLAGS) -c $< -o $@ >/dev/null 2>&1 \
+		&& echo "    $(GREEN)✓ Success$(RESET)" \
+		|| (echo "    $(RED)✗ Error compiling $<$(RESET)"; $(CXX) $(CXXFLAGS) -c $< -o $@; exit 1)
 
-# Clean
+# - - - Application build
+$(TARGET): $(OBJ_FILES) $(MAIN_OBJ)
+	@mkdir -p $(BIN_DIR)
+	@echo "$(PINK)> Linking application $(TARGET)$(RESET)"
+	@$(CXX) $^ -o $@ $(LDFLAGS) $(RPATH) \
+		&& echo "$(GREEN)✓ Application built successfully$(RESET)" \
+		|| (echo "$(RED)✗ Linking failed$(RESET)"; exit 1)
+	@echo "$(GREEN)- - - Finished Building Application - - -$(RESET)"
+	@echo ""
+
+# - - - Tests build target
+tests: sources
+	@echo "$(BLUE)- - - Building Tests - - -$(RESET)"
+	@mkdir -p $(TEST_BIN_DIR)
+	@for test in $(TEST_FILES_C) $(TEST_FILES_CPP); do \
+		name=$$(basename $$test | sed 's/\.[^.]*$$//'); \
+		echo " |_ Linking test : $$test"; \
+		if echo $$test | grep -q '\.c$$'; then \
+			$(CC) $(CFLAGS) $$test $(OBJ_FILES) -o $(TEST_BIN_DIR)/$$name $(LDFLAGS) $(RPATH_TEST) >/dev/null 2>&1 \
+				&& echo "    $(GREEN)✓ Built test: $(TEST_BIN_DIR)/$$name$(RESET)" \
+				|| (echo "    $(RED)✗ Error building test $$test$(RESET)"; $(CC) $(CFLAGS) $$test $(OBJ_FILES) $(MAIN_OBJ) -o $(TEST_BIN_DIR)/$$name $(LDFLAGS) $(RPATH_TEST); exit 1); \
+		else \
+			$(CXX) $(CXXFLAGS) $$test $(OBJ_FILES) $(MAIN_OBJ) -o $(TEST_BIN_DIR)/$$name $(LDFLAGS) $(RPATH) >/dev/null 2>&1 \
+				&& echo "    $(GREEN)✓ Built test: $(TEST_BIN_DIR)/$$name$(RESET)" \
+				|| (echo "    $(RED)✗ Error building test $$test$(RESET)"; $(CXX) $(CXXFLAGS) $$test $(OBJ_FILES) $(MAIN_OBJ) -o $(TEST_BIN_DIR)/$$name $(LDFLAGS) $(RPATH_TEST); exit 1); \
+		fi; \
+	done
+	@echo "$(GREEN)- - - Finished Building Tests - - -$(RESET)"
+	@echo ""
+	@echo ""
+
+finished:
+	@echo ""
+	@echo "$(GREEN)- - - Built Project : $(ROOT_NAME) - - -$(RESET)"
+	@echo ""
+
 clean:
-	rm -rf $(BUILD_DIR) $(OUTPUT)
+	rm -rf $(BUILD_DIR) $(BIN_DIR) $(DOCS_DIR)
 
-# Debug helper
-print-debug:
-	@echo CPP_SRC: $(CPP_SRC)
-	@echo C_SRC: $(C_SRC)
-	@echo OBJ_FILES: $(OBJ_FILES)
+remake: clean all
 
-.PHONY: all clean print-debug
+# ... (rest of your Makefile remains the same)
