@@ -328,7 +328,6 @@ static bool sdlAudioInit(void)
   // Unpause the specific device tied to this stream
   SDL_ResumeAudioDevice(SDL_GetAudioStreamDevice(gAudioStream));
 
-  FORGE_LOG_INFO("%s", "[AUDIO] Hardware successfully connected!");
   return true;
 }
 

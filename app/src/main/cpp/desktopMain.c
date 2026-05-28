@@ -100,8 +100,6 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[]) {
     PlatformContext* platform = platformGetContext();
 
     FORGE_LOG_INFO("%s", "--- POCKET PIXEL STARTING ---");
-    FORGE_LOG_INFO("Game: %s", cartridgeGetTitle());
-    FORGE_LOG_INFO("Mode: %s", getModeName(cartridgeGetContext()->mode));
 
     bool running      = true;
     bool paused       = false;

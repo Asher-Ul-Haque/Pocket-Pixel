@@ -3,12 +3,11 @@
 #include <cartridge/cartridge.h>
 #include <common.h>
 #include <time.h>
-
+#include <stdlib.h>
+#include <string.h>
 
 // - - -  Internal state
-
 static CartContext  ctx;
-
 
 CartContext* cartridgeGetContext(void)
 { return &ctx; }
@@ -92,6 +91,7 @@ bool cartridgeInit(const CartridgeFileIO* FILE_IO, const u8* ROM_DATA, const u32
   {
     ctx.mode = MODE_DMG_GAMEBOY;
   }
+  
   // - - - MBC2 has internal RAM 
   if (ctx.mapperType == MAPPER_MBC2)
   {
@@ -110,6 +110,7 @@ bool cartridgeInit(const CartridgeFileIO* FILE_IO, const u8* ROM_DATA, const u32
     FORGE_LOG_ERROR("%s", "[CARTRIDGE] : Header Checksum Check Failed, ROM may be corrupted");
     return false;
   }
+  mapperResetDefaults();
 
   // - - - Allocate external ram if needed 
   if (ctx.externalRamSize > 0)
@@ -135,14 +136,80 @@ bool cartridgeInit(const CartridgeFileIO* FILE_IO, const u8* ROM_DATA, const u32
       }
       else if (ctx.externalRamData && ctx.externalRamSize > 0)
       {
-        ctx.fileIO->loadRamFromFile(ctx.externalRamData, ctx.externalRamSize);
+        if (ctx.hasRTC)
+        {
+          u32 rtcBlockSize = 64;
+          u32 totalSize = ctx.externalRamSize + rtcBlockSize;
+          u8* tempBuffer = (u8*)malloc(totalSize);
+          if (tempBuffer)
+          {
+            memset(tempBuffer, 0, totalSize);
+            if (ctx.fileIO->loadRamFromFile(tempBuffer, totalSize))
+            {
+              // - - - Unpack standard SRAM progress arrays
+              memcpy(ctx.externalRamData, tempBuffer, ctx.externalRamSize);
+              
+              // - - - Unpack structural raw RTC states
+              u32 rtcOffset = ctx.externalRamSize;
+              u32 sec       = 0;
+              u32 min       = 0; 
+              u32 hr        = 0;
+              u32 dy        = 0;
+              u32 halt      = 0;
+              u32 carry     = 0;
+              u64 timestamp = 0;
+
+              memcpy(&sec, tempBuffer + rtcOffset + 0, 4);
+              memcpy(&min, tempBuffer + rtcOffset + 4, 4);
+              memcpy(&hr, tempBuffer + rtcOffset + 8, 4);
+              memcpy(&dy, tempBuffer + rtcOffset + 12, 4);
+              memcpy(&halt, tempBuffer + rtcOffset + 16, 4);
+              memcpy(&carry, tempBuffer + rtcOffset + 20, 4);
+              memcpy(&timestamp, tempBuffer + rtcOffset + 24, 8);
+
+              ctx.mapper.mbc3.rtcSeconds      = (u8)sec;
+              ctx.mapper.mbc3.rtcMinutes      = (u8)min;
+              ctx.mapper.mbc3.rtcHours        = (u8)hr;
+              ctx.mapper.mbc3.rtcDays         = (u16)dy;
+              ctx.mapper.mbc3.rtcHalt         = (halt != 0);
+              ctx.mapper.mbc3.rtcDayCarry     = (carry != 0);
+              ctx.mapper.mbc3.lastSystemTime  = (time_t)timestamp;
+
+              // - - - Unpack Latched metadata values
+              u32 l_sec   = 0;
+              u32 l_min   = 0;
+              u32 l_hr    = 0;
+              u32 l_dy    = 0;
+              u32 l_halt  = 0;
+              u32 l_carry = 0;
+              u32 latched = 0;
+              memcpy(&l_sec, tempBuffer + rtcOffset + 32, 4);
+              memcpy(&l_min, tempBuffer + rtcOffset + 36, 4);
+              memcpy(&l_hr, tempBuffer + rtcOffset + 40, 4);
+              memcpy(&l_dy, tempBuffer + rtcOffset + 44, 4);
+              memcpy(&l_halt, tempBuffer + rtcOffset + 48, 4);
+              memcpy(&l_carry, tempBuffer + rtcOffset + 52, 4);
+              memcpy(&latched, tempBuffer + rtcOffset + 56, 4);
+
+              ctx.mapper.mbc3.latchedSeconds  = (u8)l_sec;
+              ctx.mapper.mbc3.latchedMinutes  = (u8)l_min;
+              ctx.mapper.mbc3.latchedHours    = (u8)l_hr;
+              ctx.mapper.mbc3.latchedDays     = (u16)l_dy;
+              ctx.mapper.mbc3.latchedHalt     = (l_halt != 0);
+              ctx.mapper.mbc3.latchedDayCarry = (l_carry != 0);
+              ctx.mapper.mbc3.latched         = (latched != 0);
+            }
+            free(tempBuffer);
+          }
+        }
+        else
+        {
+          ctx.fileIO->loadRamFromFile(ctx.externalRamData, ctx.externalRamSize);
+        }
       }
     }
   }
 
-  mapperResetDefaults();
-
-  // - - - TODO: Handle MBC types and their specific RAM/RTC requirements
   ctx.initialized = true;
   cartridgePrintMetadata();
   return true;
@@ -150,7 +217,7 @@ bool cartridgeInit(const CartridgeFileIO* FILE_IO, const u8* ROM_DATA, const u32
 
 void cartridgeTick(void)
 {
-  TODO_COMMENT("Mapper-specific ticking (MBC3 RTC, etc.)");
+  // Live clock ticks execute programmatically upon controller mapping cycles
 }
 
 void cartridgeFlushRAM(void)
@@ -159,7 +226,6 @@ void cartridgeFlushRAM(void)
 
   if (!ctx.hasBattery) return;
   if (!ctx.ramDirty)   return;
-
   if (!ctx.fileIO || !ctx.fileIO->saveRamToFile) return;
 
   if (ctx.mapperType == MAPPER_MBC2)
@@ -171,11 +237,64 @@ void cartridgeFlushRAM(void)
 
   if (ctx.externalRamData)
   {
-    ctx.fileIO->saveRamToFile(
-      ctx.externalRamData,
-      ctx.externalRamSize
-    );
-    ctx.ramDirty = false;
+    if (ctx.hasRTC)
+    {
+      u32 rtcBlockSize  = 64;
+      u32 totalSize     = ctx.externalRamSize + rtcBlockSize;
+      u8* tempBuffer    = (u8*)malloc(totalSize);
+      if (tempBuffer)
+      {
+        // - - - Copy static payload array
+        memcpy(tempBuffer, ctx.externalRamData, ctx.externalRamSize);
+        
+        // - - - Append live timing variables
+        u32 rtcOffset = ctx.externalRamSize;
+        u32 sec       = (u32)ctx.mapper.mbc3.rtcSeconds;
+        u32 min       = (u32)ctx.mapper.mbc3.rtcMinutes;
+        u32 hr        = (u32)ctx.mapper.mbc3.rtcHours;
+        u32 dy        = (u32)ctx.mapper.mbc3.rtcDays;
+        u32 halt      = ctx.mapper.mbc3.rtcHalt ? 1 : 0;
+        u32 carry     = ctx.mapper.mbc3.rtcDayCarry ? 1 : 0;
+        u64 timestamp = (u64)ctx.mapper.mbc3.lastSystemTime;
+
+        memcpy(tempBuffer + rtcOffset + 0, &sec, 4);
+        memcpy(tempBuffer + rtcOffset + 4, &min, 4);
+        memcpy(tempBuffer + rtcOffset + 8, &hr, 4);
+        memcpy(tempBuffer + rtcOffset + 12, &dy, 4);
+        memcpy(tempBuffer + rtcOffset + 16, &halt, 4);
+        memcpy(tempBuffer + rtcOffset + 20, &carry, 4);
+        memcpy(tempBuffer + rtcOffset + 24, &timestamp, 8);
+
+        // - - - Append latched status registers
+        u32 l_sec   = (u32)ctx.mapper.mbc3.latchedSeconds;
+        u32 l_min   = (u32)ctx.mapper.mbc3.latchedMinutes;
+        u32 l_hr    = (u32)ctx.mapper.mbc3.latchedHours;
+        u32 l_dy    = (u32)ctx.mapper.mbc3.latchedDays;
+        u32 l_halt  = ctx.mapper.mbc3.latchedHalt ? 1 : 0;
+        u32 l_carry = ctx.mapper.mbc3.latchedDayCarry ? 1 : 0;
+        u32 latched = ctx.mapper.mbc3.latched ? 1 : 0;
+
+        memcpy(tempBuffer + rtcOffset + 32, &l_sec, 4);
+        memcpy(tempBuffer + rtcOffset + 36, &l_min, 4);
+        memcpy(tempBuffer + rtcOffset + 40, &l_hr, 4);
+        memcpy(tempBuffer + rtcOffset + 44, &l_dy, 4);
+        memcpy(tempBuffer + rtcOffset + 48, &l_halt, 4);
+        memcpy(tempBuffer + rtcOffset + 52, &l_carry, 4);
+        memcpy(tempBuffer + rtcOffset + 56, &latched, 4);
+        
+        // - - - Populate safety padding alignment boundary
+        memset(tempBuffer + rtcOffset + 60, 0, 4);
+
+        ctx.fileIO->saveRamToFile(tempBuffer, totalSize);
+        free(tempBuffer);
+        ctx.ramDirty = false;
+      }
+    }
+    else
+    {
+      ctx.fileIO->saveRamToFile(ctx.externalRamData, ctx.externalRamSize);
+      ctx.ramDirty = false;
+    }
   }
 }
 

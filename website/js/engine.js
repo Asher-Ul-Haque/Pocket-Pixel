@@ -3,61 +3,60 @@ window.PocketEngine = {
 
     boot: async function(romBuffer) {
         if (this.isEngineRunning) return;
-
         console.log("Preparing WebAssembly Environment...");
 
-        window.Module = {
-            noInitialRun: true, 
-            arguments: ['/game.rom'], 
-            
-            // CRITICAL FIX: Tell Emscripten to map to "canvas"
-            canvas: document.getElementById('canvas'), 
-            
-            print: (text) => console.log("[C++] " + text),
-            printErr: (text) => console.error("[C++ ERROR] " + text),
-            
-            onRuntimeInitialized: () => {
-                console.log("WASM Runtime Initialized. Injecting ROM...");
-
-                const romArray = new Uint8Array(romBuffer);
-                FS.writeFile('/game.rom', romArray);
-
-                console.log("Starting C++ Execution Loop...");
-                Module.callMain(Module.arguments);
-                this.isEngineRunning = true;
-            }
+        window.Module = window.Module || {};
+        window.Module.noInitialRun = true; 
+        window.Module.arguments = ['/game.rom']; 
+        window.Module.canvas = document.getElementById('canvas'); 
+        
+        window.Module.print = (text) => console.log("[C++] " + text);
+        window.Module.printErr = (text) => console.error("[C++ ERROR] " + text);
+        
+        window.Module.onRuntimeInitialized = () => {
+            console.log("WASM Runtime Initialized. Injecting ROM...");
+            const romArray = new Uint8Array(romBuffer);
+            FS.writeFile('/game.rom', romArray);
+            console.log("Starting C++ Execution Loop...");
+            Module.callMain(Module.arguments);
+            this.isEngineRunning = true;
         };
 
         const script = document.createElement('script');
-        // Matches the file name from your terminal logs!
         script.src = 'wasm/pixel_pocket.js'; 
         document.body.appendChild(script);
     },
 
     setPalette: function(hex0, hex1, hex2, hex3) {
         if (!this.isEngineRunning) return;
-        Module.ccall('webSetPalette', 'null', 
-            ['number', 'number', 'number', 'number'], 
-            [hex0, hex1, hex2, hex3]
-        );
+        Module.ccall('webSetPalette', 'null', ['number', 'number', 'number', 'number'], [hex0, hex1, hex2, hex3]);
     },
 
     setChannelVolumes: function(ch1, ch2, ch3, ch4) {
         if (!this.isEngineRunning) return;
-        Module.ccall('webSetChannelVolumes', 'null', 
-            ['number', 'number', 'number', 'number'], 
-            [ch1, ch2, ch3, ch4]
-        );
+        Module.ccall('webSetChannelVolumes', 'null', ['number', 'number', 'number', 'number'], [ch1, ch2, ch3, ch4]);
     },
 
-    // --- Save States ---
+    injectKey: function(scancode, isDown) {
+        if (!this.isEngineRunning) return;
+        Module.ccall('webInjectKey', 'null', ['number', 'boolean'], [scancode, isDown]);
+    },
+
+    setPaused: function(paused) {
+        if (!this.isEngineRunning) return;
+        // Pass the boolean state as a 1 or 0 numeric flag
+        Module.ccall('webSetPaused', 'null', ['number'], [paused ? 1 : 0]);
+    },
+
+    isPaused: function() {
+        if (!this.isEngineRunning) return false;
+        // Read the returned numeric integer and cast it back to a true JS boolean
+        return !!Module.ccall('webIsPaused', 'number', [], []);
+    },
+
     saveState: function() {
         if (!this.isEngineRunning) return null;
-
-        // 1. Allocate 4 bytes in WASM to hold the outgoing size integer
         const sizePtr = Module.ccall('webAllocate', 'number', ['number'], [4]);
-        
-        // 2. Call your C function (it returns the buffer pointer)
         const bufferPtr = Module.ccall('webSaveState', 'number', ['number'], [sizePtr]);
         
         if (bufferPtr === 0) {
@@ -65,38 +64,47 @@ window.PocketEngine = {
             return null;
         }
 
-        // 3. Read the 32-bit integer size out of the pointer
         const size = Module.HEAPU32[sizePtr >> 2];
-
-        // 4. Create a JS view of that WASM memory chunk and clone it
         const wasmView = new Uint8Array(Module.HEAPU8.buffer, bufferPtr, size);
-        const jsClone = new Uint8Array(wasmView); // Clone so it survives C free()
+        const jsClone = new Uint8Array(wasmView); 
 
-        // 5. Clean up the C memory so we don't leak RAM!
         Module.ccall('webFree', 'null', ['number'], [bufferPtr]);
         Module.ccall('webFree', 'null', ['number'], [sizePtr]);
-
-        return jsClone.buffer; // Return raw ArrayBuffer
+        return jsClone.buffer; 
     },
 
     loadState: function(arrayBuffer) {
         if (!this.isEngineRunning || !arrayBuffer) return false;
-
         const jsData = new Uint8Array(arrayBuffer);
         const size = jsData.length;
-
-        // 1. Allocate a chunk of memory in C to hold the incoming JS array
         const bufferPtr = Module.ccall('webAllocate', 'number', ['number'], [size]);
-
-        // 2. Copy the JS data into the C heap
         Module.HEAPU8.set(jsData, bufferPtr);
-
-        // 3. Call your C function to unpack it
         const success = Module.ccall('webLoadState', 'boolean', ['number', 'number'], [bufferPtr, size]);
+        Module.ccall('webFree', 'null', ['number'], [bufferPtr]);
+        return success;
+    },
 
-        // 4. Clean up the incoming buffer
+    captureScreenshot: function() {
+        if (!this.isEngineRunning) return null;
+
+        const bufferPtr = Module.ccall('webCaptureFrameBuffer', 'number', [], []);
+        if (bufferPtr === 0) return null;
+
+        const size = 160 * 144 * 4; 
+        const view = new Uint8Array(Module.HEAPU8.buffer, bufferPtr, size);
+
+        const offscreenCanvas = document.createElement('canvas');
+        offscreenCanvas.width = 160;
+        offscreenCanvas.height = 144;
+        const ctx = offscreenCanvas.getContext('2d');
+        const imgData = ctx.createImageData(160, 144);
+
+        imgData.data.set(view);
+        ctx.putImageData(imgData, 0, 0);
+
+        const dataUrl = offscreenCanvas.toDataURL('image/jpeg', 0.85);
         Module.ccall('webFree', 'null', ['number'], [bufferPtr]);
 
-        return success;
+        return dataUrl;
     }
 };
