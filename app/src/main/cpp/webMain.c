@@ -24,60 +24,53 @@ static u64 lastFrameTime = 0;
 static double timeAccumulator = 0.0;
 static u32 framesThisSecond = 0;
 static u64 lastFpsTime = 0;
-static u32 autoSaveFrameCounter = 0; // Synchronizes game states to IndexedDB
+
+static u32 autoSaveFrameCounter = 0;
+static bool saveFileUpdated     = false; // Signalling flag for the JS database layer
 
 // ============================================================================
-// --- NATIVE FILE SYSTEM PERSISTENCE CORE ---
+// --- PURE STANDARD ANSI C FILE I/O SUBSYSTEM ---
 // ============================================================================
 
 bool fileSaveRam(const u8* RAM_DATA, u32 RAM_SIZE) {
     if (!RAM_DATA || RAM_SIZE == 0) return false;
     
-    // Wrap raw WebAssembly pointer into a shared JS ArrayBuffer view on the fly
-    EM_ASM({
-        if (window.PocketEngine && window.PocketEngine.onSaveRamFlush) {
-            var heapBytes = new Uint8Array(Module.HEAPU8.buffer, $0, $1);
-            var persistentCopy = new Uint8Array(heapBytes); // Hard detached clone
-            window.PocketEngine.onSaveRamFlush(persistentCopy.buffer);
-        }
-    }, RAM_DATA, RAM_SIZE);
+    // Pure standard C file writing to the hardcoded virtual root path
+    FILE* file = fopen("/game.sav", "wb");
+    if (!file) return false;
 
-    return true;
+    size_t written = fwrite(RAM_DATA, 1, RAM_SIZE, file);
+    fclose(file);
+
+    return (written == RAM_SIZE);
 }
 
 bool fileLoadRam(u8* RAM_DATA, u32 RAM_SIZE) {
     if (!RAM_DATA || RAM_SIZE == 0) return false;
 
-    // Pull directly out of pre-staged JS memory array synchronously
-    int success = EM_ASM_INT({
-        if (window.currentSaveBuffer) {
-            var src = new Uint8Array(window.currentSaveBuffer);
-            var copySize = Math.min($1, src.length);
-            var dest = new Uint8Array(Module.HEAPU8.buffer, $0, copySize);
-            
-            dest.set(src.subarray(0, copySize));
-            return 1;
-        }
-        return 0;
-    }, RAM_DATA, RAM_SIZE);
+    // Pure standard C file reading from the hardcoded virtual root path
+    FILE* file = fopen("/game.sav", "rb");
+    if (!file) return false; // Returns false cleanly if no save file has been staged yet
 
-    return (success == 1);
+    size_t readBytes = fread(RAM_DATA, 1, RAM_SIZE, file);
+    fclose(file);
+
+    return (readBytes == RAM_SIZE);
 }
 
 u32 fileGetExpectedSaveSize(void) {
     CartContext* ctx = cartridgeGetContext();
     if (!ctx || !ctx->initialized) return 0;
     
-    // Automatically scale memory allocation arrays when live timing hardware is reported
+    // Account for 64-byte structural RTC offsets automatically if clock mappings exist
     return ctx->externalRamSize + (ctx->hasRTC ? 64 : 0);
 }
 
 // ============================================================================
-// --- MAIN EXECUTION ENGINE ---
+// --- MAIN EXECUTION loop ---
 // ============================================================================
 
 void emscripten_main_loop(void) {
-    // 1. Calculate precise Delta Time
     u64 currentTime = SDL_GetTicks();
     if (lastFrameTime == 0) {
         lastFrameTime = currentTime;
@@ -87,12 +80,9 @@ void emscripten_main_loop(void) {
     double deltaTime = (double)(currentTime - lastFrameTime);
     lastFrameTime = currentTime;
 
-    // Prevent the "spiral of death" if the user switches browser tabs
     if (deltaTime > 100.0) deltaTime = 100.0;
-    
     timeAccumulator += deltaTime;
 
-    // A Game Boy runs at exactly 59.7275 Hz. (1000ms / 59.7275 = ~16.742ms per frame)
     double targetFrameTimeMs = 16.742;
     if (platform && platform->input.doubleSpeed) {
         targetFrameTimeMs /= 2.0; 
@@ -100,9 +90,7 @@ void emscripten_main_loop(void) {
 
     bool frameRendered = false;
 
-    // 2. Consume accumulated time in mathematically perfect Game Boy frames
     while (timeAccumulator >= targetFrameTimeMs) {
-        
         if (platform && platform->input.poll) {
             platform->input.poll(&running);
         }
@@ -112,10 +100,9 @@ void emscripten_main_loop(void) {
             return;
         }
 
-        // --- Hardware Loop ---
         if (platform && !platform->input.paused) {
             int mCyclesThisFrame = 0;
-            const int MAX_MCYCLES = 36000; // LCD-Off Breaker
+            const int MAX_MCYCLES = 36000;
 
             while (running && !ppu->frameReady && mCyclesThisFrame < MAX_MCYCLES) {
                 cpuTick();
@@ -141,24 +128,26 @@ void emscripten_main_loop(void) {
         timeAccumulator -= targetFrameTimeMs;
     }
 
-    // 3. Render only if a frame was actually generated
     if (frameRendered && platform) {
         if (platform->video.renderFrame) platform->video.renderFrame(&ppu->frameBuffer);
         if (platform->video.present) platform->video.present();
         
         framesThisSecond++;
 
-        // --- BACKGROUND DAEMON IMMUNIZATION CYCLE ---
-        // Once every 300 frames (~5 seconds), flush modifications to database safely.
-        // It immediately exits if the dirty layout parameters remain unaltered.
+        // --- BACKGROUND CORESYNC CONTROLLER ---
+        // Every 5 seconds, check if the mappers marked the cartridge storage array as dirty
         autoSaveFrameCounter++;
         if (autoSaveFrameCounter >= 300) {
             autoSaveFrameCounter = 0;
-            cartridgeFlushRAM();
+            
+            CartContext* ctx = cartridgeGetContext();
+            if (ctx && ctx->initialized && ctx->ramDirty) {
+                cartridgeFlushRAM();
+                saveFileUpdated = true; // Signal flag raised for JavaScript poller
+            }
         }
     }
 
-    // 4. Print the FPS Counter to the Terminal every 1000ms
     if (currentTime - lastFpsTime >= 1000) {
         framesThisSecond = 0;
         lastFpsTime = currentTime;
@@ -214,87 +203,66 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[]) {
     ppu = ppuGetContext();
 
     FORGE_LOG_INFO("%s", "--- POCKET PIXEL WEB STARTING ---");
-
-    // Pass 0 to sync directly with the monitor's requestAnimationFrame
     emscripten_set_main_loop(emscripten_main_loop, 0, 1);
 
     return 0;
 }
 
-
 // ============================================================================
 // --- JAVASCRIPT EXPORTS (WASM API) ---
-// These functions are called directly from your web UI using Emscripten's ccall
 // ============================================================================
 
 EMSCRIPTEN_KEEPALIVE
-u8* webSaveState(u32* outSize) {
-    return systemSaveStateToMemory(outSize);
-}
+u8* webSaveState(u32* outSize) { return systemSaveStateToMemory(outSize); }
 
 EMSCRIPTEN_KEEPALIVE
-bool webLoadState(const u8* buffer, u32 size) {
-    return systemLoadStateFromMemory(buffer, size);
-}
+bool webLoadState(const u8* buffer, u32 size) { return systemLoadStateFromMemory(buffer, size); }
 
 EMSCRIPTEN_KEEPALIVE
-void webFreeStateBuffer(u8* buffer) {
-    if (buffer) free(buffer);
-}
+void webFreeStateBuffer(u8* buffer) { if (buffer) free(buffer); }
 
 EMSCRIPTEN_KEEPALIVE
-void webSetChannelVolumes(float ch1, float ch2, float ch3, float ch4) {
-    apuSetChannelVolumes(ch1, ch2, ch3, ch4);
-}
-
-// ==========================================
-// --- SAVE STATE BRIDGE ---
-// ==========================================
+void webSetChannelVolumes(float ch1, float ch2, float ch3, float ch4) { apuSetChannelVolumes(ch1, ch2, ch3, ch4); }
 
 EMSCRIPTEN_KEEPALIVE
-void* webAllocate(u32 size) {
-    return malloc(size);
-}
+void* webAllocate(u32 size) { return malloc(size); }
 
 EMSCRIPTEN_KEEPALIVE
-void webFree(void* ptr) {
-    if (ptr) free(ptr);
+void webFree(void* ptr) { if (ptr) free(ptr); }
+
+// Native Primitive Type Cast Pass-Throughs
+EMSCRIPTEN_KEEPALIVE
+void webSetPaused(i32 paused) { if (platform) platform->input.paused = (paused != 0); }
+
+EMSCRIPTEN_KEEPALIVE
+i32 webIsPaused(void) { return (platform && platform->input.paused) ? 1 : 0; }
+
+// Core Save File Poller: Returns true if C has written changes to /game.sav
+EMSCRIPTEN_KEEPALIVE
+i32 webCheckAndClearSaveUpdated(void) {
+    if (saveFileUpdated) {
+        saveFileUpdated = false;
+        return 1;
+    }
+    return 0;
 }
 
-// --- Cache lines to track active DMG palette configuration for screenshots ---
 static u32 current_c0 = 0xD1CB95FF;
 static u32 current_c1 = 0x40985EFF;
 static u32 current_c2 = 0x1A644EFF;
 static u32 current_c3 = 0x04373BFF;
 
-// FIXED: Receives primitive hex formats via standard number signatures
 EMSCRIPTEN_KEEPALIVE
 void webSetPalette(u32 c0, u32 c1, u32 c2, u32 c3) {
-    current_c0 = c0;
-    current_c1 = c1;
-    current_c2 = c2;
-    current_c3 = c3;
+    current_c0 = c0; current_c1 = c1; current_c2 = c2; current_c3 = c3;
     if (platform && platform->video.setDmgPalette) {
         DmgPalette p = {c0, c1, c2, c3};
         platform->video.setDmgPalette(p);
     }
 }
 
-EMSCRIPTEN_KEEPALIVE
-void webSetPaused(i32 paused) {
-    if (platform) platform->input.paused = (paused != 0);
-}
-
-EMSCRIPTEN_KEEPALIVE
-i32 webIsPaused(void) {
-    if (platform) return platform->input.paused ? 1 : 0;
-    return 0;
-}
-
-EMSCRIPTEN_KEEPALIVE
 u32* webCaptureFrameBuffer(void) {
     if (!ppu) return NULL;
-
     u32* buffer = (u32*)malloc(160 * 144 * sizeof(u32));
     if (!buffer) return NULL;
 
@@ -305,7 +273,6 @@ u32* webCaptureFrameBuffer(void) {
         for (int x = 0; x < 160; x++) {
             int index = (y * 160) + x;
             u16 rawCoreData = ppu->frameBuffer.pixels[y][x];
-
             if (!isCgbMode) {
                 switch (rawCoreData) {
                     case 0: buffer[index] = current_c0; break;
@@ -315,14 +282,8 @@ u32* webCaptureFrameBuffer(void) {
                     default: buffer[index] = 0xFF00FFFF; break;
                 }
             } else {
-                u8 r5 = (rawCoreData & 0x001F);
-                u8 g5 = (rawCoreData & 0x03E0) >> 5;
-                u8 b5 = (rawCoreData & 0x7C00) >> 10;
-
-                u8 r8 = (r5 << 3) | (r5 >> 2);
-                u8 g8 = (g5 << 3) | (g5 >> 2);
-                u8 b8 = (b5 << 3) | (b5 >> 2);
-
+                u8 r5 = (rawCoreData & 0x001F); u8 g5 = (rawCoreData & 0x03E0) >> 5; u8 b5 = (rawCoreData & 0x7C00) >> 10;
+                u8 r8 = (r5 << 3) | (r5 >> 2); u8 g8 = (g5 << 3) | (g5 >> 2); u8 b8 = (b5 << 3) | (b5 >> 2);
                 buffer[index] = (r8 << 24) | (g8 << 16) | (b8 << 8) | 0xFF;
             }
         }

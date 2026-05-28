@@ -1,5 +1,5 @@
 const DB_NAME = 'PocketPixelDB';
-const DB_VERSION = 3; // Bumped version for new schema
+const DB_VERSION = 3; 
 const STORE_NAME = 'cartridges';
 
 window.PocketDB = {
@@ -29,7 +29,7 @@ window.PocketDB = {
                 fileName: fileName,
                 romData: romBuffer,
                 boxartUrl: boxartUrl,
-                // Initialize 5 empty save slots
+                saveData: null, // Initialized blank payload array
                 states: [null, null, null, null, null] 
             };
             
@@ -51,7 +51,28 @@ window.PocketDB = {
         });
     },
 
-    // Save a specific slot (0-4) with an image and timestamp
+    // Persistent battery save writer
+    saveCartridgeRAM: async function(ramBuffer) {
+        const db = await this.init();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(STORE_NAME, 'readwrite');
+            const store = tx.objectStore(STORE_NAME);
+            const request = store.get(1);
+            
+            request.onsuccess = () => {
+                const data = request.result;
+                if (data) {
+                    data.saveData = ramBuffer;
+                    store.put(data);
+                    resolve(true);
+                } else {
+                    resolve(false);
+                }
+            };
+            request.onerror = (e) => reject(e.target.error);
+        });
+    },
+
     saveSlot: async function(index, stateBuffer, screenshotURI) {
         const db = await this.init();
         return new Promise((resolve, reject) => {
@@ -80,7 +101,6 @@ window.PocketDB = {
         });
     },
 
-    // Completely nuke the current game and all saves from existence
     deleteCartridge: async function() {
         const db = await this.init();
         return new Promise((resolve, reject) => {

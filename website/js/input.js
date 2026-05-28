@@ -94,6 +94,7 @@ bindDiagonal(document.querySelector('.diag.bottom-right'), 'Down', 'Right');
 // --- ENGINE PAUSE & MEDIA CONTROLS ---
 // ==========================================
 let isFastForwarding = false;
+let saveSyncInterval = null;
 
 function attemptFullscreen() {
     const elem = document.documentElement;
@@ -101,24 +102,87 @@ function attemptFullscreen() {
     else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
 }
 
-btnPlayPause.addEventListener('click', async () => {
-    if (!window.PocketEngine || !window.PocketEngine.isEngineRunning) {
-        let romToBoot = window.GlobalRomBuffer;
-        if (!romToBoot) {
-            const savedCartridge = await window.PocketDB.getCartridge();
-            if (savedCartridge) romToBoot = savedCartridge.romData;
+// Background daemon monitoring the C core save state changes
+function startSaveSyncDaemon() {
+    if (saveSyncInterval) clearInterval(saveSyncInterval);
+    console.log("[POCKET DAEMON] Save synchronization monitor armed.");
+    
+    saveSyncInterval = setInterval(async () => {
+        if (window.PocketEngine && window.PocketEngine.isEngineRunning) {
+            const updated = Module.ccall('webCheckAndClearSaveUpdated', 'number', [], []);
+            if (updated === 1) {
+                console.log("[POCKET DAEMON] C core signaled 'saveFileUpdated == true'. Fetching virtual disk...");
+                try {
+                    const saveBytes = FS.readFile('/game.sav');
+                    await window.PocketDB.saveCartridgeRAM(saveBytes.buffer);
+                    console.log("[POCKET DAEMON] IndexedDB synchronization completed successfully.");
+                    
+                    // TRIGGER NATIVE BROWSER SYSTEM NOTIFICATION
+                    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+                        new Notification("Pocket Pixel", {
+                            body: "Game progress saved successfully!",
+                            icon: "assets/icons/svg/save.svg", // Uses your crisp vector icon
+                            silent: false // Leverages the native OS notification sound
+                        });
+                    }
+                } catch (e) {
+                    console.error("[POCKET DAEMON] Error writing save block to IndexedDB:", e);
+                }
+            }
+        } else {
+            console.log("[POCKET DAEMON] Engine offline. Disarming monitor.");
+            clearInterval(saveSyncInterval);
         }
+    }, 1000);
+}
+
+btnPlayPause.addEventListener('click', async () => {
+    // Request native system notification access on user interaction
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+        Notification.requestPermission().then(permission => {
+            console.log("[POCKET FRONTEND] Native notification permission state:", permission);
+        });
+    }
+
+    console.log("[POCKET FRONTEND] Play/Pause clicked. Active engine state running:", window.PocketEngine.isEngineRunning)
+    
+    if (!window.PocketEngine || !window.PocketEngine.isEngineRunning) {
+        console.log("[POCKET FRONTEND] Requesting primary cartridge entity from IndexedDB...");
+        const savedCartridge = await window.PocketDB.getCartridge();
+        let romToBoot = savedCartridge ? savedCartridge.romData : null;
 
         if (romToBoot) {
+            console.log("[POCKET FRONTEND] ROM array loaded successfully (" + romToBoot.byteLength + " bytes). Directing to Fullscreen mode.");
             attemptFullscreen(); 
 
             consoleScreenInput.innerHTML = `<canvas id="canvas" tabindex="-1" style="width: 100%; height: 100%; image-rendering: pixelated; outline: none;"></canvas>`;
             const canvas = document.getElementById('canvas');
             window.Module = window.Module || {};
             window.Module.canvas = canvas;
-            window.PocketEngine.boot(romToBoot);
-            setTimeout(() => canvas.focus(), 100);
             
+            console.log("[POCKET FRONTEND] Injecting WASM build script context wrappers...");
+            window.PocketEngine.boot(romToBoot);
+            
+            const originalRuntimeInit = window.Module.onRuntimeInitialized;
+            window.Module.onRuntimeInitialized = () => {
+                console.log("[POCKET LIFECYCLE] Intercepted Emscripten Runtime Initialization event.");
+                
+                // FIX: Write the staged battery file to VFS BEFORE invoking C main loop execution vectors
+                if (savedCartridge && savedCartridge.saveData) {
+                    console.log("[POCKET LIFECYCLE] Pre-existing save array detected (" + savedCartridge.saveData.byteLength + " bytes). Mounting to VFS /game.sav...");
+                    FS.writeFile('/game.sav', new Uint8Array(savedCartridge.saveData));
+                    console.log("[POCKET LIFECYCLE] Mount verified. /game.sav is active on virtual drive.");
+                } else {
+                    console.log("[POCKET LIFECYCLE] No previous save block detected in database. Skipping mount (C core will allocate fresh array).");
+                }
+                
+                console.log("[POCKET LIFECYCLE] Handing control flow over to native C++ callMain loop...");
+                if (originalRuntimeInit) originalRuntimeInit();
+                
+                console.log("[POCKET LIFECYCLE] Native callMain loop completed setup. Initializing daemon pollers...");
+                startSaveSyncDaemon();
+            };
+
             const engineCheck = setInterval(() => {
                 if (window.PocketEngine && window.PocketEngine.isEngineRunning) {
                     if (window.applySavedSettingsToEngine) window.applySavedSettingsToEngine();
@@ -129,11 +193,13 @@ btnPlayPause.addEventListener('click', async () => {
             document.body.classList.add('playing');
             btnPlayPause.querySelector('img').src = 'assets/icons/svg/pause.svg';
             if (window.checkNagModal) window.checkNagModal();
+        } else {
+            console.warn("[POCKET FRONTEND] Execution halted: No cartridge found in database store.");
         }
     } else {
-        // FIXED: Accessing your webIsPaused/webSetPaused variables directly in memory bypasses the focus lock entirely!
         const isPaused = window.PocketEngine.isPaused();
         const targetState = !isPaused;
+        console.log("[POCKET FRONTEND] Toggling pause execution vector to:", targetState);
         
         window.PocketEngine.setPaused(targetState);
         btnPlayPause.querySelector('img').src = targetState ? 'assets/icons/svg/play.svg' : 'assets/icons/svg/pause.svg';
@@ -143,6 +209,7 @@ btnPlayPause.addEventListener('click', async () => {
 btnFastForward.addEventListener('click', () => {
     if (window.PocketEngine && window.PocketEngine.isEngineRunning) {
         isFastForwarding = !isFastForwarding;
+        console.log("[POCKET FRONTEND] Fast Forward toggled to:", isFastForwarding);
         sendKeyEvent(SDL_KEYS.FastForward, true);
         setTimeout(() => sendKeyEvent(SDL_KEYS.FastForward, false), 50);
         btnFastForward.querySelector('img').src = isFastForwarding ? 'assets/icons/svg/slow.svg' : 'assets/icons/svg/fast.svg';
@@ -150,9 +217,25 @@ btnFastForward.addEventListener('click', () => {
 });
 
 btnEject.addEventListener('click', async () => {
-    const confirmation = confirm("Are you sure you want to eject the cartridge?\nAll Save States will be permanently deleted!");
+    console.log("[POCKET FRONTEND] Eject cartridge request caught.");
+    const confirmation = confirm("Are you sure you want to eject the cartridge?\nAll Save States and persistent Save Files (.sav) will be permanently deleted!");
     if (confirmation) {
+        console.log("[POCKET FRONTEND] Purging core synchronization timers...");
+        if (saveSyncInterval) clearInterval(saveSyncInterval);
+        
+        try {
+            if (typeof FS !== 'undefined') {
+                console.log("[POCKET FRONTEND] Unlinking virtual filesystem disk files...");
+                FS.unlink('/game.sav');
+                FS.unlink('/game.rom');
+            }
+        } catch(e) {
+            console.log("[POCKET FRONTEND] Virtual file context clean note: Files already absent.");
+        }
+
+        console.log("[POCKET FRONTEND] Deleting database entities...");
         await window.PocketDB.deleteCartridge();
+        console.log("[POCKET FRONTEND] Purge completed. Resetting sandbox environment.");
         window.location.reload();
     }
 });
@@ -168,12 +251,14 @@ document.addEventListener('click', () => {
 if (btnSave && btnLoad) {
     btnSave.addEventListener('click', () => { 
         if (window.PocketEngine && window.PocketEngine.isEngineRunning) {
+            console.log("[POCKET FRONTEND] Snapshot save state invoked.");
             const preCapturedImg = window.PocketEngine.captureScreenshot();
             window.openSaveStateModal('SAVE', preCapturedImg);
         }
     });
     btnLoad.addEventListener('click', () => { 
         if (window.PocketEngine && window.PocketEngine.isEngineRunning) {
+            console.log("[POCKET FRONTEND] Open load state modal view invoked.");
             window.openSaveStateModal('LOAD'); 
         }
     });

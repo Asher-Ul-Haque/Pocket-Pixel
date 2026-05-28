@@ -186,7 +186,7 @@ window.applySavedSettingsToEngine = function() {
 };
 
 // ==========================================
-// --- NEW: SOCIAL NAG LOGIC ---
+// --- SOCIAL NAG LOGIC ---
 // ==========================================
 const githubUrl = "https://github.com/Asher-Ul-Haque/Pocket-Pixel";
 const playstoreUrl = "https://play.google.com/store/apps/details?id=just.somebody.templates";

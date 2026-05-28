@@ -150,3 +150,24 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px;
 .state-image-box img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
 .state-info { flex: 1; margin-left: 20px; font-size: 1.2rem; }
 .state-timestamp { display: block; font-size: 0.8rem; color: var(--light-green); margin-top: 5px; }
+
+#save-toast {
+    position: fixed;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%) translateY(150%);
+    background: var(--pure-black);
+    color: var(--green);
+    border: 4px solid var(--green);
+    padding: 12px 24px;
+    font-size: 1.3rem;
+    z-index: 9999;
+    opacity: 0;
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.2s;
+    pointer-events: none;
+    box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.4);
+}
+#save-toast.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+}

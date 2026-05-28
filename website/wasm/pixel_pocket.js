@@ -8688,10 +8688,10 @@ var _webFreeStateBuffer = Module['_webFreeStateBuffer'] = makeInvalidEarlyAccess
 var _webSetChannelVolumes = Module['_webSetChannelVolumes'] = makeInvalidEarlyAccess('_webSetChannelVolumes');
 var _webAllocate = Module['_webAllocate'] = makeInvalidEarlyAccess('_webAllocate');
 var _webFree = Module['_webFree'] = makeInvalidEarlyAccess('_webFree');
-var _webSetPalette = Module['_webSetPalette'] = makeInvalidEarlyAccess('_webSetPalette');
 var _webSetPaused = Module['_webSetPaused'] = makeInvalidEarlyAccess('_webSetPaused');
 var _webIsPaused = Module['_webIsPaused'] = makeInvalidEarlyAccess('_webIsPaused');
-var _webCaptureFrameBuffer = Module['_webCaptureFrameBuffer'] = makeInvalidEarlyAccess('_webCaptureFrameBuffer');
+var _webCheckAndClearSaveUpdated = Module['_webCheckAndClearSaveUpdated'] = makeInvalidEarlyAccess('_webCheckAndClearSaveUpdated');
+var _webSetPalette = Module['_webSetPalette'] = makeInvalidEarlyAccess('_webSetPalette');
 var _SDL_free = Module['_SDL_free'] = makeInvalidEarlyAccess('_SDL_free');
 var _SDL_malloc = Module['_SDL_malloc'] = makeInvalidEarlyAccess('_SDL_malloc');
 var _SDL_calloc = Module['_SDL_calloc'] = makeInvalidEarlyAccess('_SDL_calloc');
@@ -8733,10 +8733,10 @@ function assignWasmExports(wasmExports) {
   assert(typeof wasmExports['webSetChannelVolumes'] != 'undefined', 'missing Wasm export: webSetChannelVolumes');
   assert(typeof wasmExports['webAllocate'] != 'undefined', 'missing Wasm export: webAllocate');
   assert(typeof wasmExports['webFree'] != 'undefined', 'missing Wasm export: webFree');
-  assert(typeof wasmExports['webSetPalette'] != 'undefined', 'missing Wasm export: webSetPalette');
   assert(typeof wasmExports['webSetPaused'] != 'undefined', 'missing Wasm export: webSetPaused');
   assert(typeof wasmExports['webIsPaused'] != 'undefined', 'missing Wasm export: webIsPaused');
-  assert(typeof wasmExports['webCaptureFrameBuffer'] != 'undefined', 'missing Wasm export: webCaptureFrameBuffer');
+  assert(typeof wasmExports['webCheckAndClearSaveUpdated'] != 'undefined', 'missing Wasm export: webCheckAndClearSaveUpdated');
+  assert(typeof wasmExports['webSetPalette'] != 'undefined', 'missing Wasm export: webSetPalette');
   assert(typeof wasmExports['SDL_free'] != 'undefined', 'missing Wasm export: SDL_free');
   assert(typeof wasmExports['SDL_malloc'] != 'undefined', 'missing Wasm export: SDL_malloc');
   assert(typeof wasmExports['SDL_calloc'] != 'undefined', 'missing Wasm export: SDL_calloc');
@@ -8774,10 +8774,10 @@ function assignWasmExports(wasmExports) {
   _webSetChannelVolumes = Module['_webSetChannelVolumes'] = createExportWrapper('webSetChannelVolumes', 4);
   _webAllocate = Module['_webAllocate'] = createExportWrapper('webAllocate', 1);
   _webFree = Module['_webFree'] = createExportWrapper('webFree', 1);
-  _webSetPalette = Module['_webSetPalette'] = createExportWrapper('webSetPalette', 4);
   _webSetPaused = Module['_webSetPaused'] = createExportWrapper('webSetPaused', 1);
   _webIsPaused = Module['_webIsPaused'] = createExportWrapper('webIsPaused', 0);
-  _webCaptureFrameBuffer = Module['_webCaptureFrameBuffer'] = createExportWrapper('webCaptureFrameBuffer', 0);
+  _webCheckAndClearSaveUpdated = Module['_webCheckAndClearSaveUpdated'] = createExportWrapper('webCheckAndClearSaveUpdated', 0);
+  _webSetPalette = Module['_webSetPalette'] = createExportWrapper('webSetPalette', 4);
   _SDL_free = Module['_SDL_free'] = createExportWrapper('SDL_free', 1);
   _SDL_malloc = Module['_SDL_malloc'] = createExportWrapper('SDL_malloc', 1);
   _SDL_calloc = Module['_SDL_calloc'] = createExportWrapper('SDL_calloc', 2);
