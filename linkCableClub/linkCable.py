@@ -144,3 +144,11 @@ async def link_cable_endpoint(websocket: WebSocket):
             # Nuke the room dictionary
             del rooms[current_room_code]
             print(f"[CLUB] Room destroyed: {current_room_code}")
+            
+if __name__ == "__main__":
+    # Render dynamically assigns a port via the PORT environment variable.
+    # We default to 8000 so you can still test it locally.
+    port = int(os.environ.get("PORT", 8000))
+    
+    # 0.0.0.0 exposes the server to the public internet
+    uvicorn.run("linkCable:app", host="0.0.0.0", port=port)
