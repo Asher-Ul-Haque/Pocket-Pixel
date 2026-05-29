@@ -4,7 +4,6 @@
 #include <SDL3/SDL_audio.h>
 #include <SDL3/SDL_init.h>
 #include <platform.h>
-#include <debug.h>
 #include <ppu/ppu.h>
 #include <apu/apu.h>
 #include <cartridge/cartridge.h>

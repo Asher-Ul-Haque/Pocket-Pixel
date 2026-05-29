@@ -4,16 +4,15 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <emscripten.h>
-
+#include <serial.h>
 #include <common.h>
 #include <timer.h>
 #include <platform.h>
 #include <cpu/cpu.h>
 #include <ppu/ppu.h>
 #include <cartridge/cartridge.h>
-#include <debug.h>
 #include <joypad.h>
-#include "state.h" // Included for memory-based save states
+#include <state.h> // Included for memory-based save states
 
 static bool running              = true;
 static PlatformContext* platform = NULL;
@@ -297,4 +296,10 @@ u32* webCaptureFrameBuffer(void) {
         }
     }
     return buffer;
+}
+
+EMSCRIPTEN_KEEPALIVE
+void webCompleteSerialTransfer(i32 incomingByte) {
+    // Cast the 32-bit JavaScript number down to an 8-bit byte for the core
+    coreCompleteSerialTransfer((u8)incomingByte);
 }
