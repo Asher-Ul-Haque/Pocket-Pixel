@@ -108,6 +108,18 @@ typedef struct AudioSystem
   void (*cleanup)     (void);
 } AudioSystem;
 
+/// @brief Serial Data Transfer (Link Cable) hooks
+typedef struct SerialSystem 
+{
+  /**
+   * @brief Hook called by the emulator when the game initiates a transfer.
+   * @param OUTGOING_BYTE the byte to send 
+   * @param IS_MASTER whether this instance of the emulator is master or slave
+   * @warn The C core will NOT wait for this to finish. It hands off the byte and resumes CPU execution.
+  */
+  void (*transferRequest)(u8 OUTGOING_BYTE, bool IS_MASTER);
+} SerialSystem;
+
 /// @brief: MASTER PLATFORM CONTEXT
 typedef struct PlatformContext 
 {
@@ -116,6 +128,7 @@ typedef struct PlatformContext
   RendererSystem    video;
   AudioSystem       audio;
   InputSystem       input;
+  SerialSystem      serial;
 } PlatformContext;
 
 

@@ -1,163 +1,146 @@
-import eventlet
-eventlet.monkey_patch()
-from flask import Flask, render_template, request
-from flask_socketio import SocketIO, emit, join_room, close_room
-import uuid
+import asyncio
+import json
+import random
+import string
 import time
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 
-app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*", transports=["websocket"])
+app = FastAPI()
 
-# Dictionary to store active sessions.
-sessions                    = {}
-sessions_with_pending_bytes = {}
+# The master dictionary holding our Link Cable Clubs
+# Format: { "CODE": { "p1": WebSocket, "p2": WebSocket, "created_at": timestamp } }
+rooms = {}
 
-@app.route('/')
-def index():
-  return render_template('index.html')
+def generate_room_code(length=5):
+    """Generates a random, easy-to-type alphanumeric shortcode."""
+    characters = string.ascii_uppercase + string.digits
+    while True:
+        code = ''.join(random.choices(characters, k=length))
+        if code not in rooms:
+            return code
 
+async def cleanup_stale_rooms():
+    """Background daemon: Deletes rooms that haven't paired up within 5 minutes."""
+    while True:
+        await asyncio.sleep(60) # Check every minute
+        current_time = time.time()
+        stale_codes = []
+        
+        for code, room in rooms.items():
+            # If the room is older than 5 minutes AND nobody joined as player 2
+            if room.get("p2") is None and (current_time - room["created_at"]) > 300:
+                stale_codes.append(code)
+                
+        for code in stale_codes:
+            print(f"[CLEANUP] Deleting stale room: {code}")
+            # Notify player 1 that the room expired
+            p1_ws = rooms[code].get("p1")
+            if p1_ws:
+                try:
+                    await p1_ws.send_json({"type": "error", "message": "Room expired after 5 minutes of inactivity."})
+                    await p1_ws.close()
+                except:
+                    pass
+            del rooms[code]
 
-@socketio.on('connect')
-def on_connect():
-  print(f"[CONNECT] Client connected: {request.sid}")
+@app.on_event("startup")
+async def startup_event():
+    # Boot up the background cleanup daemon when the server starts
+    asyncio.create_task(cleanup_stale_rooms())
 
+@app.get("/")
+async def get_frontend():
+    # Serve the frontend HTML file
+    with open("templates/index.html", "r") as f:
+        return HTMLResponse(f.read())
 
-@socketio.on('exit')
-def on_disconnect():
-  print(f"[DISCONNECT] Client disconnected: {request.sid}")
+@app.websocket("/ws")
+async def link_cable_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    current_room_code = None
+    player_role = None # "p1" or "p2"
 
-  # Find which session this client was part of
-  for session_id, session_data in list(sessions.items()):
-    clients_in_session = session_data['clients']
-    if request.sid in clients_in_session:
-      clients_in_session.remove(request.sid)
-      print(f"[LEAVE] {request.sid} removed from session {session_id}")
+    try:
+        while True:
+            # Receive any incoming message (can be text/JSON for signaling, or raw bytes for emulation)
+            message = await websocket.receive()
 
-      # Notify remaining client if there's only one left
-      if len(clients_in_session) == 1:
-        remaining_client_sid = list(clients_in_session)[0]
-        emit("partner_disconnected", room=remaining_client_sid)
-        print(f"[NOTIFY] Partner disconnected in session {session_id}, notifying {remaining_client_sid}")
+            # --- SIGNALING LAYER (JSON) ---
+            if "text" in message:
+                data = json.loads(message["text"])
+                action = data.get("action")
 
-        # Clear master/slave roles since the session is now invalid
-        session_data['master']  = None
-        session_data['slave']   = None
+                if action == "create":
+                    current_room_code = generate_room_code()
+                    player_role = "p1"
+                    rooms[current_room_code] = {
+                        "p1": websocket,
+                        "p2": None,
+                        "created_at": time.time()
+                    }
+                    print(f"[CLUB] Room created: {current_room_code}")
+                    await websocket.send_json({"type": "created", "code": current_room_code})
 
-      # If no clients left, remove the session
-      elif not clients_in_session:
-        del sessions[session_id]
-        close_room(session_id)
-        print(f"[SESSION REMOVED] {session_id}")
+                elif action == "join":
+                    attempted_code = data.get("code", "").upper().strip()
+                    if attempted_code not in rooms:
+                        await websocket.send_json({"type": "error", "message": "Room not found."})
+                        continue
+                    
+                    room = rooms[attempted_code]
+                    if room["p2"] is not None:
+                        await websocket.send_json({"type": "error", "message": "Sorry, your friend has more friends! Room is full."})
+                        continue
 
-      # Also clear any pending transfers for this session
-      if session_id in sessions_with_pending_bytes:
-        del sessions_with_pending_bytes[session_id]
-        print(f"[CLEANUP] Cleared pending transfer for session {session_id}")
-      break
+                    # Success: Pair them up!
+                    current_room_code = attempted_code
+                    player_role = "p2"
+                    room["p2"] = websocket
+                    
+                    print(f"[CLUB] Room paired: {current_room_code}")
+                    # Notify both players the cable is physically "plugged in"
+                    await room["p1"].send_json({"type": "connected"})
+                    await room["p2"].send_json({"type": "connected"})
 
+                elif action == "disconnect":
+                    # Client requested a polite disconnect
+                    break 
 
-@socketio.on('create_session')
-def on_create_session():
-  # Generate a new unique session ID
-  session_id                        = str(uuid.uuid4())[:8]
-  sessions[session_id]              = {'clients': set(), 'master': None, 'slave': None}
-  sessions[session_id]['clients'].add(request.sid)
-  sessions[session_id]['master']    = request.sid
+            # --- EMULATION LAYER (RAW BYTES) ---
+            elif "bytes" in message:
+                if not current_room_code or rooms[current_room_code].get("p2") is None:
+                    continue # Ignore bytes if not fully paired
 
-  join_room(session_id)
-  print(f"[CREATE] New session created: {session_id} by {request.sid}. Assigned as Master.")
-  emit('session_created', {'session_id': session_id}, room=request.sid)
-  emit('waiting_for_partner', {'session_id': session_id}, room=request.sid)
+                room = rooms[current_room_code]
+                payload = message["bytes"]
 
+                # Route the byte to the OTHER player
+                if player_role == "p1":
+                    await room["p2"].send_bytes(payload)
+                elif player_role == "p2":
+                    await room["p1"].send_bytes(payload)
 
-@socketio.on('join_session')
-def on_join_session(data):
-  session_id = data.get('session_id')
-
-  # Generate a new session ID if none provided
-  if not session_id or session_id not in sessions:
-    print(f"[REJECT] Session {session_id} not found. {request.sid} rejected.")
-    emit('session_not_found', room=request.sid)
-    return
-
-  clients_in_session = sessions[session_id]['clients']
-  if len(clients_in_session) < 2:
-    join_room(session_id)
-    clients_in_session.add(request.sid)
-    sessions[session_id]['slave'] = request.sid
-    print(f"[JOIN] {request.sid} joined session {session_id}. Assigned as Slave. Current clients: {len(clients_in_session)}")
-
-    # Notify both clients that the session is ready
-    if len(clients_in_session) == 2:
-      print(f"[READY] Session {session_id} is full. Both clients connected.")
-      emit('session_ready', room=session_id)
-    else:
-      emit('waiting_for_partner', {'session_id': session_id}, room=request.sid)
-      print(f"[WAIT] {request.sid} waiting for partner in session {session_id}.")
-  else:
-    print(f"[REJECT] Session {session_id} is full. {request.sid} rejected.")
-    emit('session_full', room=request.sid)
-
-
-@socketio.on('send_link_data')
-def on_send_link_data(data):
-  byte = data.get('byte')
-
-  if byte is None:
-    print(f"[ERROR] Received send_link_data without 'byte' from {request.sid}")
-    return
-
-  # Find the session and role for this client
-  session_id    = None
-  client_type   = None
-  for sid, session_data in sessions.items():
-    if request.sid == session_data.get('master'):
-      session_id    = sid
-      client_type   = "master"
-      break
-    elif request.sid == session_data.get('slave'):
-      session_id    = sid
-      client_type   = "slave"
-      break
-
-  if not session_id:
-    print(f"[ERROR] {request.sid} not in any active session, ignoring data.")
-    return
-
-  # Initialize a pending transfer object if one doesn't exist for the session
-  print(f"[TRANSFER] Received byte from {client_type} ({request.sid}), session {session_id}. Byte: 0x{byte:02X}")
-  if session_id not in sessions_with_pending_bytes:
-    sessions_with_pending_bytes[session_id] = {}
-
-  # Store the incoming byte based on its client type (master or slave)
-  sessions_with_pending_bytes[session_id][client_type] = {'sid': request.sid, 'byte': byte}
-
-  # Check if both a master and a slave byte are now available for this session
-  if 'master' in sessions_with_pending_bytes[session_id] and 'slave' in sessions_with_pending_bytes[session_id]:
-    master_data = sessions_with_pending_bytes[session_id]['master']
-    slave_data  = sessions_with_pending_bytes[session_id]['slave']
-    master_sid  = master_data['sid']
-    master_byte = master_data['byte']
-    slave_sid   = slave_data['sid']
-    slave_byte  = slave_data['byte']
-
-    # Send the master's byte to the slave
-    emit('receive_link_data', {'byte': master_byte}, room=slave_sid)
-    print(f"[RELAY] Master ({master_sid}) -> Slave ({slave_sid}), byte: 0x{master_byte:02X}")
-
-    # Send the slave's byte to the master
-    emit('receive_link_data', {'byte': slave_byte}, room=master_sid)
-    print(f"[RELAY] Slave ({slave_sid}) -> Master ({master_sid}), byte: 0x{slave_byte:02X}")
-
-    # Clear the pending transfer for this session
-    del sessions_with_pending_bytes[session_id]
-    print(f"[SYNC] Transfer complete for session {session_id}. Cleared pending transfer.")
-
-  else:
-    print(f"[PENDING] Stored byte from {client_type} ({request.sid}), waiting for partner.")
-    emit('waiting_for_transfer_partner', room=request.sid)
-
-
-if __name__ == '__main__':
-  print("Starting Flask-SocketIO server for Game Boy Link Cable emulation...")
-  socketio.run(app, host='0.0.0.0', port=5000, debug=True)
+    except WebSocketDisconnect:
+        print(f"[CLUB] User disconnected from room: {current_room_code}")
+        
+    finally:
+        # --- TEARDOWN SEQUENCE ---
+        if current_room_code and current_room_code in rooms:
+            room = rooms[current_room_code]
+            
+            # Notify the OTHER player that the cable was yanked out
+            other_role = "p2" if player_role == "p1" else "p1"
+            other_ws = room.get(other_role)
+            
+            if other_ws:
+                try:
+                    await other_ws.send_json({"type": "peer_disconnected", "message": "The other player disconnected."})
+                    await other_ws.close()
+                except:
+                    pass
+            
+            # Nuke the room dictionary
+            del rooms[current_room_code]
+            print(f"[CLUB] Room destroyed: {current_room_code}")
