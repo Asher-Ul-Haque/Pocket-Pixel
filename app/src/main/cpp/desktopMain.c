@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <serial.h>
 #include <common.h>
 #include <timer.h>
 #include <platform.h>
@@ -85,7 +84,6 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[]) {
     ppuInit();
     apuInit();
     timerInit();
-    serialInit();
 
     PlatformContext* platform = platformGetContext();
 

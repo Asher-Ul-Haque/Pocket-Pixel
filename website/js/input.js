@@ -279,7 +279,7 @@ let listeningKbAction = null;
 let listeningGpAction = null; 
 
 let gpBinds = JSON.parse(localStorage.getItem('pocketGpBinds')) || {
-    Up: 12, Down: 13, Left: 14, Right: 15, A: 1, B: 0, Start: 9, Select: 8
+    Up: 'A7-', Down: 'A7+', Left: 'A6-', Right: 'A6+', A: 0, B: 1, Start: 11, Select: 10
 };
 
 window.addEventListener('keydown', (e) => {

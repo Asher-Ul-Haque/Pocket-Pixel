@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <emscripten.h>
-#include <serial.h>
 #include <common.h>
 #include <timer.h>
 #include <platform.h>
@@ -159,25 +158,6 @@ void emscripten_main_loop(void) {
 // ============================================================================
 
 EMSCRIPTEN_KEEPALIVE
-void webCompleteSerialTransfer(i32 incomingByte) {
-    // Cast the 32-bit JavaScript number down to an 8-bit byte for the core
-    coreCompleteSerialTransfer((u8)incomingByte);
-}
-
-// This macro creates a C function that directly executes JavaScript code.
-// It hands the byte to our new PocketNetwork object, or instantly returns 0xFF if not connected.
-EM_JS(void, js_trigger_serial_transfer, (u8 outgoingByte, bool isMaster), {
-    if (window.PocketNetwork && window.PocketNetwork.sendByte) {
-        window.PocketNetwork.sendByte(outgoingByte, isMaster);
-    } else {
-        Module.ccall('webCompleteSerialTransfer', 'null', ['number'], [255]);
-    }
-})
-
-void webSerialTransferRequest(u8 outgoingByte, bool isMaster) {
-    js_trigger_serial_transfer(outgoingByte, isMaster);
-}
-EMSCRIPTEN_KEEPALIVE
 u8* webSaveState(u32* outSize) { return systemSaveStateToMemory(outSize); }
 
 EMSCRIPTEN_KEEPALIVE
@@ -307,11 +287,9 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[]) {
     ppuInit();
     apuInit();
     timerInit();
-    serialInit();
 
     platform = platformGetContext();
     ppu = ppuGetContext();
-    platform->serial.transferRequest = webSerialTransferRequest;
     FORGE_LOG_INFO("%s", "--- POCKET PIXEL WEB STARTING ---");
     emscripten_set_main_loop(emscripten_main_loop, 0, 1);
 
