@@ -5,29 +5,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
-
 #include <common.h>
 #include <timer.h>
 #include <platform.h>
 #include <cpu/cpu.h>
 #include <ppu/ppu.h>
 #include <cartridge/cartridge.h>
-#include <debug.h>
 #include <joypad.h>
 
 #define TARGET_FRAME_MS_60FPS  16
 #define TARGET_FRAME_MS_120FPS 8
 
 static char savePath[1024];
-
-static const char* getModeName(GameBoyMode MODE) {
-    switch (MODE) {
-        case MODE_DMG_GAMEBOY:      return "DMG";
-        case MODE_CGB_GAMEBOY:      return "CGB (backward compatible)";
-        case MODE_CGB_ONLY_GAMEBOY: return "CGB only";
-        default:                    return "Unknown";
-    }
-}
 
 bool fileSaveRam(const u8* RAM_DATA, u32 RAM_SIZE) {
     if (savePath[0] == '\0') return false;
@@ -95,7 +84,6 @@ i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[]) {
     ppuInit();
     apuInit();
     timerInit();
-    serialInit();
 
     PlatformContext* platform = platformGetContext();
 

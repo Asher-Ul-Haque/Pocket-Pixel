@@ -12,7 +12,13 @@ const btnFastForward = document.getElementById('btn-ff');
 const btnSave = document.getElementById('btn-save');
 const btnLoad = document.getElementById('btn-load');
 const btnEject = document.getElementById('btn-eject');
-
+const btnFullscreen = document.getElementById('btn-fullscreen');
+if (btnFullscreen) {
+    btnFullscreen.addEventListener('click', () => {
+        attemptFullscreen();
+        console.log("[POCKET FRONTEND] Fullscreen sequence triggered natively.");
+    });
+}
 // ==========================================
 // --- THE INPUT TRANSLATION LAYER ---
 // ==========================================
@@ -212,6 +218,8 @@ btnFastForward.addEventListener('click', () => {
         console.log("[POCKET FRONTEND] Fast Forward toggled to:", isFastForwarding);
         sendKeyEvent(SDL_KEYS.FastForward, true);
         setTimeout(() => sendKeyEvent(SDL_KEYS.FastForward, false), 50);
+        
+        // Your original exact image swap logic
         btnFastForward.querySelector('img').src = isFastForwarding ? 'assets/icons/svg/slow.svg' : 'assets/icons/svg/fast.svg';
     }
 });
@@ -271,7 +279,7 @@ let listeningKbAction = null;
 let listeningGpAction = null; 
 
 let gpBinds = JSON.parse(localStorage.getItem('pocketGpBinds')) || {
-    Up: 12, Down: 13, Left: 14, Right: 15, A: 1, B: 0, Start: 9, Select: 8
+    Up: 'A7-', Down: 'A7+', Left: 'A6-', Right: 'A6+', A: 0, B: 1, Start: 11, Select: 10
 };
 
 window.addEventListener('keydown', (e) => {

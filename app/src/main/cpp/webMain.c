@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <emscripten.h>
-#include <serial.h>
 #include <common.h>
 #include <timer.h>
 #include <platform.h>
@@ -153,59 +152,6 @@ void emscripten_main_loop(void) {
     }
 }
 
-i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[]) {
-    if (ARGUMENT_COUNT < 2) {
-        FORGE_LOG_FATAL("%s", "Web Build: Waiting for ROM upload via JS bridge...");
-        return 0;
-    }
-
-    const char* romPath = ARGUMENT_VECTOR[1];
-    FILE* file = fopen(romPath, "rb");
-    if (!file) {
-        FORGE_LOG_FATAL("Failed to open ROM from virtual FS: %s", romPath);
-        return 1;
-    }
-
-    fseek(file, 0, SEEK_END);
-    u64 romSize = ftell(file);
-    fseek(file, 0, SEEK_SET);
-
-    u8* romData = (u8*)malloc(romSize);
-    if (!romData || fread(romData, 1, (size_t)romSize, file) != romSize) {
-        if (romData) free(romData);
-        fclose(file);
-        return 1;
-    }
-    fclose(file);
-
-    CartridgeFileIO fileIO = {
-        .saveRamToFile       = fileSaveRam,
-        .loadRamFromFile     = fileLoadRam,
-        .getExpectedSaveSize = fileGetExpectedSaveSize
-    };
-
-    if (!cartridgeInit(&fileIO, romData, (u32)romSize)) {
-        FORGE_LOG_FATAL("%s", "Failed to init cartridge on web");
-        free(romData);
-        return 1;
-    }
-
-    platformInit();
-    joypadInit();
-    cpuInit();
-    ppuInit();
-    apuInit();
-    timerInit();
-    serialInit();
-
-    platform = platformGetContext();
-    ppu = ppuGetContext();
-
-    FORGE_LOG_INFO("%s", "--- POCKET PIXEL WEB STARTING ---");
-    emscripten_set_main_loop(emscripten_main_loop, 0, 1);
-
-    return 0;
-}
 
 // ============================================================================
 // --- JAVASCRIPT EXPORTS (WASM API) ---
@@ -298,8 +244,54 @@ u32* webCaptureFrameBuffer(void) {
     return buffer;
 }
 
-EMSCRIPTEN_KEEPALIVE
-void webCompleteSerialTransfer(i32 incomingByte) {
-    // Cast the 32-bit JavaScript number down to an 8-bit byte for the core
-    coreCompleteSerialTransfer((u8)incomingByte);
+i32 main(int ARGUMENT_COUNT, char* ARGUMENT_VECTOR[]) {
+    if (ARGUMENT_COUNT < 2) {
+        FORGE_LOG_FATAL("%s", "Web Build: Waiting for ROM upload via JS bridge...");
+        return 0;
+    }
+
+    const char* romPath = ARGUMENT_VECTOR[1];
+    FILE* file = fopen(romPath, "rb");
+    if (!file) {
+        FORGE_LOG_FATAL("Failed to open ROM from virtual FS: %s", romPath);
+        return 1;
+    }
+
+    fseek(file, 0, SEEK_END);
+    u64 romSize = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    u8* romData = (u8*)malloc(romSize);
+    if (!romData || fread(romData, 1, (size_t)romSize, file) != romSize) {
+        if (romData) free(romData);
+        fclose(file);
+        return 1;
+    }
+    fclose(file);
+
+    CartridgeFileIO fileIO = {
+        .saveRamToFile       = fileSaveRam,
+        .loadRamFromFile     = fileLoadRam,
+        .getExpectedSaveSize = fileGetExpectedSaveSize
+    };
+
+    if (!cartridgeInit(&fileIO, romData, (u32)romSize)) {
+        FORGE_LOG_FATAL("%s", "Failed to init cartridge on web");
+        free(romData);
+        return 1;
+    }
+
+    platformInit();
+    joypadInit();
+    cpuInit();
+    ppuInit();
+    apuInit();
+    timerInit();
+
+    platform = platformGetContext();
+    ppu = ppuGetContext();
+    FORGE_LOG_INFO("%s", "--- POCKET PIXEL WEB STARTING ---");
+    emscripten_set_main_loop(emscripten_main_loop, 0, 1);
+
+    return 0;
 }

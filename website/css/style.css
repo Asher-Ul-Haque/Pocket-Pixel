@@ -202,3 +202,18 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px;
     transform: translateX(-50%) translateY(0);
     opacity: 1;
 }
+
+/* ==========================================
+   --- FULLSCREEN OVERRIDES ---
+   ========================================== */
+:fullscreen .center-pane, 
+:-webkit-full-screen .center-pane {
+    padding: 0 !important;
+}
+
+:fullscreen .console-screen, 
+:-webkit-full-screen .console-screen {
+    border: none !important;
+    max-height: 100vh !important;
+    max-width: calc(100vh * 1.1111) !important;
+}
