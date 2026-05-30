@@ -10,7 +10,7 @@
  */
 
 #define MAX_ROM_SIZE (64 * 1024 * 1024)  /* 64 MB maximum ROM size */
-#define MIN_ROM_SIZE 1
+
 
 typedef unsigned char u8;
 
@@ -33,12 +33,6 @@ static RomBuffer safe_load_rom(const u8 *input, size_t declared_size, size_t act
     /* Invariant: reject if declared size exceeds actual input length */
     if (declared_size > actual_input_len) {
         result.error = 2;
-        return result;
-    }
-
-    /* Invariant: reject SIZE_MAX or near-overflow values */
-    if (declared_size == SIZE_MAX || declared_size >= (SIZE_MAX / 2)) {
-        result.error = 3;
         return result;
     }
 
