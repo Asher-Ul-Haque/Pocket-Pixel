@@ -74,7 +74,7 @@ fun SearchScreen(
         {
           CustomText(
             TEXT      = stringResource(R.string.NO_RES),
-            FONT_SIZE = 32
+            FONT_SIZE = 16
           )
         }
       }

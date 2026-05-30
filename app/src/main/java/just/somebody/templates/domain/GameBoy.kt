@@ -56,23 +56,23 @@ class GameBoy
 
   // - - - Native Bindings for Emulator Core (existing) - - -
 
-  private external fun nativeLoadROM(ROM: ByteArray, SIZE: Int)
-  private external fun nativeSetButtonState(BUTTON: Int, PRESSED: Boolean)
-  private external fun nativeStartEmulator(VOLUMES : FloatArray)
-  private external fun nativeStopEmulator()
-  private external fun nativePauseEmulator()
-  private external fun nativeResumeEmulator()
-  private external fun nativeSetVolumes(VOLUMES: FloatArray)
+  private fun nativeLoadROM(ROM: ByteArray, SIZE: Int) {}
+  private fun nativeSetButtonState(BUTTON: Int, PRESSED: Boolean) {}
+  private fun nativeStartEmulator(VOLUMES : FloatArray) {}
+  private fun nativeStopEmulator() {}
+  private fun nativePauseEmulator() {}
+  private fun nativeResumeEmulator() {}
+  private fun nativeSetVolumes(VOLUMES: FloatArray) {}
 
-  private external fun nativeRecieveByte(BYTE : Byte)
-  private external fun nativeFlushSave();
-  private external fun nativeChangePallete(INDEX : Int)
-  private external fun nativeSetShader(INDEX: Int)
+  private fun nativeRecieveByte(BYTE : Byte) {}
+  private fun nativeFlushSave() {}
+  private fun nativeChangePallete(INDEX : Int) {}
+  private fun nativeSetShader(INDEX: Int) {}
 
   // - - - Native Bindings for OpenGL ES Rendering (existing)
-  external fun nativeOnSurfaceCreated()
-  external fun nativeOnSurfaceChanged(width: Int, height: Int)
-  external fun nativeOnDrawFrame()
+  fun nativeOnSurfaceCreated() {}
+  fun nativeOnSurfaceChanged(width: Int, height: Int) {}
+  fun nativeOnDrawFrame() {}
 
   fun deleteRamFile()
   {
@@ -105,7 +105,7 @@ class GameBoy
   // - - - Static method for C++ to call back to request a render
   companion object
   {
-    init { System.loadLibrary("native-lib") }
+    //init { System.loadLibrary("native-lib") }
 
     // - - - Reference to the GLSurfaceView instance to call requestRender()
     @SuppressLint("StaticFieldLeak")

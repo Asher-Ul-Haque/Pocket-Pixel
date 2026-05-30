@@ -6,24 +6,24 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import just.somebody.templates.R
 
-val PokeFontFamily : FontFamily =
+val MinecraftFontFamily : FontFamily =
   FontFamily(
-    Font(R.font.pokemon_fire_red, weight = FontWeight.Light),
-    Font(R.font.pokemon_fire_red, weight = FontWeight.Normal),
-    Font(R.font.pokemon_fire_red, weight = FontWeight.Medium),
-    Font(R.font.pokemon_fire_red, weight = FontWeight.SemiBold),
-    Font(R.font.pokemon_fire_red, weight = FontWeight.Bold),
-    Font(R.font.pokemon_fire_red, weight = FontWeight.ExtraBold)
+    Font(R.font.minecraft, weight = FontWeight.Light),
+    Font(R.font.minecraft, weight = FontWeight.Normal),
+    Font(R.font.minecraft, weight = FontWeight.Medium),
+    Font(R.font.minecraft, weight = FontWeight.SemiBold),
+    Font(R.font.minecraft, weight = FontWeight.Bold),
+    Font(R.font.minecraft, weight = FontWeight.ExtraBold)
   )
 
-val PokeTypography : Typography =
+val MinecraftTypography : Typography =
   Typography().run ()
   {
-    val fontFamily = PokeFontFamily
+    val fontFamily = MinecraftFontFamily
     copy(
       displayLarge      = displayLarge.copy  (fontFamily = fontFamily),
       displayMedium     = displayMedium.copy (fontFamily = fontFamily),
-      displaySmall      = displayLarge.copy  (fontFamily = fontFamily),
+      displaySmall      = displaySmall.copy  (fontFamily = fontFamily),
 
       headlineLarge     = headlineLarge.copy (fontFamily = fontFamily),
       headlineMedium    = headlineMedium.copy(fontFamily = fontFamily),

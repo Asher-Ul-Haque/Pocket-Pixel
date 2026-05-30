@@ -1,6 +1,5 @@
 package just.somebody.templates.presentation.widgets
 
-import android.view.MotionEvent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -10,7 +9,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -21,48 +19,34 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import just.somebody.templates.App
 import just.somebody.templates.R
-import just.somebody.templates.appModule.storage.dataStore.AppSettings
 import just.somebody.templates.domain.Buttons
 import just.somebody.templates.domain.GameBoy
-import just.somebody.templates.presentation.screens.LinkCableScreen
 import just.somebody.templates.presentation.viewModels.EmulatorViewModel
-import just.somebody.templates.presentation.viewModels.LinkCableViewModel
 import just.somebody.templates.ui.theme.GameBoyColors
-import just.somebody.templates.ui.theme.PokeFontFamily
+import just.somebody.templates.ui.theme.MinecraftFontFamily
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GameBoyControls(
   GAME_BOY   : GameBoy,
-  VIEW_MODEL : EmulatorViewModel,
-  LINK_CABLE : LinkCableViewModel)
+  VIEW_MODEL : EmulatorViewModel)
 {
   val showBottomSheet   = remember { mutableStateOf(false) }
   // - - - Stores the last successfully pressed single directional button (UP, DOWN, LEFT, RIGHT)
@@ -145,7 +129,7 @@ fun GameBoyControls(
 
     if (showBottomSheet.value)
     {
-      SettingsPanel(Modifier, GAME_BOY, VIEW_MODEL, LINK_CABLE) { showBottomSheet.value = false; }
+      SettingsPanel(Modifier, GAME_BOY, VIEW_MODEL) { showBottomSheet.value = false; }
     }
   }
 }
@@ -223,7 +207,7 @@ fun NormalButton(
         text        = LABEL,
         color       = GameBoyColors.LightGreen,
         fontSize    = 16.sp,
-        fontFamily  = PokeFontFamily,
+        fontFamily  = MinecraftFontFamily,
       )
     }
   }

@@ -72,7 +72,7 @@ fun HomeScreen(
       {
         CustomText(
           TEXT      = stringResource(R.string.SELECT),
-          FONT_SIZE = 42)
+          FONT_SIZE = 21)
 
         CustomText(stringResource(R.string.SCAN))
 

@@ -14,7 +14,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import just.somebody.templates.App
 import just.somebody.templates.presentation.viewModels.EmulatorViewModel
-import just.somebody.templates.presentation.viewModels.LinkCableViewModel
 import just.somebody.templates.presentation.widgets.GameBoyControls
 import just.somebody.templates.presentation.widgets.GameBoyFrame
 
@@ -22,7 +21,6 @@ import just.somebody.templates.presentation.widgets.GameBoyFrame
 fun EmulatorScreen(
   MODIFIER    : Modifier = Modifier,
   VIEW_MODEL  : EmulatorViewModel,
-  LINK_CABLE  : LinkCableViewModel,
   URI         : String
 )
 {
@@ -58,6 +56,6 @@ fun EmulatorScreen(
 
     Spacer(modifier = Modifier.height(48.dp))
 
-    GameBoyControls(App.appModule.gameBoy, VIEW_MODEL, LINK_CABLE)
+    GameBoyControls(App.appModule.gameBoy, VIEW_MODEL)
   }
 }

@@ -1,6 +1,5 @@
 package just.somebody.templates.presentation.widgets
 
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardActions
@@ -14,14 +13,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
@@ -33,7 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import just.somebody.templates.R
 import just.somebody.templates.ui.theme.GameBoyColors
-import just.somebody.templates.ui.theme.PokeFontFamily
+import just.somebody.templates.ui.theme.MinecraftFontFamily
 
 
 @Composable
@@ -79,14 +71,14 @@ fun SearchBar(
         Text(
           text        = "Search...",
           color       = GameBoyColors.MediumGreen,
-          fontSize    = 24.sp,
-          fontFamily  = PokeFontFamily,
+          fontSize    = 16.sp,
+          fontFamily  = MinecraftFontFamily,
         )
       },
       textStyle = TextStyle(
         color           = GameBoyColors.DarkGreen,
-        fontSize        = 24.sp,
-        fontFamily      = PokeFontFamily,
+        fontSize        = 16.sp,
+        fontFamily      = MinecraftFontFamily,
         lineHeight      = 28.sp,
         lineHeightStyle = LineHeightStyle(
           alignment = LineHeightStyle.Alignment.Center,

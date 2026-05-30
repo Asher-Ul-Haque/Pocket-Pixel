@@ -9,14 +9,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import just.somebody.templates.ui.theme.GameBoyColors
-import just.somebody.templates.ui.theme.PokeFontFamily
+import just.somebody.templates.ui.theme.MinecraftFontFamily
 
 @Composable
 fun CustomText(
   TEXT      : String,
   MODIFIER  : Modifier = Modifier,
   COLOR     : Color    = GameBoyColors.LightGreen,
-  FONT_SIZE : Int      = 32,
+  FONT_SIZE : Int      = 16,
   MAX_LINES : Int      = 100)
 {
   Text(
@@ -25,7 +25,7 @@ fun CustomText(
     text       = TEXT,
     color      = COLOR,
     fontSize   = FONT_SIZE.sp,
-    fontFamily = PokeFontFamily,
+    fontFamily = MinecraftFontFamily,
     overflow   = TextOverflow.Ellipsis,
     maxLines   = MAX_LINES
   )

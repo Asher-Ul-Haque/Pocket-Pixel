@@ -1,4 +1,4 @@
-#if defined(_WIN32) || defined(__linux__) || (defined(__APPLE__) && defined(__MACH__)) || defined(__EMSCRIPTEN__)
+#ifndef __ANDROID__
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_audio.h>

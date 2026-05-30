@@ -3,8 +3,7 @@
     <string name = "HOME">         Home                        </string>
     <string name = "FAV">          Favorites                   </string>
     <string name = "SEARCH">       Search                      </string>
-    <string name = "SERVER">       Server                      </string>
-    <string name = "LINK_CABLE">   Link                        </string>
+    <string name = "SETTINGS">     Settings                    </string>
     <string name = "HOW_TO">       How do I use Pixel Pocket   </string>
     <string name = "NOT_WORKING">  Why is your app not working </string>
     <string name = "LEGAL">        Is this app legal           </string>
@@ -37,7 +36,6 @@
     <string name = "DISCOVER"> Discover New </string>
     <string name = "NO_FAV"> No Favorites </string>
     <string name = "NO_RES"> No Results </string>
-    <string name = "SETTINGS"> Settings </string>
     <string name = "CHANGE"> Change ROM Directory </string>
     <string name = "RESCAN"> Rescan ROMs </string>
     <string name = "FACTORY"> Factory Reset </string>

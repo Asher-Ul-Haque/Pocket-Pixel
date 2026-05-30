@@ -29,7 +29,7 @@ import androidx.compose.ui.unit.sp
 import just.somebody.templates.App
 import just.somebody.templates.R
 import just.somebody.templates.ui.theme.GameBoyColors
-import just.somebody.templates.ui.theme.PokeFontFamily
+import just.somebody.templates.ui.theme.MinecraftFontFamily
 
 
 data class NavItem(
@@ -94,18 +94,6 @@ private fun NavList(
       R.drawable.search,
       R.drawable.search
     ),
-
-    NavItem(
-      stringResource(R.string.LINK_CABLE),
-      R.drawable.power,
-      R.drawable.power
-    ),
-
-    NavItem(
-      stringResource(R.string.SERVER),
-      R.drawable.downasaur,
-      R.drawable.downasaur
-    ),
   )
 
   navItems.forEachIndexed ()
@@ -161,8 +149,8 @@ private fun NavList(
                 Text(
                   text        = item.badgeCount.toString(),
                   color       = GameBoyColors.DarkGreen,
-                  fontFamily  = PokeFontFamily,
-                  fontSize    = 16.sp,
+                  fontFamily  = MinecraftFontFamily,
+                  fontSize    = 8.sp,
                 )
               }
             }
@@ -173,8 +161,8 @@ private fun NavList(
 
         Text(
           text        = item.title,
-          fontFamily  = PokeFontFamily,
-          fontSize    = 20.sp,
+          fontFamily  = MinecraftFontFamily,
+          fontSize    = 10.sp,
           color       = GameBoyColors.LightGreen,
           softWrap    = false,
           maxLines    = 1

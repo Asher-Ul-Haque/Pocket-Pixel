@@ -23,7 +23,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import just.somebody.templates.ui.theme.GameBoyColors
-import just.somebody.templates.ui.theme.PokeFontFamily
+import just.somebody.templates.ui.theme.MinecraftFontFamily
 
 @Composable
 fun TextInp(
@@ -51,7 +51,7 @@ fun TextInp(
       textStyle             = TextStyle(
         color       = GameBoyColors.DarkGreen,
         fontSize    = 36.sp,
-        fontFamily  = PokeFontFamily
+        fontFamily  = MinecraftFontFamily
       ),
       modifier              = MODIFIER
         .minimumInteractiveComponentSize()
@@ -69,7 +69,7 @@ fun TextInp(
           text        = PLACEHOLDER,
           color       = GameBoyColors.MediumGreen,
           fontSize    = 36.sp,
-          fontFamily  = PokeFontFamily,
+          fontFamily  = MinecraftFontFamily,
         )
       },
     )

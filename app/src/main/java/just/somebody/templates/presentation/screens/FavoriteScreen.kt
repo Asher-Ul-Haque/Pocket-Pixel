@@ -49,7 +49,7 @@ fun FavoriteScreen(
     {
       CustomText(
         TEXT      = stringResource(R.string.NO_FAV),
-        FONT_SIZE = 42)
+        FONT_SIZE = 21)
     }
     else
     {

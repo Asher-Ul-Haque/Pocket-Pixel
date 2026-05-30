@@ -1,5 +1,6 @@
 package just.somebody.templates.presentation.screens
 
+import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
@@ -26,9 +27,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -41,7 +46,6 @@ import just.somebody.templates.presentation.effects.ObserveAsEvents
 import just.somebody.templates.presentation.viewModels.BrowseViewModel
 import just.somebody.templates.presentation.viewModels.EmulatorViewModel
 import just.somebody.templates.presentation.viewModels.GamesViewModel
-import just.somebody.templates.presentation.viewModels.LinkCableViewModel
 import just.somebody.templates.presentation.viewModels.SettingsViewModel
 import just.somebody.templates.presentation.viewModels.viewModelFactory
 import just.somebody.templates.presentation.widgets.CustomText
@@ -57,6 +61,22 @@ fun BrowseScreen(
 )
 {
   val state by VIEW_MODEL.browseState.collectAsState()
+
+  val context = LocalContext.current
+  LaunchedEffect(state.showBars)
+  {
+    val window      = (context as? Activity)?.window ?: return@LaunchedEffect
+    val controller  = WindowCompat.getInsetsController(window, window.decorView)
+    if (state.showBars)
+    {
+      controller.show(WindowInsetsCompat.Type.systemBars())
+    }
+    else
+    {
+      controller.hide(WindowInsetsCompat.Type.systemBars())
+      controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+    }
+  }
 
   val gamesViewModel =
     viewModel<GamesViewModel>(factory = viewModelFactory()
@@ -74,9 +94,6 @@ fun BrowseScreen(
   val emulatorViewModel =
     viewModel<EmulatorViewModel>(factory = viewModelFactory()
     { EmulatorViewModel() })
-  val linkCableViewModel =
-    viewModel<LinkCableViewModel>(factory = viewModelFactory()
-    { LinkCableViewModel() })
 
   Scaffold (
     topBar    =
@@ -93,16 +110,6 @@ fun BrowseScreen(
               Icon(
                 painter            = painterResource(R.drawable.github),
                 contentDescription = "Check information",
-                tint                = GameBoyColors.DarkGreen,
-                modifier            = Modifier.size(24.dp)
-              )
-            }
-
-            IconButton(onClick = { VIEW_MODEL.goToSettings(true) })
-            {
-              Icon(
-                painter            = painterResource(R.drawable.settings),
-                contentDescription = "Change Settings",
                 tint                = GameBoyColors.DarkGreen,
                 modifier            = Modifier.size(24.dp)
               )
@@ -202,16 +209,6 @@ fun BrowseScreen(
           MODIFIFER  = Modifier.fillMaxSize()
         )
       }
-      composable<Destination.Server>
-      {
-        LaunchedEffect(Unit) { VIEW_MODEL.showBars(true) }
-        ServerScreen(Modifier.fillMaxSize())
-      }
-      composable<Destination.LinkCable>
-      {
-        LaunchedEffect(Unit) { VIEW_MODEL.showBars(true) }
-        LinkCableScreen(linkCableViewModel, Modifier.fillMaxSize())
-      }
       composable<Destination.Emulator>
       {
         LaunchedEffect(Unit) { VIEW_MODEL.showBars(false) }
@@ -219,8 +216,7 @@ fun BrowseScreen(
         EmulatorScreen(
           MODIFIER   = Modifier.fillMaxSize(),
           URI        = args.URI,
-          VIEW_MODEL = emulatorViewModel,
-          LINK_CABLE = linkCableViewModel)
+          VIEW_MODEL = emulatorViewModel)
       }
     }
 
@@ -238,29 +234,29 @@ fun BrowseScreen(
           {
             CustomText(
               TEXT      = stringResource(R.string.HOW_TO),
-              FONT_SIZE = 24,
+              FONT_SIZE = 12,
               COLOR     = GameBoyColors.Green)
             CustomText(
               TEXT      = stringResource(R.string.USAGE),
-              FONT_SIZE = 16,
+              FONT_SIZE = 8,
               COLOR     = GameBoyColors.LightGreen)
 
             CustomText(
               TEXT      = stringResource(R.string.NOT_WORKING),
-              FONT_SIZE = 24,
+              FONT_SIZE = 12,
               COLOR     = GameBoyColors.Green)
             CustomText(
               TEXT      = stringResource(R.string.TROUBLESHOOT),
-              FONT_SIZE = 16,
+              FONT_SIZE = 8,
               COLOR     = GameBoyColors.LightGreen)
 
             CustomText(
               TEXT      = stringResource(R.string.LEGAL),
-              FONT_SIZE = 24,
+              FONT_SIZE = 12,
               COLOR     = GameBoyColors.Green)
             CustomText(
               TEXT      = stringResource(R.string.PIRACY),
-              FONT_SIZE = 16,
+              FONT_SIZE = 8,
               COLOR     = GameBoyColors.LightGreen)
 
             CustomText(

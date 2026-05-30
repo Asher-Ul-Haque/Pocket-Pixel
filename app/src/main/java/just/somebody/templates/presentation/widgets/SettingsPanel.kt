@@ -32,9 +32,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.unit.dp
 import just.somebody.templates.domain.GameBoy
-import just.somebody.templates.presentation.screens.LinkCableScreen
 import just.somebody.templates.presentation.viewModels.EmulatorViewModel
-import just.somebody.templates.presentation.viewModels.LinkCableViewModel
 import just.somebody.templates.ui.theme.GameBoyColors
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -43,7 +41,6 @@ fun SettingsPanel(
   MODIFIER    : Modifier = Modifier,
   GAME_BOY    : GameBoy,
   EMULATOR    : EmulatorViewModel,
-  LINK_CABLE  : LinkCableViewModel,
   ON_CLOSE    : () -> Unit
 )
 {
@@ -80,8 +77,6 @@ fun SettingsPanel(
 
       when (settingsPage)
       {
-        0 -> LinkCableScreen(LINK_CABLE, Modifier.fillMaxSize(), false)
-
         1 -> AudioSettingsSection(settings.channelVolume)
         { vol, ch -> EMULATOR.setVolume(vol, ch) }
 
