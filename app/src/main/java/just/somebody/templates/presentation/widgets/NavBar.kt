@@ -94,6 +94,12 @@ private fun NavList(
       R.drawable.search,
       R.drawable.search
     ),
+
+    NavItem(
+      stringResource(R.string.SETTINGS),
+      R.drawable.settings,
+      R.drawable.settings
+    ),
   )
 
   navItems.forEachIndexed ()

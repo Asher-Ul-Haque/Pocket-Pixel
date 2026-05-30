@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -95,190 +96,204 @@ fun BrowseScreen(
     viewModel<EmulatorViewModel>(factory = viewModelFactory()
     { EmulatorViewModel() })
 
-  Scaffold (
-    topBar    =
+  val isLandscape = App.appModule.isLandscape()
+
+  Row(modifier = MODIFIFER.fillMaxSize())
+  {
+    if (isLandscape && state.showBars)
     {
-      if (state.showBars)
+      NavBar(
+        SELECTED_INDEX = state.selectedIndex,
+        ON_NAVIGATE    = { VIEW_MODEL.onNavigate(it) }
+      )
+    }
+
+    Scaffold (
+      topBar    =
       {
-        TopAppBar(
-          title          =
-          { CustomText(TEXT = stringResource(VIEW_MODEL.getDestinationTitle()) ) },
-          actions        =
-          {
-            IconButton(onClick = { VIEW_MODEL.toggleSeeInfo() })
+        if (state.showBars)
+        {
+          TopAppBar(
+            title          =
+            { CustomText(TEXT = stringResource(VIEW_MODEL.getDestinationTitle()) ) },
+            actions        =
             {
-              Icon(
-                painter            = painterResource(R.drawable.github),
-                contentDescription = "Check information",
-                tint                = GameBoyColors.DarkGreen,
-                modifier            = Modifier.size(24.dp)
+              IconButton(onClick = { VIEW_MODEL.toggleSeeInfo() })
+              {
+                Icon(
+                  painter            = painterResource(R.drawable.github),
+                  contentDescription = "Check information",
+                  tint                = GameBoyColors.DarkGreen,
+                  modifier            = Modifier.size(24.dp)
+                )
+              }
+            },
+            colors         = TopAppBarDefaults.topAppBarColors(containerColor = GameBoyColors.MediumGreen)
+          )
+        }
+      },
+
+      bottomBar =
+      {
+        if (!isLandscape && state.showBars)
+        {
+          NavBar(
+            MODIFIER       = Modifier
+              .fillMaxWidth(),
+            SELECTED_INDEX = state.selectedIndex,
+            ON_NAVIGATE    = { VIEW_MODEL.onNavigate(it)
+            }
+          )
+        }
+      },
+
+      modifier  = Modifier.weight(1f),
+
+      snackbarHost = { SnackbarHost(hostState = SNACK) }
+    )
+    { innerPadding ->
+      val navController       = rememberNavController()
+      val navigator           = App.appModule.navigator
+
+      ObserveAsEvents(navigator.navigationAction)
+      { action ->
+        when(action)
+        {
+          is NavigationAction.Navigate          -> navController.navigate(action.DESTINATION)  {action.OPTIONS(this) }
+          is NavigationAction.PopBackStack      ->
+          {
+            if (action.DESTINATION != null) navController.popBackStack(action.DESTINATION, action.INCLUSIVE)
+            else                            navController.popBackStack()
+          }
+          is NavigationAction.ClearBackStack    ->
+          {
+            navController.navigate(action.DESTINATION)
+            {
+              popUpTo(0) { inclusive = true}
+              launchSingleTop = true
+            }
+          }
+          is NavigationAction.NavigateSingleTop -> { navController.navigate(action.DESTINATION) { launchSingleTop = true } }
+          is NavigationAction.PopUpTo           ->
+          {
+            navController.navigate(action.DESTINATION)
+            {
+              popUpTo(action.DESTINATION) { inclusive = action.INCLUSIVE}
+              launchSingleTop = true
+            }
+          }
+          is NavigationAction.Replace           ->
+          {
+            navController.popBackStack()
+            navController.navigate(action.DESTINATION)
+          }
+          NavigationAction.NavigateBack         -> navController.navigateUp()
+        }
+      }
+
+
+      NavHost(
+        navController    = navController,
+        startDestination = navigator.startDestination,
+        modifier         = Modifier.padding(innerPadding)
+      )
+      {
+        composable<Destination.Home>
+        {
+          LaunchedEffect(Unit) { VIEW_MODEL.showBars(true) }
+          HomeScreen(
+            VIEW_MODEL = gamesViewModel,
+            MODIFIFER  = Modifier.fillMaxSize()
+          )
+        }
+        composable<Destination.Favorites>
+        {
+          LaunchedEffect(Unit) { VIEW_MODEL.showBars(true) }
+          FavoriteScreen(
+            VIEW_MODEL = gamesViewModel,
+            MODIFIFER  = Modifier.fillMaxSize()
+          )
+        }
+        composable<Destination.Search>
+        {
+          LaunchedEffect(Unit) { VIEW_MODEL.showBars(true) }
+          SearchScreen(
+            VIEW_MODEL = gamesViewModel,
+            MODIFIFER  = Modifier.fillMaxSize()
+          )
+        }
+        composable<Destination.Settings>
+        {
+          LaunchedEffect(Unit) { VIEW_MODEL.showBars(true) }
+          SettingsScreen(
+            VIEW_MODEL = settingsViewModel,
+            MODIFIFER  = Modifier.fillMaxSize()
+          )
+        }
+        composable<Destination.Emulator>
+        {
+          LaunchedEffect(Unit) { VIEW_MODEL.showBars(false) }
+          val args = it.toRoute<Destination.Emulator>()
+          EmulatorScreen(
+            MODIFIER   = Modifier.fillMaxSize(),
+            URI        = args.URI,
+            VIEW_MODEL = emulatorViewModel)
+        }
+      }
+
+      if (state.showInfoDialog)
+      {
+        BasicAlertDialog(
+          onDismissRequest = { VIEW_MODEL.toggleSeeInfo() },
+          modifier         = Modifier.background(GameBoyColors.MediumGreen),
+          content          =
+          {
+            Column (
+              verticalArrangement = Arrangement.SpaceEvenly,
+              horizontalAlignment = Alignment.CenterHorizontally,
+              modifier            = Modifier.padding(16.dp)
+            )
+            {
+              CustomText(
+                TEXT      = stringResource(R.string.HOW_TO),
+                FONT_SIZE = 12,
+                COLOR     = GameBoyColors.Green)
+              CustomText(
+                TEXT      = stringResource(R.string.USAGE),
+                FONT_SIZE = 8,
+                COLOR     = GameBoyColors.LightGreen)
+
+              CustomText(
+                TEXT      = stringResource(R.string.NOT_WORKING),
+                FONT_SIZE = 12,
+                COLOR     = GameBoyColors.Green)
+              CustomText(
+                TEXT      = stringResource(R.string.TROUBLESHOOT),
+                FONT_SIZE = 8,
+                COLOR     = GameBoyColors.LightGreen)
+
+              CustomText(
+                TEXT      = stringResource(R.string.LEGAL),
+                FONT_SIZE = 12,
+                COLOR     = GameBoyColors.Green)
+              CustomText(
+                TEXT      = stringResource(R.string.PIRACY),
+                FONT_SIZE = 8,
+                COLOR     = GameBoyColors.LightGreen)
+
+              CustomText(
+                TEXT     = stringResource(R.string.GITHUB),
+                MODIFIER = Modifier.clickable ()
+                  {
+                    val githubUrl = "https://github.com/Asher-Ul-Haque/Pocket-Pixel"
+                    val intent    = Intent(Intent.ACTION_VIEW, Uri.parse(githubUrl)).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+                    App.appModule.context.startActivity(intent)
+                  },
+                COLOR   = Color.Blue
               )
             }
-          },
-          colors         = TopAppBarDefaults.topAppBarColors(containerColor = GameBoyColors.MediumGreen)
-        )
+          })
       }
-    },
-
-    bottomBar =
-    {
-      if (state.showBars)
-      {
-        NavBar(
-          MODIFIER       = Modifier
-            .fillMaxWidth(),
-          SELECTED_INDEX = state.selectedIndex,
-          ON_NAVIGATE    = { VIEW_MODEL.onNavigate(it)
-          }
-        )
-      }
-    },
-
-    modifier  = MODIFIFER,
-
-    snackbarHost = { SnackbarHost(hostState = SNACK) }
-  )
-  { innerPadding ->
-    val navController       = rememberNavController()
-    val navigator           = App.appModule.navigator
-
-    ObserveAsEvents(navigator.navigationAction)
-    { action ->
-      when(action)
-      {
-        is NavigationAction.Navigate          -> navController.navigate(action.DESTINATION)  {action.OPTIONS(this) }
-        is NavigationAction.PopBackStack      ->
-        {
-          if (action.DESTINATION != null) navController.popBackStack(action.DESTINATION, action.INCLUSIVE)
-          else                            navController.popBackStack()
-        }
-        is NavigationAction.ClearBackStack    ->
-        {
-          navController.navigate(action.DESTINATION)
-          {
-            popUpTo(0) { inclusive = true}
-            launchSingleTop = true
-          }
-        }
-        is NavigationAction.NavigateSingleTop -> { navController.navigate(action.DESTINATION) { launchSingleTop = true } }
-        is NavigationAction.PopUpTo           ->
-        {
-          navController.navigate(action.DESTINATION)
-          {
-            popUpTo(action.DESTINATION) { inclusive = action.INCLUSIVE}
-            launchSingleTop = true
-          }
-        }
-        is NavigationAction.Replace           ->
-        {
-          navController.popBackStack()
-          navController.navigate(action.DESTINATION)
-        }
-        NavigationAction.NavigateBack         -> navController.navigateUp()
-      }
-    }
-
-
-    NavHost(
-      navController    = navController,
-      startDestination = navigator.startDestination,
-      modifier         = Modifier.padding(innerPadding)
-    )
-    {
-      composable<Destination.Home>
-      {
-        LaunchedEffect(Unit) { VIEW_MODEL.showBars(true) }
-        HomeScreen(
-          VIEW_MODEL = gamesViewModel,
-          MODIFIFER  = Modifier.fillMaxSize()
-        )
-      }
-      composable<Destination.Favorites>
-      {
-        LaunchedEffect(Unit) { VIEW_MODEL.showBars(true) }
-        FavoriteScreen(
-          VIEW_MODEL = gamesViewModel,
-          MODIFIFER  = Modifier.fillMaxSize()
-        )
-      }
-      composable<Destination.Search>
-      {
-        LaunchedEffect(Unit) { VIEW_MODEL.showBars(true) }
-        SearchScreen(
-          VIEW_MODEL = gamesViewModel,
-          MODIFIFER  = Modifier.fillMaxSize()
-        )
-      }
-      composable<Destination.Emulator>
-      {
-        LaunchedEffect(Unit) { VIEW_MODEL.showBars(false) }
-        val args = it.toRoute<Destination.Emulator>()
-        EmulatorScreen(
-          MODIFIER   = Modifier.fillMaxSize(),
-          URI        = args.URI,
-          VIEW_MODEL = emulatorViewModel)
-      }
-    }
-
-    if (state.showInfoDialog)
-    {
-      BasicAlertDialog(
-        onDismissRequest = { VIEW_MODEL.toggleSeeInfo() },
-        modifier         = Modifier.background(GameBoyColors.MediumGreen),
-        content          =
-        {
-          Column (
-            verticalArrangement = Arrangement.SpaceEvenly,
-            horizontalAlignment = Alignment.CenterHorizontally
-          )
-          {
-            CustomText(
-              TEXT      = stringResource(R.string.HOW_TO),
-              FONT_SIZE = 12,
-              COLOR     = GameBoyColors.Green)
-            CustomText(
-              TEXT      = stringResource(R.string.USAGE),
-              FONT_SIZE = 8,
-              COLOR     = GameBoyColors.LightGreen)
-
-            CustomText(
-              TEXT      = stringResource(R.string.NOT_WORKING),
-              FONT_SIZE = 12,
-              COLOR     = GameBoyColors.Green)
-            CustomText(
-              TEXT      = stringResource(R.string.TROUBLESHOOT),
-              FONT_SIZE = 8,
-              COLOR     = GameBoyColors.LightGreen)
-
-            CustomText(
-              TEXT      = stringResource(R.string.LEGAL),
-              FONT_SIZE = 12,
-              COLOR     = GameBoyColors.Green)
-            CustomText(
-              TEXT      = stringResource(R.string.PIRACY),
-              FONT_SIZE = 8,
-              COLOR     = GameBoyColors.LightGreen)
-
-            CustomText(
-              TEXT     = stringResource(R.string.GITHUB),
-              MODIFIER = Modifier.clickable ()
-                {
-                  val githubUrl = "https://github.com/Asher-Ul-Haque/Pocket-Pixel"
-                  val intent    = Intent(Intent.ACTION_VIEW, Uri.parse(githubUrl)).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
-                  App.appModule.context.startActivity(intent)
-                },
-              COLOR   = Color.Blue
-            )
-          }
-        })
-    }
-
-    if (state.showSettings)
-    {
-      SettingsScreen(
-        VIEW_MODEL = settingsViewModel,
-        ON_DISMISS = { VIEW_MODEL.goToSettings(false) }
-      )
     }
   }
 }
