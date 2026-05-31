@@ -1,36 +1,25 @@
 package just.somebody.templates.presentation.screens
 
-import GameActionBottomSheet
-import GameList
+import just.somebody.templates.presentation.widgets.GameActionBottomSheet
+import just.somebody.templates.presentation.widgets.GameList
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import just.somebody.templates.App
 import just.somebody.templates.R
-import just.somebody.templates.presentation.effects.SnackbarController
-import just.somebody.templates.presentation.effects.SnackbarEvent
 import just.somebody.templates.presentation.viewModels.GamesViewModel
-import just.somebody.templates.presentation.widgets.CustomButton
 import just.somebody.templates.presentation.widgets.CustomText
 import just.somebody.templates.presentation.widgets.SearchBar
 import just.somebody.templates.ui.theme.GameBoyColors
-import kotlinx.coroutines.launch
 
 @Composable
 fun SearchScreen(
@@ -92,7 +81,7 @@ fun SearchScreen(
             ON_CLICK      = { game -> VIEW_MODEL.markAsPlayed(game) },
             ON_LONG_PRESS = { game -> VIEW_MODEL.selectGame(game) },
             USE_ROW       = false,
-            GET_URL       = { game -> VIEW_MODEL.getBoxArtFlow(game.title) },
+            GET_URL       = { game -> VIEW_MODEL.getBoxArtFlow(game) },
             SHOW_TITLE    = false
           )
         }
@@ -102,18 +91,19 @@ fun SearchScreen(
     selectedGame.value?.let ()
     { game ->
       GameActionBottomSheet(
-        GAME       = game,
-        ON_DISMISS = { VIEW_MODEL.selectGame(null)},
-        ON_PLAY    =
+        GAME             = game,
+        ON_DISMISS       = { VIEW_MODEL.selectGame(null)},
+        ON_PLAY          =
         {
           VIEW_MODEL.markAsPlayed(game)
           VIEW_MODEL.selectGame(null)
         },
-        ON_FAVORITE  =
+        ON_FAVORITE      =
         {
           VIEW_MODEL.toggleFavorite(game)
           VIEW_MODEL.selectGame(null)
         },
+        ON_UPDATE_BOXART = { url -> VIEW_MODEL.updateBoxArtUrl(game, url) }
       )
     }
   }

@@ -1,3 +1,5 @@
+package just.somebody.templates.presentation.widgets
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -12,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -22,6 +23,9 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -31,19 +35,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import just.somebody.templates.App
 import just.somebody.templates.R
 import just.somebody.templates.domain.models.Game
-import just.somebody.templates.presentation.widgets.CustomButton
-import just.somebody.templates.presentation.widgets.CustomText
 import just.somebody.templates.ui.theme.GameBoyColors
+import just.somebody.templates.ui.theme.MinecraftFontFamily
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 
@@ -73,8 +77,8 @@ fun GameCard(
     if (BIG)  200.dp * SCALE
     else      140.dp * SCALE
   val titleFont =
-    if (BIG)  24
-    else      18
+    if (BIG)  16
+    else      12
 
   Card(
     shape     = RectangleShape,
@@ -218,41 +222,70 @@ fun GameList(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GameActionBottomSheet(
-  GAME        : Game,
-  ON_DISMISS  : () -> Unit,
-  ON_PLAY     : () -> Unit,
-  ON_FAVORITE : () -> Unit,
+  GAME            : Game,
+  ON_DISMISS      : () -> Unit,
+  ON_PLAY         : () -> Unit,
+  ON_FAVORITE      : () -> Unit,
+  ON_UPDATE_BOXART : (String) -> Unit,
 )
 {
+  var boxArtUrl by remember { mutableStateOf(GAME.boxArtUrl ?: "") }
+
   ModalBottomSheet(
     onDismissRequest = ON_DISMISS,
     containerColor   = GameBoyColors.DarkGreen)
   {
     Column(
-      modifier            = Modifier.padding(16.dp),
+      modifier            = Modifier
+        .padding(16.dp)
+        .fillMaxWidth(),
       verticalArrangement = Arrangement.Top,
       horizontalAlignment = Alignment.Start
     )
     {
       CustomText(GAME.title)
+
+      Spacer(modifier = Modifier.height(8.dp))
+
+      OutlinedTextField(
+        value         = boxArtUrl,
+        onValueChange = { boxArtUrl = it },
+        label         = { Text(stringResource(R.string.BOX_ART_URL), fontFamily = MinecraftFontFamily, color = GameBoyColors.DarkGreen) },
+        modifier      = Modifier.fillMaxWidth().background(color = GameBoyColors.LightGreen),
+        textStyle     = TextStyle(fontFamily = MinecraftFontFamily, fontSize = 14.sp, color = GameBoyColors.DarkGreen),
+        colors        = OutlinedTextFieldDefaults.colors(
+          focusedBorderColor   = GameBoyColors.LightGreen,
+          unfocusedBorderColor = GameBoyColors.LightGreen,
+          focusedLabelColor    = GameBoyColors.Green,
+          unfocusedLabelColor  = GameBoyColors.Green,
+          cursorColor          = GameBoyColors.DarkGreen
+        ),
+        shape         = RectangleShape
+      )
+
+      CustomButton(
+        ON_CLICK = { ON_UPDATE_BOXART(boxArtUrl) },
+        MODIFIER = Modifier.fillMaxWidth())
+      { CustomText(stringResource(R.string.UPDATE_BOX_ART)) }
+
       CustomButton(
         ON_CLICK = ON_PLAY,
         MODIFIER = Modifier.fillMaxWidth())
-      { CustomText("Play") }
+      { CustomText(stringResource(R.string.PLAY)) }
 
       CustomButton(
         ON_CLICK = ON_FAVORITE,
         MODIFIER = Modifier.fillMaxWidth())
       { CustomText(
-        if (!GAME.isFavorite) "Favorite"
-        else                  "Remove Favorite")
+        if (!GAME.isFavorite) stringResource(R.string.ADD_FAV)
+        else                  stringResource(R.string.REMOVE_FAV))
       }
 
       CustomButton(
         ON_CLICK  = { App.appModule.gameBoy.deleteRamFile(GAME.romUri) },
         MODIFIER  = Modifier.fillMaxWidth(),
         COLOR     = GameBoyColors.Error)
-      { CustomText(TEXT = "Delete Save File", )
+      { CustomText(TEXT = stringResource(R.string.DELTE_SAV),)
       }
     }
   }

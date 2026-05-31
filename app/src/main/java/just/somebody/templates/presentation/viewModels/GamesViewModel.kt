@@ -90,6 +90,15 @@ class GamesViewModel(private val REPO : GameRepository) : ViewModel()
     viewModelScope.launch { REPO.updateGame(GAME.copy(isFavorite = !GAME.isFavorite)) }
   }
 
+  fun updateBoxArtUrl(GAME: Game, URL: String)
+  {
+    viewModelScope.launch ()
+    {
+      REPO.updateGame(GAME.copy(boxArtUrl = URL))
+      _selectedGame.emit(null)
+    }
+  }
+
   fun markAsPlayed(GAME : Game)
   {
     viewModelScope.launch ()
@@ -123,9 +132,12 @@ class GamesViewModel(private val REPO : GameRepository) : ViewModel()
   private val queuedTitles = Collections.synchronizedSet(mutableSetOf<String>())
 
 
-  fun getBoxArtFlow(title: String): Flow<String?>
+  fun getBoxArtFlow(game: Game): Flow<String?>
   {
-    if (!_boxArtMap.value.containsKey(title) && networkStatus == NetworkStatus.Available) fetchBoxArt(title)
+    if (game.boxArtUrl != null) return flow { emit(game.boxArtUrl) }
+
+    val title = game.title
+    if (!_boxArtMap.value.containsKey(title) && networkStatus == NetworkStatus.Available) fetchBoxArt(game)
     return boxArtMap.map { it[title] }
   }
 
@@ -151,15 +163,13 @@ class GamesViewModel(private val REPO : GameRepository) : ViewModel()
 
   private fun retryMissingBoxArts()
   {
-    val missingGames = _boxArtMap.value
-      .filter { (_, url) -> url == null }
-      .keys
-
-    for (title in missingGames) { fetchBoxArt(title) }
+    // This logic might need refinement since we now have DB persistence,
+    // but for now let's keep it simple.
   }
 
-  private fun fetchBoxArt(title: String)
+  private fun fetchBoxArt(game: Game)
   {
+    val title = game.title
     if (_boxArtMap.value.containsKey(title)) return
     if (queuedTitles.contains(title)) return
 
@@ -178,7 +188,18 @@ class GamesViewModel(private val REPO : GameRepository) : ViewModel()
         try
         {
           boxArtFetcher.fetchBoxArt(title).collect()
-          { url -> _boxArtMap.update { it + (title to url) } }
+          { url ->
+            _boxArtMap.update { it + (title to url) }
+            if (url != null)
+            {
+              // Cache to DB if found
+              REPO.getGameByTitle(title)?.let { game ->
+                if (game.boxArtUrl == null) {
+                   REPO.updateGame(game.copy(boxArtUrl = url))
+                }
+              }
+            }
+          }
         }
         catch (e: Exception)
         {

@@ -256,29 +256,29 @@ fun BrowseScreen(
             {
               CustomText(
                 TEXT      = stringResource(R.string.HOW_TO),
-                FONT_SIZE = 12,
-                COLOR     = GameBoyColors.Green)
+                FONT_SIZE = 16,
+                COLOR     = GameBoyColors.DarkGreen)
               CustomText(
                 TEXT      = stringResource(R.string.USAGE),
-                FONT_SIZE = 8,
+                FONT_SIZE = 12,
                 COLOR     = GameBoyColors.LightGreen)
 
               CustomText(
                 TEXT      = stringResource(R.string.NOT_WORKING),
-                FONT_SIZE = 12,
-                COLOR     = GameBoyColors.Green)
+                FONT_SIZE = 16,
+                COLOR     = GameBoyColors.DarkGreen)
               CustomText(
                 TEXT      = stringResource(R.string.TROUBLESHOOT),
-                FONT_SIZE = 8,
+                FONT_SIZE = 12,
                 COLOR     = GameBoyColors.LightGreen)
 
               CustomText(
                 TEXT      = stringResource(R.string.LEGAL),
-                FONT_SIZE = 12,
-                COLOR     = GameBoyColors.Green)
+                FONT_SIZE = 16,
+                COLOR     = GameBoyColors.DarkGreen)
               CustomText(
                 TEXT      = stringResource(R.string.PIRACY),
-                FONT_SIZE = 8,
+                FONT_SIZE = 12,
                 COLOR     = GameBoyColors.LightGreen)
 
               CustomText(
@@ -289,7 +289,7 @@ fun BrowseScreen(
                     val intent    = Intent(Intent.ACTION_VIEW, Uri.parse(githubUrl)).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
                     App.appModule.context.startActivity(intent)
                   },
-                COLOR   = Color.Blue
+                COLOR   = Color.Black
               )
             }
           })

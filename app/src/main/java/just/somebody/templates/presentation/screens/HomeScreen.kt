@@ -1,7 +1,7 @@
 package just.somebody.templates.presentation.screens
 
-import GameActionBottomSheet
-import GameList
+import just.somebody.templates.presentation.widgets.GameActionBottomSheet
+import just.somebody.templates.presentation.widgets.GameList
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.rememberCoroutineScope
@@ -85,7 +87,9 @@ fun HomeScreen(
     else
     {
       Column (
-        modifier            = Modifier.fillMaxSize(),
+        modifier            = Modifier
+          .fillMaxSize()
+          .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.Start,
         verticalArrangement = Arrangement.Top)
       {
@@ -94,7 +98,7 @@ fun HomeScreen(
           TITLE         = stringResource(R.string.FAV),
           ON_CLICK      = { game -> VIEW_MODEL.markAsPlayed(game) },
           ON_LONG_PRESS = { game -> VIEW_MODEL.selectGame(game)},
-          GET_URL       = { game -> VIEW_MODEL.getBoxArtFlow(game.title) }
+          GET_URL       = { game -> VIEW_MODEL.getBoxArtFlow(game) }
         )
 
         GameList(
@@ -102,7 +106,7 @@ fun HomeScreen(
           TITLE         = stringResource(R.string.RECENT),
           ON_CLICK      = { game -> VIEW_MODEL.markAsPlayed(game) },
           ON_LONG_PRESS = { game -> VIEW_MODEL.selectGame(game) },
-          GET_URL       = { game -> VIEW_MODEL.getBoxArtFlow(game.title) }
+          GET_URL       = { game -> VIEW_MODEL.getBoxArtFlow(game) }
         )
 
         GameList(
@@ -110,7 +114,7 @@ fun HomeScreen(
           TITLE         = stringResource(R.string.DISCOVER),
           ON_CLICK      = { game -> VIEW_MODEL.markAsPlayed(game) },
           ON_LONG_PRESS = { game -> VIEW_MODEL.selectGame(game) },
-          GET_URL       = { game -> VIEW_MODEL.getBoxArtFlow(game.title) }
+          GET_URL       = { game -> VIEW_MODEL.getBoxArtFlow(game) }
         )
       }
     }
@@ -118,18 +122,19 @@ fun HomeScreen(
     selectedGame.value?.let ()
     { game ->
       GameActionBottomSheet(
-        GAME         = game,
-        ON_DISMISS   = { VIEW_MODEL.selectGame(null)},
-        ON_PLAY      =
+        GAME             = game,
+        ON_DISMISS       = { VIEW_MODEL.selectGame(null)},
+        ON_PLAY          =
           {
             VIEW_MODEL.markAsPlayed(game)
             VIEW_MODEL.selectGame(null)
           },
-        ON_FAVORITE  =
+        ON_FAVORITE      =
           {
             VIEW_MODEL.toggleFavorite(game)
             VIEW_MODEL.selectGame(null)
           },
+        ON_UPDATE_BOXART = { url -> VIEW_MODEL.updateBoxArtUrl(game, url) }
       )
     }
   }

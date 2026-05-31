@@ -35,7 +35,6 @@ class GameBoy
   {
     this.currentRomUri = ROM_URI
     updateStaticRomUri(ROM_URI)
-    App.appModule.linkCable.onByteReceived = { byte -> nativeRecieveByte(byte.toByte()) }
     nativeLoadROM(ROM, ROM.size)
   }
 
@@ -123,7 +122,6 @@ class GameBoy
     fun sendByte(BYTE: Byte)
     {
       val sb : Int = BYTE.toInt() and 0xFF
-      App.appModule.linkCable.sendByte(sb)
     }
 
     // - - - Function to update the static ROM URI from a GameBoy instance

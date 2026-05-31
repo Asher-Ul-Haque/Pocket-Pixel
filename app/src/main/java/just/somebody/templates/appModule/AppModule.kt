@@ -1,7 +1,6 @@
 package just.somebody.templates.appModule
 
 
-import LinkCable
 import android.content.Context
 import android.content.res.Configuration
 import androidx.compose.runtime.Composable
@@ -51,7 +50,6 @@ interface AppModuleInterface
   val gameRomsKey            : String
   val boxArtFetcher          : BoxArtFetcher
   val gameBoy                : GameBoy
-  val linkCable              : LinkCable
   @Composable fun isLandscape() : Boolean
 }
 
@@ -73,7 +71,6 @@ class AppModule(private val APP_CONTEXT : Context) : AppModuleInterface
   override val gameRomsKey            : String                  by lazy { "GAME_BOY_ROMS" }
   override val boxArtFetcher          : BoxArtFetcher           by lazy { DefaultBoxArtFetcher(internalStorageManager, networkService) }
   override val gameBoy                : GameBoy                 by lazy { GameBoy() }
-  override val linkCable              : LinkCable               by lazy { LinkCable() }
 
 
   private val appSettingsDataStore : DataStore<AppSettings> by lazy ()

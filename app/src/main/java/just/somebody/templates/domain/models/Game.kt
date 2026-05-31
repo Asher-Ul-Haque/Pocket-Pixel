@@ -5,5 +5,6 @@ data class Game(
   val title           : String,
   val romUri          : String,
   val lastPlayed      : Long?,
-  val isFavorite      : Boolean
+  val isFavorite      : Boolean,
+  val boxArtUrl       : String? = null
 )

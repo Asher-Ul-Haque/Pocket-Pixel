@@ -15,7 +15,8 @@ class DefaultGameRepository(private val DAO : GameDao) : GameRepository
     title           = title,
     romUri          = romUri,
     lastPlayed      = lastPlayed,
-    isFavorite      = isFavorite
+    isFavorite      = isFavorite,
+    boxArtUrl       = boxArtUrl
   )
 
   private fun Game.toEntity() : GameEntity = GameEntity(
@@ -23,7 +24,8 @@ class DefaultGameRepository(private val DAO : GameDao) : GameRepository
     title           = title,
     romUri          = romUri,
     lastPlayed      = lastPlayed,
-    isFavorite      = isFavorite
+    isFavorite      = isFavorite,
+    boxArtUrl       = boxArtUrl
   )
 
   override suspend fun insertGames(KEY: String)

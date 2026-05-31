@@ -39,4 +39,10 @@
     <string name = "CHANGE"> Change ROM Directory </string>
     <string name = "RESCAN"> Rescan ROMs </string>
     <string name = "FACTORY"> Factory Reset </string>
+    <string name = "UPDATE_BOX_ART"> Update Box Art </string>
+    <string name = "BOX_ART_URL"> Box Art URL </string>
+    <string name = "PLAY"> Play </string>
+    <string name = "REMOVE_FAV"> Remove Favorite </string>
+    <string name = "ADD_FAV"> Add Favorite </string>
+    <string name = "DELTE_SAV"> Delete Save File </string>
 </resources>
