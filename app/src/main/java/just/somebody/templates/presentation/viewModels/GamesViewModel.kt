@@ -70,10 +70,17 @@ class GamesViewModel(private val REPO : GameRepository) : ViewModel()
   val searchResults: StateFlow<List<Game>> =
     _searchQuery
       .debounce(300)
-      .flatMapLatest ()
-      { query ->
-        if (query.isBlank()) REPO.getAllGames()
-        else                 REPO.searchGames(query)
+      .distinctUntilChanged()
+      .flatMapLatest { query ->
+        if (query.isBlank()) {
+          REPO.getAllGames()
+        } else {
+          REPO.getAllGames().map { allGames ->
+            allGames.filter { game ->
+              fuzzyMatch(game.title, query)
+            }.sortedByDescending { it.lastPlayed ?: 0L }
+          }
+        }
       }
       .stateIn(
         viewModelScope,
@@ -81,9 +88,26 @@ class GamesViewModel(private val REPO : GameRepository) : ViewModel()
         emptyList()
       )
 
+  private fun fuzzyMatch(text: String, query: String): Boolean {
+    if (query.isBlank()) return true
+    val cleanText = text.lowercase()
+    val cleanQuery = query.lowercase().trim()
+
+    // Simple fuzzy: check if all characters of query appear in text in order
+    var textIndex = 0
+    var queryIndex = 0
+    while (textIndex < cleanText.length && queryIndex < cleanQuery.length) {
+      if (cleanText[textIndex] == cleanQuery[queryIndex]) {
+        queryIndex++
+      }
+      textIndex++
+    }
+    return queryIndex == cleanQuery.length
+  }
+
 
   fun updateSearchQuery(QUERY : String)
-  { _searchQuery.value = QUERY.trim() }
+  { _searchQuery.value = QUERY }
 
   fun toggleFavorite(GAME : Game)
   {

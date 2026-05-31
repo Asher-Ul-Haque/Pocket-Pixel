@@ -1,7 +1,10 @@
 package just.somebody.templates.presentation.widgets
 
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,11 +15,13 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
@@ -80,15 +85,23 @@ fun GameCard(
     if (BIG)  16
     else      12
 
+  val interactionSource = remember { MutableInteractionSource() }
+  val isPressed by interactionSource.collectIsPressedAsState()
+  val elevation by animateDpAsState(if (isPressed) 0.dp else 4.dp * SCALE, label = "elevation")
+  val offset by animateDpAsState(if (isPressed) 2.dp else 0.dp, label = "offset")
+
   Card(
     shape     = RectangleShape,
     modifier  = Modifier
       .width(cardWidth)
+      .offset(x = offset, y = offset)
       .combinedClickable(
-        onClick     = { ON_CLICK(GAME) },
-        onLongClick = { ON_LONG_PRESS(GAME) }
+        interactionSource = interactionSource,
+        indication        = null,
+        onClick           = { ON_CLICK(GAME) },
+        onLongClick       = { ON_LONG_PRESS(GAME) }
       ),
-    elevation = CardDefaults.cardElevation(4.dp * SCALE)
+    elevation = CardDefaults.cardElevation(elevation)
   )
   {
     Column(
@@ -196,22 +209,47 @@ fun GameList(
         modifier            = MODIFIFER)
       {
         if (SHOW_TITLE) CustomText(TITLE)
-        LazyVerticalGrid(
-          columns               = GridCells.Fixed(2),
-          verticalArrangement   = Arrangement.spacedBy(12.dp),
-          horizontalArrangement = Arrangement.spacedBy(12.dp),
-          contentPadding        = PaddingValues(16.dp),
-          modifier              = Modifier.fillMaxHeight()
-        )
+
+        if (App.appModule.isLandscape())
         {
-          items(GAMES)
-          { game ->
-            GameCard(
-              GAME          = game,
-              ON_CLICK      = ON_CLICK,
-              ON_LONG_PRESS = ON_LONG_PRESS,
-              IMAGE_URL     = GET_URL,
-              BIG           = BIG)
+          LazyHorizontalGrid(
+            rows                  = GridCells.Fixed(1),
+            verticalArrangement   = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding        = PaddingValues(16.dp),
+            modifier              = Modifier.fillMaxSize()
+          )
+          {
+            items(GAMES)
+            { game ->
+              GameCard(
+                GAME          = game,
+                ON_CLICK      = ON_CLICK,
+                ON_LONG_PRESS = ON_LONG_PRESS,
+                IMAGE_URL     = GET_URL,
+                BIG           = BIG)
+            }
+          }
+        }
+        else
+        {
+          LazyVerticalGrid(
+            columns               = GridCells.Fixed(2),
+            verticalArrangement   = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding        = PaddingValues(16.dp),
+            modifier              = Modifier.fillMaxHeight()
+          )
+          {
+            items(GAMES)
+            { game ->
+              GameCard(
+                GAME          = game,
+                ON_CLICK      = ON_CLICK,
+                ON_LONG_PRESS = ON_LONG_PRESS,
+                IMAGE_URL     = GET_URL,
+                BIG           = BIG)
+            }
           }
         }
       }
