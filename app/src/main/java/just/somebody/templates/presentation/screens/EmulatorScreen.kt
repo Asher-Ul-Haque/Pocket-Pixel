@@ -3,26 +3,35 @@ package just.somebody.templates.presentation.screens
 import android.view.KeyEvent
 import android.view.MotionEvent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import just.somebody.templates.App
+import just.somebody.templates.R
 import just.somebody.templates.domain.Buttons
-import just.somebody.templates.presentation.effects.ObserveAsEvents
 import just.somebody.templates.presentation.viewModels.EmulatorViewModel
+import just.somebody.templates.presentation.widgets.GameBoyActionButtons
 import just.somebody.templates.presentation.widgets.GameBoyControls
+import just.somebody.templates.presentation.widgets.GameBoyDpad
 import just.somebody.templates.presentation.widgets.GameBoyFrame
-import kotlin.math.abs
+import just.somebody.templates.presentation.widgets.NormalButton
+import just.somebody.templates.ui.theme.GameBoyColors
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EmulatorScreen(
   MODIFIER    : Modifier = Modifier,
@@ -76,31 +85,80 @@ fun EmulatorScreen(
     onDispose { VIEW_MODEL.stopEmulator() }
   }
 
-  Column(
-    modifier            = MODIFIER
+  val isLandscape = App.appModule.isLandscape()
+  val gameBoyAspectRatio = 160f / 144f
+
+  Box(
+    modifier = MODIFIER
       .fillMaxSize()
       .background(Color.Black)
-      .padding(top = 48.dp),
-    verticalArrangement = Arrangement.Bottom,
-    horizontalAlignment = Alignment.CenterHorizontally
-  )
-  {
-    val gameBoyAspectRatio = 160f / 144f
+  ) {
+    if (isLandscape) {
+      Row(
+        modifier = Modifier.fillMaxSize().background(GameBoyColors.DarkGreen),
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        // Left Controls: Dpad and Select
+        Column(
+          modifier = Modifier.fillMaxHeight().padding(16.dp),
+          horizontalAlignment = Alignment.CenterHorizontally,
+          verticalArrangement = Arrangement.Center
+        ) {
+          GameBoyDpad(gameBoy)
+          Spacer(modifier = Modifier.height(32.dp))
+          NormalButton("Select", Buttons.SELECT, gameBoy)
+        }
 
-    AndroidView(
-      modifier  = Modifier
-        .fillMaxWidth()
-        .aspectRatio(gameBoyAspectRatio),
-      factory   =
-        { context ->
-          val gameBoySurfaceView = GameBoyFrame(context)
-          gameBoySurfaceView
-        },
-      update    = { }
-    )
+        // Viewport
+        Box(
+          modifier = Modifier.weight(1f).fillMaxHeight().background(Color.Black),
+          contentAlignment = Alignment.Center
+        ) {
+          AndroidView(
+            modifier = Modifier
+              .fillMaxHeight()
+              .aspectRatio(gameBoyAspectRatio),
+            factory = { context -> GameBoyFrame(context) },
+            update = { }
+          )
+        }
 
-    Spacer(modifier = Modifier.height(48.dp))
+        // Right Controls: Actions and Start
+        Column(
+          modifier = Modifier.fillMaxHeight().padding(16.dp),
+          horizontalAlignment = Alignment.CenterHorizontally,
+          verticalArrangement = Arrangement.Center
+        ) {
+          GameBoyActionButtons(gameBoy)
+          Spacer(modifier = Modifier.height(32.dp))
+          NormalButton("Start", Buttons.START, gameBoy)
+        }
+      }
+    } else {
+      Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally
+      ) {
+        // Viewport (fills top, but maintains ratio)
+        Box(
+          modifier = Modifier
+            .weight(1f)
+            .fillMaxWidth()
+            .background(Color.Black),
+          contentAlignment = Alignment.Center
+        ) {
+          AndroidView(
+            modifier = Modifier
+              .fillMaxWidth(0.95f)
+              .aspectRatio(gameBoyAspectRatio),
+            factory = { context -> GameBoyFrame(context) },
+            update = { }
+          )
+        }
 
-    GameBoyControls(App.appModule.gameBoy, VIEW_MODEL)
+        // Controls at bottom
+        GameBoyControls(gameBoy, VIEW_MODEL)
+      }
+    }
   }
 }

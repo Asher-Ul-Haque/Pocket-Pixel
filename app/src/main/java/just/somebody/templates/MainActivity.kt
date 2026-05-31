@@ -2,6 +2,8 @@ package just.somebody.templates
 
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.view.animation.OvershootInterpolator
@@ -20,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.core.animation.doOnEnd
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import just.somebody.pocketpixel.ui.theme.TemplateTheme
 import just.somebody.templates.presentation.effects.ObserveAsEvents
@@ -27,6 +30,7 @@ import just.somebody.templates.presentation.effects.SnackbarController
 import just.somebody.templates.presentation.effects.SoundController
 import just.somebody.templates.presentation.effects.SoundEffect
 import just.somebody.templates.presentation.screens.BrowseScreen
+import just.somebody.templates.presentation.screens.Destination
 import just.somebody.templates.presentation.viewModels.BrowseViewModel
 import just.somebody.templates.presentation.viewModels.SplashViewModel
 import just.somebody.templates.presentation.viewModels.viewModelFactory
@@ -107,6 +111,24 @@ class MainActivity : ComponentActivity()
           SNACK      = snackbarHostState,
           VIEW_MODEL = viewModel<BrowseViewModel>(factory = viewModelFactory { BrowseViewModel() }),
           MODIFIFER  = Modifier.fillMaxSize())
+      }
+    }
+
+    handleIntent(intent)
+  }
+
+  override fun onNewIntent(intent: Intent)
+  {
+    super.onNewIntent(intent)
+    setIntent(intent)
+    handleIntent(intent)
+  }
+
+  private fun handleIntent(intent: Intent?)
+  {
+    intent?.data?.let { uri ->
+      lifecycleScope.launch {
+        App.appModule.navigator.replace(Destination.Emulator(uri.toString()))
       }
     }
   }

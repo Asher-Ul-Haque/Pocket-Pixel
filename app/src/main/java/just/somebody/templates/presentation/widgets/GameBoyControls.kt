@@ -1,27 +1,27 @@
 package just.somebody.templates.presentation.widgets
 
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -31,10 +31,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import just.somebody.templates.R
 import just.somebody.templates.domain.Buttons
 import just.somebody.templates.domain.GameBoy
 import just.somebody.templates.presentation.viewModels.EmulatorViewModel
@@ -42,78 +40,74 @@ import just.somebody.templates.ui.theme.GameBoyColors
 import just.somebody.templates.ui.theme.MinecraftFontFamily
 
 
+@Composable
+fun GameBoyDpad(GAME_BOY: GameBoy) {
+  val lastDirection     = remember { mutableStateOf<Buttons?>(null) }
+  val activeDpadButtons = remember { mutableStateOf(setOf<Buttons>()) }
+
+  Column(
+    verticalArrangement = Arrangement.Center,
+    horizontalAlignment = Alignment.CenterHorizontally,
+  ) {
+    Row(horizontalArrangement = Arrangement.Center) {
+      DirectionButton(Buttons.UP, Buttons.LEFT, GAME_BOY, lastDirection, activeDpadButtons)
+      DirectionButton(Buttons.UP, null, GAME_BOY, lastDirection, activeDpadButtons, SHOW_TOP_BORDER = true, SHOW_RIGHT_BORDER = true, SHOW_LEFT_BORDER = true)
+      DirectionButton(Buttons.UP, Buttons.RIGHT, GAME_BOY, lastDirection, activeDpadButtons)
+    }
+    Row(horizontalArrangement = Arrangement.Center) {
+      DirectionButton(Buttons.LEFT,  null, GAME_BOY, lastDirection, activeDpadButtons, SHOW_LEFT_BORDER = true, SHOW_TOP_BORDER = true, SHOW_BOTTOM_BORDER = true)
+      DirectionButton(null, null, GAME_BOY, lastDirection, activeDpadButtons)
+      DirectionButton(Buttons.RIGHT, null, GAME_BOY, lastDirection, activeDpadButtons, SHOW_TOP_BORDER = true, SHOW_RIGHT_BORDER = true, SHOW_BOTTOM_BORDER = true)
+    }
+    Row(horizontalArrangement = Arrangement.Center) {
+      DirectionButton(Buttons.DOWN, Buttons.LEFT, GAME_BOY, lastDirection, activeDpadButtons)
+      DirectionButton(Buttons.DOWN, null, GAME_BOY, lastDirection, activeDpadButtons, SHOW_BOTTOM_BORDER = true, SHOW_RIGHT_BORDER = true, SHOW_LEFT_BORDER = true)
+      DirectionButton(Buttons.DOWN, Buttons.RIGHT, GAME_BOY, lastDirection, activeDpadButtons)
+    }
+  }
+}
+
+@Composable
+fun GameBoyActionButtons(GAME_BOY: GameBoy) {
+  Column ()
+  {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp))
+    {
+      NormalButton("B", Buttons.B, GAME_BOY, null, true)
+      NormalButton("", Buttons.A, GAME_BOY, Buttons.B, true, IS_INVISIBLE = true)
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp))
+    {
+      NormalButton("", Buttons.B, GAME_BOY, Buttons.A, true, IS_INVISIBLE = true)
+      NormalButton("A", Buttons.A, GAME_BOY, null, true)
+    }
+  }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GameBoyControls(
   GAME_BOY   : GameBoy,
   VIEW_MODEL : EmulatorViewModel)
 {
-  val showBottomSheet   = remember { mutableStateOf(false) }
-  // - - - Stores the last successfully pressed single directional button (UP, DOWN, LEFT, RIGHT)
-  val lastDirection     = remember { mutableStateOf<Buttons?>(null) }
-  // - - - Tracks all directional buttons currently active due to fat-finger logic (e.g., UP and LEFT)
-  val activeDpadButtons = remember { mutableStateOf(setOf<Buttons>()) }
-
   Column(
     horizontalAlignment = Alignment.CenterHorizontally,
     modifier            = Modifier
-      .fillMaxSize()
+      .fillMaxWidth()
       .background(GameBoyColors.DarkGreen)
       .padding(top = 16.dp, bottom = 16.dp)
   )
   {
-    Row (horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically)
+    Row (
+      modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+      horizontalArrangement = Arrangement.SpaceEvenly, 
+      verticalAlignment = Alignment.CenterVertically
+    )
     {
-      Column(
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-      )
-      {
-        Row(horizontalArrangement = Arrangement.Center)
-        {
-          DirectionButton(Buttons.UP, Buttons.LEFT, GAME_BOY, lastDirection, activeDpadButtons)
-          DirectionButton(Buttons.UP, null, GAME_BOY, lastDirection, activeDpadButtons, SHOW_TOP_BORDER = true, SHOW_RIGHT_BORDER = true, SHOW_LEFT_BORDER = true)
-          DirectionButton(Buttons.UP, Buttons.RIGHT, GAME_BOY, lastDirection, activeDpadButtons)
-        }
-        Row(horizontalArrangement = Arrangement.Center)
-        {
-          DirectionButton(Buttons.LEFT,  null, GAME_BOY, lastDirection, activeDpadButtons, SHOW_LEFT_BORDER = true, SHOW_TOP_BORDER = true, SHOW_BOTTOM_BORDER = true)
-          DirectionButton(null, null, GAME_BOY, lastDirection, activeDpadButtons)
-          DirectionButton(Buttons.RIGHT, null, GAME_BOY, lastDirection, activeDpadButtons, SHOW_TOP_BORDER = true, SHOW_RIGHT_BORDER = true, SHOW_BOTTOM_BORDER = true)
-        }
-        Row(horizontalArrangement = Arrangement.Center)
-        {
-          DirectionButton(Buttons.DOWN, Buttons.LEFT, GAME_BOY, lastDirection, activeDpadButtons)
-          DirectionButton(Buttons.DOWN, null, GAME_BOY, lastDirection, activeDpadButtons, SHOW_BOTTOM_BORDER = true, SHOW_RIGHT_BORDER = true, SHOW_LEFT_BORDER = true)
-          DirectionButton(Buttons.DOWN, Buttons.RIGHT, GAME_BOY, lastDirection, activeDpadButtons)
-        }
-      }
-      Spacer(Modifier.padding(16.dp))
-      Column ()
-      {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp))
-        {
-          NormalButton("B", Buttons.B, GAME_BOY, Buttons.A, true)
-          NormalButton("A", Buttons.A, GAME_BOY, null, true)
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp))
-        {
-          NormalButton("B", Buttons.B, GAME_BOY, null, true)
-          NormalButton("A", Buttons.A, GAME_BOY, Buttons.B, true)
-        }
-      }
+      GameBoyDpad(GAME_BOY)
+      GameBoyActionButtons(GAME_BOY)
     }
 
-    Spacer(modifier = Modifier.padding(10.dp))
-
-    Icon(
-      painter             = painterResource(R.drawable.settings),
-      contentDescription  = null,
-      tint                = GameBoyColors.MediumGreen,
-      modifier            = Modifier
-        .size(24.dp)
-        .clickable { showBottomSheet.value = true }
-    )
     Spacer(modifier = Modifier.padding(10.dp))
 
     Row(
@@ -125,14 +119,9 @@ fun GameBoyControls(
       Spacer(Modifier.padding(16.dp))
       NormalButton("Start", Buttons.START, GAME_BOY)
     }
-
-
-    if (showBottomSheet.value)
-    {
-      SettingsPanel(Modifier, GAME_BOY, VIEW_MODEL) { showBottomSheet.value = false; }
-    }
   }
 }
+
 
 
 @Composable
@@ -142,16 +131,20 @@ fun NormalButton(
   GAME_BOY  : GameBoy,
   SECONDARY : Buttons?  = null,
   IS_SQUARE : Boolean   = false,
-  MODIFIER  : Modifier  = Modifier
+  MODIFIER  : Modifier  = Modifier,
+  IS_INVISIBLE : Boolean = false
 )
 {
   val isPressed = remember { mutableStateOf(false) }
+  val offset by animateDpAsState(if (isPressed.value && !IS_INVISIBLE) 2.dp else 0.dp, label = "offset")
 
   Button(
     onClick  = { /* ignored: handled via pointerInput */ },
     modifier = MODIFIER
       .width(if (IS_SQUARE) 64.dp else 96.dp)
       .height(if (IS_SQUARE) 64.dp else 48.dp)
+      .alpha(if (IS_INVISIBLE && !isPressed.value) 0f else 1f)
+      .offset(x = offset, y = offset)
       .pointerInput(Unit)
       {
         awaitPointerEventScope()
@@ -234,13 +227,15 @@ fun DirectionButton(
   val isBottomRightCorner = (PRIMARY_BUTTON == Buttons.DOWN && SECONDARY_BUTTON == Buttons.RIGHT)
   val IS_INVISIBLE_CALCULATED = isTopLeftCorner || isTopRightCorner || isBottomLeftCorner || isBottomRightCorner
   var isPressed = remember { mutableStateOf(false) }
+  val offset by animateDpAsState(if (isPressed.value && !IS_INVISIBLE_CALCULATED) 2.dp else 0.dp, label = "offset")
 
   Box(
     modifier = Modifier
       .size(64.dp)
       .alpha(
-        if (IS_INVISIBLE_CALCULATED) 0f
+        if (IS_INVISIBLE_CALCULATED && !isPressed.value) 0f
         else                         1f)
+      .offset(x = offset, y = offset)
       .pointerInput(PRIMARY_BUTTON, SECONDARY_BUTTON)
       {
         awaitPointerEventScope()

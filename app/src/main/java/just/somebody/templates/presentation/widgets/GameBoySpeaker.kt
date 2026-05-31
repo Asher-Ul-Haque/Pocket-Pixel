@@ -11,8 +11,8 @@ class GameBoySpeaker {
 
   private val sampleRate = 44100 // 44100 is standard
   private val channelMask = AudioFormat.CHANNEL_OUT_STEREO
-  private val encoding = AudioFormat.ENCODING_PCM_8BIT
-  private val frameSize = 2 // stereo: 1 byte per channel
+  private val encoding = AudioFormat.ENCODING_PCM_FLOAT
+  private val frameSize = 8 // stereo: 4 bytes per channel (float)
 
   // This is a safe multiple of the system minimum — adjust if needed
   private val minBufferSize = AudioTrack.getMinBufferSize(sampleRate, channelMask, encoding)
@@ -41,9 +41,9 @@ class GameBoySpeaker {
   }
 
   /**
-   * Pushes interleaved 8-bit stereo PCM data to the audio stream.
+   * Pushes interleaved 32-bit float stereo PCM data to the audio stream.
    */
-  fun play(sampleBuffer: ByteArray) {
+  fun play(sampleBuffer: FloatArray) {
     if (sampleBuffer.isEmpty()) return
 
     val written = audioTrack.write(sampleBuffer, 0, sampleBuffer.size, WRITE_NON_BLOCKING)
@@ -51,7 +51,7 @@ class GameBoySpeaker {
     if (written < 0) {
       ForgeLogger.error("GameBoySpeaker: Audio write failed with code $written")
     } else if (written < sampleBuffer.size) {
-      ForgeLogger.warn("GameBoySpeaker: Partial write — $written / ${sampleBuffer.size} bytes")
+      ForgeLogger.warn("GameBoySpeaker: Partial write — $written / ${sampleBuffer.size} samples")
     }
 
     if (audioTrack.playState != PLAYSTATE_PLAYING) {

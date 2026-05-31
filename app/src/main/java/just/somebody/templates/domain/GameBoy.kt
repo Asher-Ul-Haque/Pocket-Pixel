@@ -38,14 +38,15 @@ class GameBoy
     nativeLoadROM(ROM, ROM.size)
   }
 
-  fun startEmulator(VOLUMES : FloatArray )   { nativeStartEmulator(VOLUMES) }
+  fun startEmulator()   { nativeStartEmulator() }
   fun stopEmulator()    { nativeStopEmulator() }
   fun resumeEmulator()  { nativeResumeEmulator() }
   fun pauseEmulator()   { nativePauseEmulator() }
-  fun setVolumes(VOLUMES: FloatArray) { nativeSetVolumes(VOLUMES); }
-  fun flushSave() { nativeFlushSave() }
-  fun setPalette(INDEX : Int) { nativeChangePallete(INDEX) }
-  fun setShader(INDEX : Int) { nativeSetShader(INDEX); }
+  fun setVolumes(VOLUMES: FloatArray) { nativeSetVolumes(VOLUMES) }
+  fun flushSave()       { nativeFlushSave() }
+  fun setPalette(INDEX : Int) { nativeChangePalette(INDEX) }
+  fun setShader(INDEX : Int)  { nativeChangeShader(INDEX) }
+  fun setFastForward(ENABLED : Boolean) { nativeSetFastForward(ENABLED) }
 
   // - - - Input
   fun sendButton(
@@ -53,25 +54,32 @@ class GameBoy
     IS_PRESSED: Boolean
   ) { nativeSetButtonState(BUTTON.ordinal, IS_PRESSED) }
 
-  // - - - Native Bindings for Emulator Core (existing) - - -
+  // - - - Native Bindings for Emulator Core - - -
 
-  private fun nativeLoadROM(ROM: ByteArray, SIZE: Int) {}
-  private fun nativeSetButtonState(BUTTON: Int, PRESSED: Boolean) {}
-  private fun nativeStartEmulator(VOLUMES : FloatArray) {}
-  private fun nativeStopEmulator() {}
-  private fun nativePauseEmulator() {}
-  private fun nativeResumeEmulator() {}
-  private fun nativeSetVolumes(VOLUMES: FloatArray) {}
+  private external fun nativeLoadROM(ROM: ByteArray, SIZE: Int)
+  private external fun nativeSetButtonState(BUTTON: Int, PRESSED: Boolean)
+  private external fun nativeStartEmulator()
+  private external fun nativeStopEmulator()
+  private external fun nativePauseEmulator()
+  private external fun nativeResumeEmulator()
+  private external fun nativeSetVolumes(VOLUMES: FloatArray)
 
-  private fun nativeRecieveByte(BYTE : Byte) {}
-  private fun nativeFlushSave() {}
-  private fun nativeChangePallete(INDEX : Int) {}
-  private fun nativeSetShader(INDEX: Int) {}
+  private external fun nativeFlushSave()
+  private external fun nativeChangePalette(INDEX : Int)
+  private external fun nativeChangeShader(INDEX: Int)
+  private external fun nativeSetFastForward(ENABLED : Boolean)
 
-  // - - - Native Bindings for OpenGL ES Rendering (existing)
-  fun nativeOnSurfaceCreated() {}
-  fun nativeOnSurfaceChanged(width: Int, height: Int) {}
-  fun nativeOnDrawFrame() {}
+  // - - - Save State support
+  fun saveState(): ByteArray? = nativeSaveState()
+  fun loadState(DATA: ByteArray): Boolean = nativeLoadState(DATA, DATA.size)
+
+  private external fun nativeSaveState(): ByteArray?
+  private external fun nativeLoadState(DATA: ByteArray, SIZE: Int): Boolean
+
+  // - - - Native Bindings for OpenGL ES Rendering
+  external fun nativeOnSurfaceCreated()
+  external fun nativeOnSurfaceChanged(width: Int, height: Int)
+  external fun nativeOnDrawFrame()
 
   fun deleteRamFile()
   {
@@ -104,7 +112,7 @@ class GameBoy
   // - - - Static method for C++ to call back to request a render
   companion object
   {
-    //init { System.loadLibrary("native-lib") }
+    init { System.loadLibrary("PocketPixel") }
 
     // - - - Reference to the GLSurfaceView instance to call requestRender()
     @SuppressLint("StaticFieldLeak")
@@ -136,11 +144,11 @@ class GameBoy
     @JvmStatic
     fun requestRenderFromNative()
     {
-      glSurfaceViewInstance?.queueEvent { glSurfaceViewInstance?.requestRender() }
+      glSurfaceViewInstance?.requestRender()
     }
 
     @JvmStatic
-    fun nativePlayAudio(SAMPLE_BUFFER : ByteArray)
+    fun nativePlayAudio(SAMPLE_BUFFER : FloatArray)
     { speaker.play(SAMPLE_BUFFER)  }
 
     @JvmStatic

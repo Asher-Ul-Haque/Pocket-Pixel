@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22.1)
 
-project("native-lib")
+project("PocketPixel")
 
 # Recursively find all source files
 file(GLOB_RECURSE PROJECT_SOURCES

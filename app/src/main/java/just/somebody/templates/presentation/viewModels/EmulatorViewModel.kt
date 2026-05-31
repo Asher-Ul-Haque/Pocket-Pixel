@@ -73,7 +73,8 @@ class EmulatorViewModel : ViewModel()
       gameBoy.setPalette(_settings.value.paletteIndex)
       gameBoy.setShader(_settings.value.shaderIndex)
       gameBoy.loadROM(currentROM!!, URI)
-      gameBoy.startEmulator(_settings.value.channelVolume.toFloatArray())
+      gameBoy.startEmulator()
+      gameBoy.setVolumes(_settings.value.channelVolume.toFloatArray())
       emulatorStarted = true
     }
   }
@@ -101,12 +102,12 @@ class EmulatorViewModel : ViewModel()
     viewModelScope.launch()
     {
       val currentSettings = App.appModule.dataStoreManager.getSettings()
-      val updatedSettings = currentSettings.copy(paletteIndex = INDEX % 10)
+      val updatedSettings = currentSettings.copy(paletteIndex = INDEX % 18)
 
       App.appModule.dataStoreManager.updateSettings(updatedSettings)
       _settings.value = updatedSettings
 
-      App.appModule.gameBoy.setPalette(INDEX % 10)
+      App.appModule.gameBoy.setPalette(INDEX % 18)
     }
   }
 
@@ -115,12 +116,12 @@ class EmulatorViewModel : ViewModel()
     viewModelScope.launch()
     {
       val currentSettings = App.appModule.dataStoreManager.getSettings()
-      val updatedSettings = currentSettings.copy(shaderIndex = INDEX % 5)
+      val updatedSettings = currentSettings.copy(shaderIndex = INDEX % 4)
 
       App.appModule.dataStoreManager.updateSettings(updatedSettings)
       _settings.value = updatedSettings
 
-      App.appModule.gameBoy.setShader(INDEX % 5)
+      App.appModule.gameBoy.setShader(INDEX % 4)
     }
   }
 }
