@@ -38,6 +38,10 @@ class SettingsViewModel(
     }
   }
 
+  fun updateControllerConnection() {
+    App.appModule.gameControllerManager.updateConnectionState()
+  }
+
   fun factoryReset()
   {
     viewModelScope.launch ()

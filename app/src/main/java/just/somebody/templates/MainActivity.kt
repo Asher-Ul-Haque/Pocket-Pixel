@@ -5,6 +5,8 @@ import android.animation.ObjectAnimator
 import android.os.Bundle
 import android.view.View
 import android.view.animation.OvershootInterpolator
+import android.view.KeyEvent
+import android.view.MotionEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -107,6 +109,27 @@ class MainActivity : ComponentActivity()
           MODIFIFER  = Modifier.fillMaxSize())
       }
     }
+  }
+
+  override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+    if (App.appModule.gameControllerManager.handleKeyEvent(event)) {
+      return true
+    }
+    return super.onKeyDown(keyCode, event)
+  }
+
+  override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
+    if (App.appModule.gameControllerManager.handleKeyEvent(event)) {
+      return true
+    }
+    return super.onKeyUp(keyCode, event)
+  }
+
+  override fun onGenericMotionEvent(event: MotionEvent): Boolean {
+    if (App.appModule.gameControllerManager.handleMotionEvent(event)) {
+      return true
+    }
+    return super.onGenericMotionEvent(event)
   }
 
   override fun onStop()

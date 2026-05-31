@@ -50,6 +50,7 @@ interface AppModuleInterface
   val gameRomsKey            : String
   val boxArtFetcher          : BoxArtFetcher
   val gameBoy                : GameBoy
+  val gameControllerManager  : GameControllerManager
   @Composable fun isLandscape() : Boolean
 }
 
@@ -71,6 +72,7 @@ class AppModule(private val APP_CONTEXT : Context) : AppModuleInterface
   override val gameRomsKey            : String                  by lazy { "GAME_BOY_ROMS" }
   override val boxArtFetcher          : BoxArtFetcher           by lazy { DefaultBoxArtFetcher(internalStorageManager, networkService) }
   override val gameBoy                : GameBoy                 by lazy { GameBoy() }
+  override val gameControllerManager  : GameControllerManager   by lazy { DefaultGameControllerManager(APP_CONTEXT) }
 
 
   private val appSettingsDataStore : DataStore<AppSettings> by lazy ()
