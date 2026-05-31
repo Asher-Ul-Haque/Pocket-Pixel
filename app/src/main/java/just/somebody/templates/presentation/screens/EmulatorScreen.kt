@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -143,53 +144,53 @@ fun EmulatorScreen(
   val gameBoyAspectRatio = 160f / 144f
 
   // Viewport slide animation
-  // In Portrait: Center when UI hidden, Top when UI visible.
-  // In Landscape: Always Center.
-  // Root Box centers the child. Offset 0 means Center.
-  // To move to Top in Portrait: Center is middle. Top is screenTop + viewportHeight/2.
-  // A negative offset of approx -120dp will move it from center to top area.
+  // In Portrait: Center when UI hidden (0dp), Top when UI visible (-120dp).
   val viewportYOffset by animateDpAsState(
       targetValue = if (!isLandscape && (controlsVisible || showSettings.value)) (-120).dp else 0.dp,
       animationSpec = tween(durationMillis = 1000),
       label = "viewportSlide"
   )
 
-  Box(
+  BoxWithConstraints(
     modifier = MODIFIER
       .fillMaxSize()
       .background(Color.Black)
       .pointerInput(Unit) {
-          detectTapGestures { onInteraction() }
+          // Reset timer on any touch, even if consumed by children
+          awaitPointerEventScope {
+              while (true) {
+                  awaitPointerEvent(PointerEventPass.Initial)
+                  onInteraction()
+              }
+          }
       }
   ) {
+    val screenWidth = maxWidth
+    val screenHeight = maxHeight
+    val viewportActualWidth = if (isLandscape) (screenHeight * gameBoyAspectRatio) else screenWidth
+
     // 1. Viewport Layer (Always visible, centered by default)
-    AndroidView(
-      modifier = Modifier
-        .fillMaxHeight(if (isLandscape) 1f else 0.7f)
-        .aspectRatio(gameBoyAspectRatio)
-        .align(Alignment.Center)
-        .offset(y = viewportYOffset),
-      factory = { context -> GameBoyFrame(context) },
-      update = { }
-    )
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        AndroidView(
+          modifier = Modifier
+            .fillMaxHeight(if (isLandscape) 1f else 0.7f)
+            .aspectRatio(gameBoyAspectRatio)
+            .offset(y = viewportYOffset),
+          factory = { context -> GameBoyFrame(context) },
+          update = { }
+        )
+    }
 
     // 2. Controls Layer
     if (isLandscape) {
-      // Landscape Panels: Reveal root Black by fading their background + contents
-      Row(
-        modifier = Modifier.fillMaxSize().pointerInput(Unit) {
-            detectTapGestures { onInteraction() }
-        },
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-      ) {
-        // Left Panel (Fades to reveal Black)
+      Row(modifier = Modifier.fillMaxSize()) {
+        // Left Side Panel
         Box(modifier = Modifier
             .fillMaxHeight()
-            .wrapContentWidth()
+            .weight(1f)
             .alpha(controlAlpha)
             .background(GameBoyColors.DarkGreen)
-            .padding(horizontal = 8.dp),
+            .padding(8.dp),
             contentAlignment = Alignment.Center
         ) {
           Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(IntrinsicSize.Min)) {
@@ -199,15 +200,16 @@ fun EmulatorScreen(
           }
         }
 
-        Spacer(modifier = Modifier.weight(1f))
+        // Viewport Gap (Ensures side panels don't overlap centered game area)
+        Spacer(modifier = Modifier.width(viewportActualWidth))
 
-        // Right Panel (Fades to reveal Black)
+        // Right Side Panel
         Box(modifier = Modifier
             .fillMaxHeight()
-            .wrapContentWidth()
+            .weight(1f)
             .alpha(controlAlpha)
             .background(GameBoyColors.DarkGreen)
-            .padding(horizontal = 8.dp),
+            .padding(8.dp),
             contentAlignment = Alignment.Center
         ) {
           Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(IntrinsicSize.Min)) {
@@ -245,7 +247,7 @@ fun EmulatorScreen(
             .alpha(controlAlpha)
             .background(GameBoyColors.DarkGreen)
         ) {
-            GameBoyControls(gameBoy, VIEW_MODEL) { 
+            GameBoyControls(gameBoy, VIEW_MODEL, onInteraction) { 
                 onInteraction()
                 showSettings.value = true 
             }

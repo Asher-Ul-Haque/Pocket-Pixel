@@ -61,6 +61,7 @@ class GameBoy
 
   fun loadROM(ROM: ByteArray, ROM_URI: String)
   {
+    resetActivityFlag()
     this.currentRomUri = ROM_URI
     updateStaticRomUri(ROM_URI)
     nativeLoadROM(ROM, ROM.size)
@@ -170,6 +171,7 @@ class GameBoy
     private var staticCurrentRomUri: String? = null
     
     var onFirstActivity: (() -> Unit)? = null
+    @Volatile
     private var activityDetected = false
 
     @JvmStatic
@@ -178,6 +180,7 @@ class GameBoy
     
     fun resetActivityFlag() {
       activityDetected = false
+      ForgeLogger.info("Core activity flag reset.")
     }
 
     @JvmStatic

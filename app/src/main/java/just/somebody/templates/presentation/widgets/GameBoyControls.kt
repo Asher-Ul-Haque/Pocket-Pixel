@@ -5,6 +5,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
@@ -83,6 +84,7 @@ fun GameBoyActionButtons(GAME_BOY: GameBoy) {
 fun GameBoyControls(
   GAME_BOY   : GameBoy,
   VIEW_MODEL : EmulatorViewModel,
+  ON_INTERACTION: () -> Unit,
   ON_SETTINGS_CLICK : () -> Unit)
 {
   Column(
@@ -91,16 +93,37 @@ fun GameBoyControls(
       .fillMaxWidth()
       .background(GameBoyColors.DarkGreen)
       .padding(top = 16.dp, bottom = 16.dp)
+      .pointerInput(Unit) {
+          detectTapGestures { ON_INTERACTION() }
+      }
   )
   {
     Row (
-      modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+      modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
       horizontalArrangement = Arrangement.SpaceBetween, 
       verticalAlignment = Alignment.CenterVertically
     )
     {
-      GameBoyDpad(GAME_BOY)
-      GameBoyActionButtons(GAME_BOY)
+      Box(modifier = Modifier.pointerInput(Unit) {
+          awaitPointerEventScope {
+              while (true) {
+                  awaitPointerEvent()
+                  ON_INTERACTION()
+              }
+          }
+      }) {
+          GameBoyDpad(GAME_BOY)
+      }
+      Box(modifier = Modifier.pointerInput(Unit) {
+          awaitPointerEventScope {
+              while (true) {
+                  awaitPointerEvent()
+                  ON_INTERACTION()
+              }
+          }
+      }) {
+          GameBoyActionButtons(GAME_BOY)
+      }
     }
 
     Spacer(modifier = Modifier.height(24.dp))
@@ -111,7 +134,10 @@ fun GameBoyControls(
       tint                = GameBoyColors.MediumGreen,
       modifier            = Modifier
         .size(32.dp)
-        .clickable { ON_SETTINGS_CLICK() }
+        .clickable { 
+            ON_INTERACTION()
+            ON_SETTINGS_CLICK() 
+        }
     )
 
     Spacer(modifier = Modifier.height(16.dp))
@@ -123,7 +149,7 @@ fun GameBoyControls(
     {
       NormalButton("Select", Buttons.SELECT, GAME_BOY)
       Spacer(Modifier.width(32.dp))
-      NormalButton("Start", Buttons.START, GAME_BOY)
+      NormalButton("Start", Buttons.START, GAME_BO_Y = GAME_BOY) // Use named param to avoid confusion
     }
   }
 }
@@ -134,7 +160,7 @@ fun GameBoyControls(
 fun NormalButton(
   LABEL     : String,
   BUTTON    : Buttons,
-  GAME_BOY  : GameBoy,
+  GAME_BO_Y  : GameBoy, // Renamed to avoid confusion with the param name in play call
   SECONDARY : Buttons?  = null,
   IS_SQUARE : Boolean   = false,
   MODIFIER  : Modifier  = Modifier,
@@ -162,15 +188,15 @@ fun NormalButton(
             if (pressed && !isPressed.value)
             {
               isPressed.value = true
-              GAME_BOY.sendButton(BUTTON, true)
-              if (SECONDARY != null) GAME_BOY.sendButton(SECONDARY, true)
+              GAME_BO_Y.sendButton(BUTTON, true)
+              if (SECONDARY != null) GAME_BO_Y.sendButton(SECONDARY, true)
             }
 
             if (!pressed && isPressed.value)
             {
               isPressed.value = false
-              GAME_BOY.sendButton(BUTTON, false)
-              if (SECONDARY != null) GAME_BOY.sendButton(SECONDARY, false)
+              GAME_BO_Y.sendButton(BUTTON, false)
+              if (SECONDARY != null) GAME_BO_Y.sendButton(SECONDARY, false)
             }
           }
         }
