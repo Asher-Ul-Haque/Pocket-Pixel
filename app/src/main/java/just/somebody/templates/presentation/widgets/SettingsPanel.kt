@@ -94,7 +94,7 @@ fun SettingsPanel(
                                 onShaderSelect = { EMULATOR.setShaderIndex(it) }
                             )
                             2 -> SaveStateSection(EMULATOR)
-                            3 -> MiscSettingsSection(GAME_BO_Y = GAME_BOY, emulator = EMULATOR)
+                            3 -> MiscSettingsSection(EMULATOR)
                         }
                     }
                 }
@@ -285,15 +285,14 @@ private fun SaveStateSection(emulator: EmulatorViewModel) {
 }
 
 @Composable
-private fun MiscSettingsSection(GAME_BO_Y: GameBoy, emulator: EmulatorViewModel) {
-    var fastForward by remember { mutableStateOf(false) }
+private fun MiscSettingsSection(emulator: EmulatorViewModel) {
+    val fastForward by emulator.fastForward.collectAsState()
     val game by emulator.currentGame.collectAsState()
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         CustomButton(
             ON_CLICK = { 
-                fastForward = !fastForward
-                GAME_BO_Y.setFastForward(fastForward)
+                emulator.toggleFastForward()
             },
             MODIFIER = Modifier.fillMaxWidth()
         ) {

@@ -34,11 +34,15 @@ class EmulatorViewModel : ViewModel()
   private val _currentGame : MutableStateFlow<Game?> = MutableStateFlow(null)
   val currentGame : StateFlow<Game?> = _currentGame
 
+  private val _fastForward = MutableStateFlow(false)
+  val fastForward: StateFlow<Boolean> = _fastForward
+
   init
   {
     GameBoy.onFirstActivity = {
       // Re-apply settings on first sign of life from the core
       applyCurrentSettings()
+      gameBoy.setFastForward(_fastForward.value)
     }
     
     viewModelScope.launch {
@@ -213,5 +217,11 @@ class EmulatorViewModel : ViewModel()
 
       App.appModule.gameBoy.setShader(INDEX % 4)
     }
+  }
+
+  fun toggleFastForward() {
+      val newState = !_fastForward.value
+      _fastForward.value = newState
+      gameBoy.setFastForward(newState)
   }
 }

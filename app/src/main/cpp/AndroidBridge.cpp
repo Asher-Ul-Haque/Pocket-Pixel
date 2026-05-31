@@ -37,6 +37,10 @@ static jmethodID g_loadRamID = nullptr;
 static jmethodID g_getExpectedSaveSizeID = nullptr;
 static jmethodID g_playAudioID = nullptr;
 
+static jfloatArray g_audioArray = nullptr;
+static u32 g_audioArraySize = 0;
+static std::mutex g_audioMutex;
+
 // - - - Emulator Thread Control - - -
 static std::thread g_emulatorThread;
 static std::atomic<bool> g_running{false};
@@ -359,6 +363,7 @@ Java_just_somebody_templates_domain_GameBoy_nativeChangeShader(JNIEnv *env, jobj
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeSetFastForward(JNIEnv *env, jobject thiz, jboolean enabled) {
     g_fastForward = enabled;
+    apuSetSpeed(enabled ? 2.0f : 1.0f);
 }
 
 JNIEXPORT jintArray JNICALL
@@ -490,10 +495,20 @@ void android_audio_push(const f32* SAMPLES, u32 COUNT) {
     if (g_jvm->GetEnv((void**)&env, JNI_VERSION_1_6) != JNI_OK) return;
     if (g_playAudioID == nullptr) return;
 
-    jfloatArray array = env->NewFloatArray(COUNT);
-    env->SetFloatArrayRegion(array, 0, COUNT, SAMPLES);
-    env->CallStaticVoidMethod(g_gameBoyClass, g_playAudioID, array);
-    env->DeleteLocalRef(array);
+    std::lock_guard<std::mutex> lock(g_audioMutex);
+
+    if (g_audioArray == nullptr || g_audioArraySize < COUNT) {
+        if (g_audioArray != nullptr) {
+            env->DeleteGlobalRef(g_audioArray);
+        }
+        g_audioArraySize = COUNT;
+        jfloatArray local = env->NewFloatArray(COUNT);
+        g_audioArray = (jfloatArray)env->NewGlobalRef(local);
+        env->DeleteLocalRef(local);
+    }
+
+    env->SetFloatArrayRegion(g_audioArray, 0, COUNT, SAMPLES);
+    env->CallStaticVoidMethod(g_gameBoyClass, g_playAudioID, g_audioArray);
 }
 
 bool android_saveRam(const u8* RAM_DATA, u32 RAM_SIZE) {
