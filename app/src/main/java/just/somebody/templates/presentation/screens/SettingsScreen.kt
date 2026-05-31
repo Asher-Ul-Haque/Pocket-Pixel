@@ -179,6 +179,9 @@ fun SettingsScreen(
                   CustomButton(ON_CLICK = pickDirectory, MODIFIER = Modifier.fillMaxWidth()) {
                       CustomText(stringResource(R.string.CHANGE))
                   }
+                  CustomButton(ON_CLICK = { VIEW_MODEL.toggleImmersiveMode() }, MODIFIER = Modifier.fillMaxWidth()) {
+                      CustomText(if (settings.isImmersiveModeEnabled) "Immersive Mode: ON" else "Immersive Mode: OFF")
+                  }
                   CustomButton(ON_CLICK = { VIEW_MODEL.rescan() }, MODIFIER = Modifier.fillMaxWidth()) {
                       CustomText(stringResource(R.string.RESCAN))
                   }

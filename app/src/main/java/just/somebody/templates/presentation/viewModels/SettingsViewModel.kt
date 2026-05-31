@@ -110,6 +110,15 @@ class SettingsViewModel(
       }
   }
 
+  fun toggleImmersiveMode() {
+      viewModelScope.launch {
+          val current = DATASTORE.getSettings()
+          val updated = current.copy(isImmersiveModeEnabled = !current.isImmersiveModeEnabled)
+          DATASTORE.updateSettings(updated)
+          _settings.value = updated
+      }
+  }
+
   fun factoryReset()
   {
     viewModelScope.launch ()

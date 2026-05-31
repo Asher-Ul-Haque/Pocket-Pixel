@@ -101,6 +101,7 @@ class EmulatorViewModel : ViewModel()
       {
         currentROM = romBytes
         romReady = true
+        incrementLaunchCount()
         tryStartEmulator(URI)
       }
       else
@@ -219,9 +220,26 @@ class EmulatorViewModel : ViewModel()
     }
   }
 
+  private fun incrementLaunchCount() {
+      viewModelScope.launch {
+          val current = App.appModule.dataStoreManager.getSettings()
+          App.appModule.dataStoreManager.updateSettings(current.copy(launchCount = current.launchCount + 1))
+      }
+  }
+
   fun toggleFastForward() {
       val newState = !_fastForward.value
       _fastForward.value = newState
       gameBoy.setFastForward(newState)
+  }
+
+  fun toggleImmersiveMode() {
+      viewModelScope.launch {
+          val dataStore = App.appModule.dataStoreManager
+          val current = dataStore.getSettings()
+          val updated = current.copy(isImmersiveModeEnabled = !current.isImmersiveModeEnabled)
+          dataStore.updateSettings(updated)
+          _settings.value = updated
+      }
   }
 }

@@ -14,5 +14,8 @@ data class AppSettings
   val paletteIndex    : Int                     = 0,
   val shaderIndex     : Int                     = 0,
   val customPalettes  : List<Palette>           = emptyList(),
-  val gamepadMapping  : GamepadMapping          = GamepadMapping()
+  val gamepadMapping  : GamepadMapping          = GamepadMapping(),
+  val launchCount             : Int                     = 0,
+  val hasRated                : Boolean                 = false,
+  val isImmersiveModeEnabled  : Boolean                 = true
 )

@@ -16,12 +16,16 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import just.somebody.templates.App
 import just.somebody.templates.R
 import just.somebody.templates.presentation.effects.SnackbarController
@@ -30,6 +34,11 @@ import just.somebody.templates.presentation.viewModels.GamesViewModel
 import just.somebody.templates.presentation.widgets.CustomButton
 import just.somebody.templates.presentation.widgets.CustomText
 import just.somebody.templates.ui.theme.GameBoyColors
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
 
 @Composable
@@ -42,6 +51,14 @@ fun HomeScreen(
   val favoriteGames  = VIEW_MODEL.favoriteGames.collectAsState()
   val recentGames    = VIEW_MODEL.recentlyPlayedGames.collectAsState()
   val selectedGame   = VIEW_MODEL.selectedGame.collectAsState()
+  val settings       = App.appModule.dataStoreManager.settingsFlow.collectAsState(initial = null)
+  val context        = LocalContext.current
+
+  val showRatePrompt = remember(settings.value) {
+      val s = settings.value
+      s != null && !s.hasRated && listOf(5, 10, 50, 100).contains(s.launchCount)
+  }
+
   val empty          = newGames.value.isEmpty()      &&
                        favoriteGames.value.isEmpty() &&
                        recentGames.value.isEmpty()
@@ -61,37 +78,66 @@ fun HomeScreen(
     .background(GameBoyColors.DarkGreen),
     contentAlignment = Alignment.Center)
   {
-    if (empty)
+    Column (
+      modifier            = Modifier
+        .fillMaxSize()
+        .verticalScroll(rememberScrollState()),
+      horizontalAlignment = Alignment.Start,
+      verticalArrangement = Arrangement.Top)
     {
-      Column(
-        modifier            = Modifier
-          .padding(16.dp)
-          .border(4.dp, GameBoyColors.Green, RectangleShape)
-          .wrapContentHeight(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-      )
-      {
-        CustomText(
-          TEXT      = stringResource(R.string.SELECT),
-          FONT_SIZE = 21)
-
-        CustomText(stringResource(R.string.SCAN))
-
-        CustomButton( {pickDirectory() })
-        { CustomText(stringResource(R.string.DIRECTORY)) }
-
-        Spacer(modifier = Modifier.size(8.dp))
+      if (showRatePrompt) {
+          Card(
+              colors = CardDefaults.cardColors(containerColor = GameBoyColors.MediumGreen),
+              shape = RectangleShape,
+              modifier = Modifier.padding(16.dp).fillMaxWidth().border(2.dp, GameBoyColors.Green, RectangleShape)
+          ) {
+              Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                  CustomText("Enjoying Pixel Pocket?", FONT_SIZE = 18)
+                  CustomText("Your rating helps me make it better!", FONT_SIZE = 12, COLOR = GameBoyColors.Green)
+                  Spacer(modifier = Modifier.height(12.dp))
+                  Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                      CustomButton(
+                          ON_CLICK = {
+                              VIEW_MODEL.markAsRated()
+                              val intent = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=${context.packageName}"))
+                              context.startActivity(intent)
+                          },
+                          MODIFIER = Modifier.weight(1f)
+                      ) { CustomText("Rate Now", FONT_SIZE = 12) }
+                      
+                      CustomButton(
+                          ON_CLICK = { VIEW_MODEL.markAsRated() },
+                          MODIFIER = Modifier.weight(1f),
+                          COLOR = GameBoyColors.DarkGreen
+                      ) { CustomText("Maybe Later", FONT_SIZE = 12) }
+                  }
+              }
+          }
       }
-    }
-    else
-    {
-      Column (
-        modifier            = Modifier
-          .fillMaxSize()
-          .verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.Start,
-        verticalArrangement = Arrangement.Top)
+
+      if (empty)
+      {
+        Column(
+          modifier            = Modifier
+            .padding(16.dp)
+            .border(4.dp, GameBoyColors.Green, RectangleShape)
+            .wrapContentHeight(),
+          verticalArrangement = Arrangement.Center,
+          horizontalAlignment = Alignment.CenterHorizontally)
+        {
+          CustomText(
+            TEXT      = stringResource(R.string.SELECT),
+            FONT_SIZE = 21)
+
+          CustomText(stringResource(R.string.SCAN))
+
+          CustomButton( {pickDirectory() })
+          { CustomText(stringResource(R.string.DIRECTORY)) }
+
+          Spacer(modifier = Modifier.size(8.dp))
+        }
+      }
+      else
       {
         GameList(
           GAMES         = favoriteGames.value,

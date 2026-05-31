@@ -33,6 +33,12 @@ import java.util.Collections
 
 class GamesViewModel(private val REPO : GameRepository) : ViewModel()
 {
+      fun markAsRated() {
+      viewModelScope.launch {
+          val current = App.appModule.dataStoreManager.getSettings()
+          App.appModule.dataStoreManager.updateSettings(current.copy(hasRated = true))
+      }
+  }
 
   private val _selectedGame : MutableStateFlow<Game?> = MutableStateFlow<Game?>(null)
   public  val selectedGame  : StateFlow<Game?>        = _selectedGame

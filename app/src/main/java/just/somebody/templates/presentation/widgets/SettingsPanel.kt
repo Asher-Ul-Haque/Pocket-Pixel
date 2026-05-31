@@ -298,6 +298,14 @@ private fun MiscSettingsSection(emulator: EmulatorViewModel) {
         ) {
             CustomText(if (fastForward) "Speed: 2x" else "Speed: 1x", FONT_SIZE = 14)
         }
+
+        val settings by emulator.settings.collectAsState()
+        CustomButton(
+            ON_CLICK = { emulator.toggleImmersiveMode() },
+            MODIFIER = Modifier.fillMaxWidth()
+        ) {
+            CustomText(if (settings.isImmersiveModeEnabled) "Immersive Mode: ON" else "Immersive Mode: OFF", FONT_SIZE = 14)
+        }
         
         if (game != null) {
             CustomButton(

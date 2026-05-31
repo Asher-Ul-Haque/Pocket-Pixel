@@ -2,23 +2,23 @@ package just.somebody.templates.presentation.screens
 
 import android.view.KeyEvent
 import android.view.MotionEvent
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -37,6 +37,7 @@ import just.somebody.templates.presentation.widgets.GameBoyFrame
 import just.somebody.templates.presentation.widgets.NormalButton
 import just.somebody.templates.presentation.widgets.SettingsPanel
 import just.somebody.templates.ui.theme.GameBoyColors
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,6 +53,28 @@ fun EmulatorScreen(
   val settings        by VIEW_MODEL.settings.collectAsState()
   val gameBoy       = App.appModule.gameBoy
   val showSettings  = remember { mutableStateOf(false) }
+
+  // Immersive Mode Logic: Fade out controls after 5 seconds of inactivity
+  var lastInteractionTime by remember { mutableStateOf(System.currentTimeMillis()) }
+  var controlsVisible by remember { mutableStateOf(true) }
+  
+  val controlAlpha by animateFloatAsState(
+      targetValue = if (!settings.isImmersiveModeEnabled || controlsVisible || showSettings.value) 1f else 0f,
+      animationSpec = tween(durationMillis = 1000),
+      label = "controlAlpha"
+  )
+
+  LaunchedEffect(lastInteractionTime, showSettings.value, settings.isImmersiveModeEnabled) {
+      if (!showSettings.value && settings.isImmersiveModeEnabled) {
+          delay(5000)
+          controlsVisible = false
+      }
+  }
+
+  val onInteraction = {
+      lastInteractionTime = System.currentTimeMillis()
+      controlsVisible = true
+  }
 
   // - - - Handle App Focus/Lifecycle Pause
   val lifecycleOwner = LocalLifecycleOwner.current
@@ -119,91 +142,114 @@ fun EmulatorScreen(
   val isLandscape = App.appModule.isLandscape()
   val gameBoyAspectRatio = 160f / 144f
 
+  // Viewport slide animation
+  // In Portrait: Center when UI hidden, Top when UI visible.
+  // In Landscape: Always Center.
+  // Root Box centers the child. Offset 0 means Center.
+  // To move to Top in Portrait: Center is middle. Top is screenTop + viewportHeight/2.
+  // A negative offset of approx -120dp will move it from center to top area.
+  val viewportYOffset by animateDpAsState(
+      targetValue = if (!isLandscape && (controlsVisible || showSettings.value)) (-120).dp else 0.dp,
+      animationSpec = tween(durationMillis = 1000),
+      label = "viewportSlide"
+  )
+
   Box(
     modifier = MODIFIER
       .fillMaxSize()
       .background(Color.Black)
+      .pointerInput(Unit) {
+          detectTapGestures { onInteraction() }
+      }
   ) {
+    // 1. Viewport Layer (Always visible, centered by default)
+    AndroidView(
+      modifier = Modifier
+        .fillMaxHeight(if (isLandscape) 1f else 0.7f)
+        .aspectRatio(gameBoyAspectRatio)
+        .align(Alignment.Center)
+        .offset(y = viewportYOffset),
+      factory = { context -> GameBoyFrame(context) },
+      update = { }
+    )
+
+    // 2. Controls Layer
     if (isLandscape) {
-      Box(modifier = Modifier.fillMaxSize().background(GameBoyColors.DarkGreen)) {
-        Row(
-          modifier = Modifier.fillMaxSize(),
-          verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.SpaceBetween
+      // Landscape Panels: Reveal root Black by fading their background + contents
+      Row(
+        modifier = Modifier.fillMaxSize().pointerInput(Unit) {
+            detectTapGestures { onInteraction() }
+        },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+      ) {
+        // Left Panel (Fades to reveal Black)
+        Box(modifier = Modifier
+            .fillMaxHeight()
+            .wrapContentWidth()
+            .alpha(controlAlpha)
+            .background(GameBoyColors.DarkGreen)
+            .padding(horizontal = 8.dp),
+            contentAlignment = Alignment.Center
         ) {
-          // Left Controls: Dpad and Select
-          Column(
-            modifier = Modifier.padding(start = 16.dp, end = 8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-          ) {
+          Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(IntrinsicSize.Min)) {
             GameBoyDpad(gameBoy)
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(32.dp))
             NormalButton("Select", Buttons.SELECT, gameBoy)
           }
+        }
 
-          // Viewport
-          Box(
-            modifier = Modifier.weight(1f),
+        Spacer(modifier = Modifier.weight(1f))
+
+        // Right Panel (Fades to reveal Black)
+        Box(modifier = Modifier
+            .fillMaxHeight()
+            .wrapContentWidth()
+            .alpha(controlAlpha)
+            .background(GameBoyColors.DarkGreen)
+            .padding(horizontal = 8.dp),
             contentAlignment = Alignment.Center
-          ) {
-            AndroidView(
-              modifier = Modifier
-                .fillMaxHeight()
-                .aspectRatio(gameBoyAspectRatio),
-              factory = { context -> GameBoyFrame(context) },
-              update = { }
-            )
-          }
-
-          // Right Controls: Actions and Start
-          Column(
-            modifier = Modifier.padding(start = 8.dp, end = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-          ) {
+        ) {
+          Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(IntrinsicSize.Min)) {
             GameBoyActionButtons(gameBoy)
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(32.dp))
             NormalButton("Start", Buttons.START, gameBoy)
           }
         }
-
-        // Settings icon for landscape - Top Right
-        Icon(
-          painter             = painterResource(R.drawable.settings),
-          contentDescription  = "In-game Settings",
-          tint                = GameBoyColors.MediumGreen,
-          modifier            = Modifier
-            .align(Alignment.TopEnd)
-            .padding(16.dp)
-            .size(32.dp)
-            .clickable { showSettings.value = true }
-        )
       }
+
+      // Settings icon for landscape - Top Right
+      Icon(
+        painter             = painterResource(R.drawable.settings),
+        contentDescription  = "In-game Settings",
+        tint                = GameBoyColors.MediumGreen,
+        modifier            = Modifier
+          .align(Alignment.TopEnd)
+          .padding(16.dp)
+          .size(32.dp)
+          .alpha(controlAlpha)
+          .clickable { 
+              onInteraction()
+              showSettings.value = true 
+          }
+      )
     } else {
+      // Portrait Mode
       Column(
         modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally
+        verticalArrangement = Arrangement.Bottom
       ) {
-        // Viewport (fills top, but maintains ratio)
-        Box(
-          modifier = Modifier
-            .weight(1f)
+        // Portrait Controls Layer - Fades to reveal Black root
+        Box(modifier = Modifier
             .fillMaxWidth()
-            .background(Color.Black),
-          contentAlignment = Alignment.Center)
-        {
-          AndroidView(
-            modifier = Modifier
-              .fillMaxWidth(1.0f)
-              .aspectRatio(gameBoyAspectRatio),
-            factory = { context -> GameBoyFrame(context) },
-            update  = { }
-          )
+            .alpha(controlAlpha)
+            .background(GameBoyColors.DarkGreen)
+        ) {
+            GameBoyControls(gameBoy, VIEW_MODEL) { 
+                onInteraction()
+                showSettings.value = true 
+            }
         }
-
-        // - - - Controls at bottom
-        GameBoyControls(gameBoy, VIEW_MODEL) { showSettings.value = true }
       }
     }
 
