@@ -170,7 +170,6 @@ class MainActivity : ComponentActivity()
   {
     super.onDestroy()
     App.appModule.gameBoy.stopEmulator()
-    App.appModule.gameBoy.flushSave()
   }
 
 }
