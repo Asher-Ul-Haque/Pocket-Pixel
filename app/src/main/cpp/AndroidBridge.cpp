@@ -7,6 +7,8 @@
 #include <condition_variable>
 #include <android/log.h>
 #include <GLES2/gl2.h>
+#include <chrono>
+
 extern "C" {
 #include <platform.h>
 #include <joypad.h>
@@ -17,8 +19,6 @@ extern "C" {
 #include <state.h>
 #include <cartridge/cartridge.h>
 }
-
-#include <chrono>
 
 #define LOG_TAG "PocketPixel_Native"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
@@ -87,6 +87,7 @@ void emulatorLoop() {
 
     PpuContext* ppu = ppuGetContext();
     CpuContext* cpu = cpuGetContext();
+    u32 autoSaveFrameCounter = 0;
 
     auto lastFrameTime = std::chrono::steady_clock::now();
 
@@ -127,16 +128,25 @@ void emulatorLoop() {
             // Request render on GL thread
             env->CallStaticVoidMethod(g_gameBoyClass, g_requestRenderID);
 
-            if (!g_fastForward) {
-                auto now = std::chrono::steady_clock::now();
-                std::chrono::duration<double> elapsed = now - lastFrameTime;
-
-                if (elapsed.count() < TARGET_FRAME_TIME) {
-                    auto sleepTime = std::chrono::duration<double>(TARGET_FRAME_TIME - elapsed.count());
-                    std::this_thread::sleep_for(std::chrono::duration_cast<std::chrono::microseconds>(sleepTime));
+            // --- AUTO-SAVE HEARTBEAT ---
+            autoSaveFrameCounter++;
+            if (autoSaveFrameCounter >= 300) { // Every 5 seconds (roughly)
+                autoSaveFrameCounter = 0;
+                CartContext* ctx = cartridgeGetContext();
+                if (ctx && ctx->initialized && ctx->ramDirty) {
+                    cartridgeFlushRAM();
                 }
-                lastFrameTime = std::chrono::steady_clock::now();
             }
+
+            double targetFrameTime = g_fastForward ? (TARGET_FRAME_TIME / 2.0) : TARGET_FRAME_TIME;
+            auto now = std::chrono::steady_clock::now();
+            std::chrono::duration<double> elapsed = now - lastFrameTime;
+
+            if (elapsed.count() < targetFrameTime) {
+                auto sleepTime = std::chrono::duration<double>(targetFrameTime - elapsed.count());
+                std::this_thread::sleep_for(std::chrono::duration_cast<std::chrono::microseconds>(sleepTime));
+            }
+            lastFrameTime = std::chrono::steady_clock::now();
         }
     }
 
@@ -325,8 +335,20 @@ Java_just_somebody_templates_domain_GameBoy_nativeFlushSave(JNIEnv *env, jobject
 }
 
 JNIEXPORT void JNICALL
-Java_just_somebody_templates_domain_GameBoy_nativeChangePalette(JNIEnv *env, jobject thiz, jint index) {
-    androidSetPaletteByIndex((u8)index);
+Java_just_somebody_templates_domain_GameBoy_nativeChangePalette(JNIEnv *env, jobject thiz, jintArray colors) {
+    jint* cols = env->GetIntArrayElements(colors, nullptr);
+    DmgPalette palette;
+    palette.color0 = (u32)cols[0];
+    palette.color1 = (u32)cols[1];
+    palette.color2 = (u32)cols[2];
+    palette.color3 = (u32)cols[3];
+
+    PlatformContext* platform = platformGetContext();
+    if (platform && platform->video.setDmgPalette) {
+        platform->video.setDmgPalette(palette);
+    }
+
+    env->ReleaseIntArrayElements(colors, cols, JNI_ABORT);
 }
 
 JNIEXPORT void JNICALL
@@ -337,6 +359,16 @@ Java_just_somebody_templates_domain_GameBoy_nativeChangeShader(JNIEnv *env, jobj
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeSetFastForward(JNIEnv *env, jobject thiz, jboolean enabled) {
     g_fastForward = enabled;
+}
+
+JNIEXPORT jintArray JNICALL
+Java_just_somebody_templates_domain_GameBoy_nativeCaptureFrame(JNIEnv *env, jobject thiz) {
+    u32* pixels = androidGetFrameBuffer();
+    if (!pixels) return nullptr;
+
+    jintArray result = env->NewIntArray(160 * 144);
+    env->SetIntArrayRegion(result, 0, 160 * 144, (jint*)pixels);
+    return result;
 }
 
 JNIEXPORT jbyteArray JNICALL
@@ -376,7 +408,7 @@ Java_just_somebody_templates_domain_GameBoy_nativeOnSurfaceCreated(JNIEnv *env, 
         glGetProgramiv(g_program, GL_INFO_LOG_LENGTH, &infoLen);
         if (infoLen > 0) {
             char* buf = (char*)malloc(infoLen);
-            glGetProgramInfoLog(g_program, infoLen, nullptr, buf);
+            glGetShaderInfoLog(g_program, infoLen, nullptr, buf);
             LOGE("Error linking program:\n%s", buf);
             free(buf);
         }

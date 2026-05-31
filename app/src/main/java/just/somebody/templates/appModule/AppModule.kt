@@ -27,6 +27,7 @@ import just.somebody.templates.data.BoxArtFetcher
 import just.somebody.templates.data.DefaultBoxArtFetcher
 import just.somebody.templates.appModule.storage.DefaultExternalStorageManager
 import just.somebody.templates.appModule.storage.ExternalStorageManager
+import just.somebody.templates.appModule.storage.SaveStateManager
 import just.somebody.templates.domain.GameBoy
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -51,6 +52,7 @@ interface AppModuleInterface
   val boxArtFetcher          : BoxArtFetcher
   val gameBoy                : GameBoy
   val gameControllerManager  : GameControllerManager
+  val saveStateManager       : SaveStateManager
   @Composable fun isLandscape() : Boolean
 }
 
@@ -73,6 +75,7 @@ class AppModule(private val APP_CONTEXT : Context) : AppModuleInterface
   override val boxArtFetcher          : BoxArtFetcher           by lazy { DefaultBoxArtFetcher(internalStorageManager, networkService) }
   override val gameBoy                : GameBoy                 by lazy { GameBoy() }
   override val gameControllerManager  : GameControllerManager   by lazy { DefaultGameControllerManager(APP_CONTEXT) }
+  override val saveStateManager       : SaveStateManager        by lazy { SaveStateManager(APP_CONTEXT, database.saveStateDAO()) }
 
 
   private val appSettingsDataStore : DataStore<AppSettings> by lazy ()

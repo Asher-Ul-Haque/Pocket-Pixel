@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -17,18 +18,24 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import just.somebody.templates.App
 import just.somebody.templates.R
 import just.somebody.templates.domain.Buttons
+import just.somebody.templates.domain.PauseTrigger
 import just.somebody.templates.presentation.viewModels.EmulatorViewModel
 import just.somebody.templates.presentation.widgets.GameBoyActionButtons
 import just.somebody.templates.presentation.widgets.GameBoyControls
 import just.somebody.templates.presentation.widgets.GameBoyDpad
 import just.somebody.templates.presentation.widgets.GameBoyFrame
 import just.somebody.templates.presentation.widgets.NormalButton
+import just.somebody.templates.presentation.widgets.SettingsPanel
 import just.somebody.templates.ui.theme.GameBoyColors
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -42,42 +49,66 @@ fun EmulatorScreen(
   LaunchedEffect(URI) { VIEW_MODEL.runEmulator(URI) }
 
   val controllerState by App.appModule.gameControllerManager.controllerState.collectAsState()
-  val gameBoy = App.appModule.gameBoy
+  val settings        by VIEW_MODEL.settings.collectAsState()
+  val gameBoy       = App.appModule.gameBoy
+  val showSettings  = remember { mutableStateOf(false) }
 
-  // Map Gamepad Buttons to GameBoy Buttons
-  LaunchedEffect(controllerState.buttons) {
-    val buttons = controllerState.buttons
-    gameBoy.sendButton(Buttons.A, buttons[KeyEvent.KEYCODE_BUTTON_A] == true)
-    gameBoy.sendButton(Buttons.B, buttons[KeyEvent.KEYCODE_BUTTON_B] == true || buttons[KeyEvent.KEYCODE_BUTTON_X] == true)
-    gameBoy.sendButton(Buttons.START, buttons[KeyEvent.KEYCODE_BUTTON_START] == true)
-    gameBoy.sendButton(Buttons.SELECT, buttons[KeyEvent.KEYCODE_BUTTON_SELECT] == true)
-    
-    // D-Pad key fallback
-    if (buttons.containsKey(KeyEvent.KEYCODE_DPAD_UP)) gameBoy.sendButton(Buttons.UP, buttons[KeyEvent.KEYCODE_DPAD_UP] == true)
-    if (buttons.containsKey(KeyEvent.KEYCODE_DPAD_DOWN)) gameBoy.sendButton(Buttons.DOWN, buttons[KeyEvent.KEYCODE_DPAD_DOWN] == true)
-    if (buttons.containsKey(KeyEvent.KEYCODE_DPAD_LEFT)) gameBoy.sendButton(Buttons.LEFT, buttons[KeyEvent.KEYCODE_DPAD_LEFT] == true)
-    if (buttons.containsKey(KeyEvent.KEYCODE_DPAD_RIGHT)) gameBoy.sendButton(Buttons.RIGHT, buttons[KeyEvent.KEYCODE_DPAD_RIGHT] == true)
+  // - - - Handle App Focus/Lifecycle Pause
+  val lifecycleOwner = LocalLifecycleOwner.current
+  DisposableEffect(lifecycleOwner) {
+    val observer = LifecycleEventObserver { _, event ->
+      when (event) {
+        Lifecycle.Event.ON_PAUSE -> VIEW_MODEL.pause(PauseTrigger.FOCUS)
+        Lifecycle.Event.ON_RESUME -> VIEW_MODEL.resume(PauseTrigger.FOCUS)
+        else -> {}
+      }
+    }
+    lifecycleOwner.lifecycle.addObserver(observer)
+    onDispose {
+      lifecycleOwner.lifecycle.removeObserver(observer)
+    }
   }
 
-  // Map Analog Sticks / Hat to GameBoy D-Pad
-  LaunchedEffect(controllerState.axes) {
-    val axes = controllerState.axes
-    val hatX = axes[MotionEvent.AXIS_HAT_X] ?: 0f
-    val hatY = axes[MotionEvent.AXIS_HAT_Y] ?: 0f
-    val stickX = axes[MotionEvent.AXIS_X] ?: 0f
-    val stickY = axes[MotionEvent.AXIS_Y] ?: 0f
+  // - - - Handle Settings Modal Pause
+  LaunchedEffect(showSettings.value) {
+    if (showSettings.value) VIEW_MODEL.pause(PauseTrigger.SETTINGS)
+    else VIEW_MODEL.resume(PauseTrigger.SETTINGS)
+  }
 
-    val threshold = 0.5f
+  // - - - Map Gamepad Buttons to GameBoy Buttons based on custom mapping
+  LaunchedEffect(controllerState.buttons, settings.gamepadMapping)
+  {
+    val buttons = controllerState.buttons
+    val mapping = settings.gamepadMapping.buttonToGameBoy
     
-    val up = hatY < -threshold || stickY < -threshold
-    val down = hatY > threshold || stickY > threshold
-    val left = hatX < -threshold || stickX < -threshold
-    val right = hatX > threshold || stickX > threshold
+    // - - - Clear states for buttons that are in our mapping
+    mapping.values.distinct().forEach()
+    { gbButton ->
+      val isPressed = mapping.filter { it.value == gbButton }.any()
+      { (keyCode, _) -> buttons[keyCode] == true }
+      gameBoy.sendButton(gbButton, isPressed)
+    }
+  }
 
-    gameBoy.sendButton(Buttons.UP, up)
-    gameBoy.sendButton(Buttons.DOWN, down)
-    gameBoy.sendButton(Buttons.LEFT, left)
-    gameBoy.sendButton(Buttons.RIGHT, right)
+  // Map Analog Sticks / Hat to GameBoy D-Pad based on custom mapping
+  LaunchedEffect(controllerState.axes, settings.gamepadMapping) {
+    val axes = controllerState.axes
+    val mapping = settings.gamepadMapping.axisToGameBoy
+    val deadzone = settings.gamepadMapping.deadzone
+    
+    // Apply custom mapping
+    val allGbButtons = mapping.values.flatMap { it.values }.distinct()
+    allGbButtons.forEach { gbButton ->
+        val isPressed = mapping.any { (axis, dirMap) ->
+            dirMap.any { (dir, mappedButton) ->
+                if (mappedButton == gbButton) {
+                    val value = axes[axis] ?: 0f
+                    if (dir > 0) value > deadzone else value < -deadzone
+                } else false
+            }
+        }
+        gameBoy.sendButton(gbButton, isPressed)
+    }
   }
 
   DisposableEffect(Unit)
@@ -94,45 +125,60 @@ fun EmulatorScreen(
       .background(Color.Black)
   ) {
     if (isLandscape) {
-      Row(
-        modifier = Modifier.fillMaxSize().background(GameBoyColors.DarkGreen),
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        // Left Controls: Dpad and Select
-        Column(
-          modifier = Modifier.fillMaxHeight().padding(16.dp),
-          horizontalAlignment = Alignment.CenterHorizontally,
-          verticalArrangement = Arrangement.Center
+      Box(modifier = Modifier.fillMaxSize().background(GameBoyColors.DarkGreen)) {
+        Row(
+          modifier = Modifier.fillMaxSize(),
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.SpaceBetween
         ) {
-          GameBoyDpad(gameBoy)
-          Spacer(modifier = Modifier.height(32.dp))
-          NormalButton("Select", Buttons.SELECT, gameBoy)
+          // Left Controls: Dpad and Select
+          Column(
+            modifier = Modifier.padding(start = 16.dp, end = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+          ) {
+            GameBoyDpad(gameBoy)
+            Spacer(modifier = Modifier.height(24.dp))
+            NormalButton("Select", Buttons.SELECT, gameBoy)
+          }
+
+          // Viewport
+          Box(
+            modifier = Modifier.weight(1f),
+            contentAlignment = Alignment.Center
+          ) {
+            AndroidView(
+              modifier = Modifier
+                .fillMaxHeight()
+                .aspectRatio(gameBoyAspectRatio),
+              factory = { context -> GameBoyFrame(context) },
+              update = { }
+            )
+          }
+
+          // Right Controls: Actions and Start
+          Column(
+            modifier = Modifier.padding(start = 8.dp, end = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+          ) {
+            GameBoyActionButtons(gameBoy)
+            Spacer(modifier = Modifier.height(24.dp))
+            NormalButton("Start", Buttons.START, gameBoy)
+          }
         }
 
-        // Viewport
-        Box(
-          modifier = Modifier.weight(1f).fillMaxHeight().background(Color.Black),
-          contentAlignment = Alignment.Center
-        ) {
-          AndroidView(
-            modifier = Modifier
-              .fillMaxHeight()
-              .aspectRatio(gameBoyAspectRatio),
-            factory = { context -> GameBoyFrame(context) },
-            update = { }
-          )
-        }
-
-        // Right Controls: Actions and Start
-        Column(
-          modifier = Modifier.fillMaxHeight().padding(16.dp),
-          horizontalAlignment = Alignment.CenterHorizontally,
-          verticalArrangement = Arrangement.Center
-        ) {
-          GameBoyActionButtons(gameBoy)
-          Spacer(modifier = Modifier.height(32.dp))
-          NormalButton("Start", Buttons.START, gameBoy)
-        }
+        // Settings icon for landscape - Top Right
+        Icon(
+          painter             = painterResource(R.drawable.settings),
+          contentDescription  = "In-game Settings",
+          tint                = GameBoyColors.MediumGreen,
+          modifier            = Modifier
+            .align(Alignment.TopEnd)
+            .padding(16.dp)
+            .size(32.dp)
+            .clickable { showSettings.value = true }
+        )
       }
     } else {
       Column(
@@ -145,20 +191,28 @@ fun EmulatorScreen(
             .weight(1f)
             .fillMaxWidth()
             .background(Color.Black),
-          contentAlignment = Alignment.Center
-        ) {
+          contentAlignment = Alignment.Center)
+        {
           AndroidView(
             modifier = Modifier
-              .fillMaxWidth(0.95f)
+              .fillMaxWidth(1.0f)
               .aspectRatio(gameBoyAspectRatio),
             factory = { context -> GameBoyFrame(context) },
-            update = { }
+            update  = { }
           )
         }
 
-        // Controls at bottom
-        GameBoyControls(gameBoy, VIEW_MODEL)
+        // - - - Controls at bottom
+        GameBoyControls(gameBoy, VIEW_MODEL) { showSettings.value = true }
       }
+    }
+
+    if (showSettings.value)
+    {
+      SettingsPanel(
+        GAME_BOY = gameBoy,
+        EMULATOR = VIEW_MODEL,
+        ON_CLOSE = { showSettings.value = false })
     }
   }
 }

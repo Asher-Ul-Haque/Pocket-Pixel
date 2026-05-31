@@ -4,20 +4,12 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
@@ -31,8 +23,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import just.somebody.templates.R
 import just.somebody.templates.domain.Buttons
 import just.somebody.templates.domain.GameBoy
 import just.somebody.templates.presentation.viewModels.EmulatorViewModel
@@ -73,13 +67,13 @@ fun GameBoyActionButtons(GAME_BOY: GameBoy) {
   {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp))
     {
-      NormalButton("B", Buttons.B, GAME_BOY, null, true)
       NormalButton("", Buttons.A, GAME_BOY, Buttons.B, true, IS_INVISIBLE = true)
+      NormalButton("A", Buttons.A, GAME_BOY, null, true)
     }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp))
     {
+      NormalButton("B", Buttons.B, GAME_BOY, null, true)
       NormalButton("", Buttons.B, GAME_BOY, Buttons.A, true, IS_INVISIBLE = true)
-      NormalButton("A", Buttons.A, GAME_BOY, null, true)
     }
   }
 }
@@ -88,7 +82,8 @@ fun GameBoyActionButtons(GAME_BOY: GameBoy) {
 @Composable
 fun GameBoyControls(
   GAME_BOY   : GameBoy,
-  VIEW_MODEL : EmulatorViewModel)
+  VIEW_MODEL : EmulatorViewModel,
+  ON_SETTINGS_CLICK : () -> Unit)
 {
   Column(
     horizontalAlignment = Alignment.CenterHorizontally,
@@ -99,8 +94,8 @@ fun GameBoyControls(
   )
   {
     Row (
-      modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-      horizontalArrangement = Arrangement.SpaceEvenly, 
+      modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+      horizontalArrangement = Arrangement.SpaceBetween, 
       verticalAlignment = Alignment.CenterVertically
     )
     {
@@ -108,7 +103,18 @@ fun GameBoyControls(
       GameBoyActionButtons(GAME_BOY)
     }
 
-    Spacer(modifier = Modifier.padding(10.dp))
+    Spacer(modifier = Modifier.height(24.dp))
+
+    Icon(
+      painter             = painterResource(R.drawable.settings),
+      contentDescription  = "In-game Settings",
+      tint                = GameBoyColors.MediumGreen,
+      modifier            = Modifier
+        .size(32.dp)
+        .clickable { ON_SETTINGS_CLICK() }
+    )
+
+    Spacer(modifier = Modifier.height(16.dp))
 
     Row(
       modifier                = Modifier.fillMaxWidth(),
@@ -116,7 +122,7 @@ fun GameBoyControls(
       verticalAlignment       = Alignment.CenterVertically)
     {
       NormalButton("Select", Buttons.SELECT, GAME_BOY)
-      Spacer(Modifier.padding(16.dp))
+      Spacer(Modifier.width(32.dp))
       NormalButton("Start", Buttons.START, GAME_BOY)
     }
   }
@@ -141,8 +147,7 @@ fun NormalButton(
   Button(
     onClick  = { /* ignored: handled via pointerInput */ },
     modifier = MODIFIER
-      .width(if (IS_SQUARE) 64.dp else 96.dp)
-      .height(if (IS_SQUARE) 64.dp else 48.dp)
+      .size(if (IS_SQUARE) 64.dp else 96.dp, if (IS_SQUARE) 64.dp else 48.dp)
       .alpha(if (IS_INVISIBLE && !isPressed.value) 0f else 1f)
       .offset(x = offset, y = offset)
       .pointerInput(Unit)
@@ -192,6 +197,7 @@ fun NormalButton(
           if (SECONDARY != null) 0.0f
           else                   1.0f
       )),
+    contentPadding = PaddingValues(0.dp)
   )
   {
     if (SECONDARY == null)
