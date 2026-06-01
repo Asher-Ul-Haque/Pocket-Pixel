@@ -30,6 +30,8 @@ import just.somebody.templates.App
 import just.somebody.templates.R
 import just.somebody.templates.ui.theme.GameBoyColors
 import just.somebody.templates.ui.theme.MinecraftFontFamily
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.systemBarsPadding
 
 /**
  * Data blueprint mapping properties for a single navigation destination slot.
@@ -69,16 +71,17 @@ fun NavBar(
         .wrapContentWidth()
         .background(GameBoyColors.MediumGreen),
       horizontalAlignment =  Alignment.CenterHorizontally,
-      verticalArrangement = Arrangement.SpaceEvenly
-           ) { NavList(SELECTED_INDEX, ON_NAVIGATE) }
+      verticalArrangement = Arrangement.SpaceEvenly)
+    { NavList(SELECTED_INDEX, ON_NAVIGATE) }
   }
   else
   {
     Row (
       modifier            = MODIFIER
         .fillMaxWidth()
-        .wrapContentHeight()
-        .background(GameBoyColors.MediumGreen),
+        .background(GameBoyColors.MediumGreen)
+        .navigationBarsPadding()
+        .wrapContentHeight(),
       verticalAlignment     = Alignment.CenterVertically,
       horizontalArrangement = Arrangement.SpaceEvenly)
     { NavList(SELECTED_INDEX, ON_NAVIGATE) }
