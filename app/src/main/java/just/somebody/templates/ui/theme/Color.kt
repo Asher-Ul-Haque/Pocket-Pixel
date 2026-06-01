@@ -2,6 +2,9 @@ package just.somebody.templates.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
+/**
+ * Monochromatic color palette arrangement based on progressive variations of a single dominant blue wavelength.
+ */
 data object MonoChrome
 {
   val Blue90 = Color(0xFFE3F2FD)
@@ -11,6 +14,9 @@ data object MonoChrome
   val Blue10 = Color(0xFF0D47A1)
 }
 
+/**
+ * Analogous color grouping capturing neighboring color harmonies positioned close together on the color wheel structure.
+ */
 data object Analogous
 {
   val GreenBlue80  = Color(0xFF80DEEA)
@@ -19,6 +25,9 @@ data object Analogous
   val PurpleBlue60 = Color(0xFF9575CD)
 }
 
+/**
+ * Complementary color pairing providing high visual contrast by matching opposing orange and blue light frequencies.
+ */
 data object Complementary
 {
   val OrangeLight   = Color(0xFFFFCC80)
@@ -28,6 +37,9 @@ data object Complementary
   val BlueDark      = MonoChrome.Blue30
 }
 
+/**
+ * Triadic design spectrum utilizing three evenly spaced color nodes distributed across the color map profile.
+ */
 data object Triadic
 {
   val YellowPrimary  = Color(0xFFFFEB3B)
@@ -35,6 +47,9 @@ data object Triadic
   val CyanPrimary    = Color(0xFF00BCD4)
 }
 
+/**
+ * Split-Complementary mapping architecture combining a base primary hue with two colors adjacent to its direct complement.
+ */
 data object SplitComplementary
 {
   val RedPrimary       = Color(0xFFF44336)
@@ -42,6 +57,9 @@ data object SplitComplementary
   val BlueGreenLight   = Color(0xFF4DB6AC)
 }
 
+/**
+ * Neutral achromatic baseline scale tracking balanced grayscale light levels for backgrounds, text elements, and borders.
+ */
 data object Neutral
 {
   val Grey90 = Color(0xFFF5F5F5)
@@ -51,6 +69,9 @@ data object Neutral
   val Grey10 = Color(0xFF212121)
 }
 
+/**
+ * Specialized hardware color replication spectrum mirroring the classic 2-bit green monochrome shades of retro dot-matrix panels.
+ */
 data object GameBoyColors
 {
   val DarkGreen    : Color = Color(0xff0f380f);

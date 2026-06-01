@@ -2,12 +2,14 @@ package just.somebody.templates
 
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.view.animation.OvershootInterpolator
+import android.view.KeyEvent
+import android.view.MotionEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.SnackbarHostState
@@ -17,14 +19,15 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.core.animation.doOnEnd
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.core.view.WindowCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import just.somebody.pocketpixel.ui.theme.TemplateTheme
+import just.somebody.templates.ui.theme.TemplateTheme
 import just.somebody.templates.presentation.effects.ObserveAsEvents
 import just.somebody.templates.presentation.effects.SnackbarController
 import just.somebody.templates.presentation.effects.SoundController
 import just.somebody.templates.presentation.effects.SoundEffect
 import just.somebody.templates.presentation.screens.BrowseScreen
+import just.somebody.templates.presentation.screens.Destination
 import just.somebody.templates.presentation.viewModels.BrowseViewModel
 import just.somebody.templates.presentation.viewModels.SplashViewModel
 import just.somebody.templates.presentation.viewModels.viewModelFactory
@@ -109,6 +112,27 @@ class MainActivity : ComponentActivity()
     }
   }
 
+  override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+    if (App.appModule.gameControllerManager.handleKeyEvent(event)) {
+      return true
+    }
+    return super.onKeyDown(keyCode, event)
+  }
+
+  override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
+    if (App.appModule.gameControllerManager.handleKeyEvent(event)) {
+      return true
+    }
+    return super.onKeyUp(keyCode, event)
+  }
+
+  override fun onGenericMotionEvent(event: MotionEvent): Boolean {
+    if (App.appModule.gameControllerManager.handleMotionEvent(event)) {
+      return true
+    }
+    return super.onGenericMotionEvent(event)
+  }
+
   override fun onStop()
   {
     super.onStop()
@@ -125,7 +149,6 @@ class MainActivity : ComponentActivity()
   {
     super.onDestroy()
     App.appModule.gameBoy.stopEmulator()
-    App.appModule.gameBoy.flushSave()
   }
 
 }

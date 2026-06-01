@@ -1,6 +1,5 @@
 package just.somebody.templates.presentation.viewModels
 
-import android.view.View
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import just.somebody.templates.App
@@ -11,7 +10,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-
+/**
+ * Immutable architecture layout snapshot tracking structural presentation variables for shell components.
+ *
+ * @property selectedIndex Main location pointer identifying the currently targeted navigation tab coordinate.
+ * @property showInfoDialog Toggles systemic application documentation visibility modals.
+ * @property showSettings Intercepts visual overrides to manifest overlay property adjustments.
+ * @property showBars Toggles contextual operational menu layers (headers and bottom navigation views).
+ */
 data class BrowseUIState
 (
   val selectedIndex  : Int,
@@ -20,17 +26,10 @@ data class BrowseUIState
   val showBars       : Boolean,
 )
 
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
-
-private fun hideSystemUI() {
-  WindowInsetsControllerCompat(window, window.decorView).let { controller ->
-    controller.hide(WindowInsetsCompat.Type.systemBars())
-    controller.systemBarsBehavior =
-      WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-  }
-}
-
+/**
+ * Presentation layer coordinator hosting control actions for the global navigation interface framework.
+ * Pipes active navigation changes through manual injection routers to switch presentation screens smoothly.
+ */
 class BrowseViewModel : ViewModel()
 {
   private val _browseState : MutableStateFlow<BrowseUIState> = MutableStateFlow(
@@ -38,10 +37,15 @@ class BrowseViewModel : ViewModel()
       0,
       false,
       false,
-      true)
-  )
+      true))
   public  val browseState  : StateFlow<BrowseUIState>        = _browseState
 
+  /**
+   * Commits an atomic navigation adjustment operation across asynchronous thread pipelines.
+   * Swaps context states via the central [Navigator] to refresh structural screen overlays.
+   *
+   * @param NEW_INDEX Coordinate identifier mapping the target path selection segment.
+   */
   fun onNavigate(NEW_INDEX : Int)
   {
     viewModelScope.launch ()
@@ -51,25 +55,24 @@ class BrowseViewModel : ViewModel()
       _browseState.update ()
       {
         BrowseUIState(
-        NEW_INDEX,
-        _browseState.value.showInfoDialog,
-        _browseState.value.showSettings,
-        _browseState.value.showBars)
+          NEW_INDEX,
+          _browseState.value.showInfoDialog,
+          _browseState.value.showSettings,
+          _browseState.value.showBars)
       }
       val destination =
         when (NEW_INDEX)
         {
           1    -> Destination.Favorites
           2    -> Destination.Search
-          3    -> Destination.LinkCable
-          4    -> Destination.Server
-          5    -> Destination.Settings
+          3    -> Destination.Settings
           else -> Destination.Home
         }
       App.appModule.navigator.replace(destination)
     }
   }
 
+  /** Shifts layout configurations to alternate the presentation layer visibility of internal settings. */
   fun goToSettings(TOGGLE : Boolean)
   {
     viewModelScope.launch ()
@@ -85,6 +88,7 @@ class BrowseViewModel : ViewModel()
     }
   }
 
+  /** Toggles display conditions for documentation elements across active layout subtrees. */
   fun toggleSeeInfo()
   {
     viewModelScope.launch ()
@@ -100,18 +104,19 @@ class BrowseViewModel : ViewModel()
     }
   }
 
+  /** Extracts and returns localized string resource identities aligned to active presentation states. */
   fun getDestinationTitle() : Int
   {
     return when (_browseState.value.selectedIndex)
     {
       1    -> R.string.FAV
       2    -> R.string.SEARCH
-      3    -> R.string.LINK_CABLE
-      4    -> R.string.SERVER
+      3    -> R.string.SETTINGS
       else -> R.string.HOME
     }
   }
 
+  /** Modifies visibility rules affecting operational shell layers based on runtime configurations. */
   fun showBars(TOGGLE : Boolean)
   {
     viewModelScope.launch ()

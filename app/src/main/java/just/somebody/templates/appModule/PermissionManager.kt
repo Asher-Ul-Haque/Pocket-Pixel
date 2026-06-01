@@ -13,28 +13,48 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.compose.ui.platform.LocalContext
 
-
+/**
+ * Subsystem coordinator managing platform validation rules, system verification queries,
+ * and contextual redirection links for Android runtime permissions.
+ */
 interface PermissionManager
 {
+  /** Evaluates whether an explicit single security permission string is currently authorized. */
   fun hasPermission(CONTEXT : Context, PERMISSION: String): Boolean
 
+  /**
+   * Evaluates, orchestrates, and invokes a single runtime dialog approval prompt targeting a Composable layout node.
+   *
+   * @param PERMISSION The targeted system security identity path string.
+   * @param ON_GRANT Callback triggered when user configuration verification passes.
+   * @param TRIGGER Flag that fires the underlying asynchronous manifest authorization window.
+   * @param ON_TRIGGER Callback tracking completion of permission check processing.
+   * @param GO_TO_SETTINGS Directs the execution thread to open system properties if permanently denied.
+   */
   @Composable
   fun RequestPermissionIfNeeded(
     PERMISSION      : String,
     ON_GRANT        : () -> Unit,
     TRIGGER         : Boolean,
     ON_TRIGGER      : () -> Unit,
-    GO_TO_SETTINGS  : Boolean
-  )
+    GO_TO_SETTINGS  : Boolean)
 
+  /**
+   * Evaluates, orchestrates, and invokes a multi-permission verification matrix block inside a Composable layout node.
+   *
+   * @param PERMISSIONS Matched array list of required authorization properties.
+   * @param ON_ALL_GRANT Callback triggered when all combined parameters successfully map to active approvals.
+   * @param TRIGGER Flag that fires the underlying asynchronous manifest authorization window.
+   * @param ON_TRIGGER Callback tracking completion of permission check processing.
+   * @param GO_TO_SETTINGS Directs the execution thread to open system properties if permanently denied.
+   */
   @Composable
   fun RequestPermissionIfNeeded(
     PERMISSIONS    : Array<String>,
     ON_ALL_GRANT   : () -> Unit,
     TRIGGER        : Boolean,
     ON_TRIGGER     : () -> Unit,
-    GO_TO_SETTINGS : Boolean
-  )
+    GO_TO_SETTINGS : Boolean)
 }
 
 class DefaultPermissionManager : PermissionManager
@@ -48,8 +68,7 @@ class DefaultPermissionManager : PermissionManager
     ON_GRANT        : () -> Unit,
     TRIGGER         : Boolean,
     ON_TRIGGER      : () -> Unit,
-    GO_TO_SETTINGS  : Boolean
-  )
+    GO_TO_SETTINGS  : Boolean)
   {
     val context       = LocalContext.current
     val activity      = context as? Activity
@@ -79,8 +98,7 @@ class DefaultPermissionManager : PermissionManager
     ON_ALL_GRANT   : () -> Unit,
     TRIGGER        : Boolean,
     ON_TRIGGER     : () -> Unit,
-    GO_TO_SETTINGS : Boolean
-  )
+    GO_TO_SETTINGS : Boolean)
   {
     val context       = LocalContext.current
     val activity      = context as? Activity
@@ -111,6 +129,11 @@ class DefaultPermissionManager : PermissionManager
 
   companion object
   {
+    /**
+     * Issues an implicit platform intent vector tracking application identifier paths to show OS settings info directly.
+     *
+     * @param context Host execution reference path used to initiate the target transaction task.
+     */
     fun openAppSettings(context: Context)
     {
       val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply()

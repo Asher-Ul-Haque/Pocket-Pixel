@@ -12,15 +12,24 @@ import kotlinx.coroutines.runBlocking // For synchronous file loading
 import kotlinx.coroutines.withContext
 import androidx.documentfile.provider.DocumentFile // Needed for DocumentFile operations
 import just.somebody.templates.appModule.storage.ExternalStorageManager
+import just.somebody.templates.domain.models.Palette
 import just.somebody.templates.presentation.effects.SnackbarController
 import just.somebody.templates.presentation.effects.SnackbarEvent
 import kotlinx.coroutines.coroutineScope
+import java.util.Collections
+import java.util.concurrent.ConcurrentHashMap
+
+enum class PauseTrigger {
+  SETTINGS,
+  FOCUS,
+  IO
+}
 
 enum class Buttons {
+  RIGHT,
+  LEFT,
   UP,
   DOWN,
-  LEFT,
-  RIGHT,
   A,
   B,
   SELECT,
@@ -30,23 +39,60 @@ enum class Buttons {
 class GameBoy
 {
   private var currentRomUri: String? = null
+  private val pauseTriggers = Collections.newSetFromMap(ConcurrentHashMap<PauseTrigger, Boolean>())
+
+  fun pauseEmulator(trigger: PauseTrigger) {
+    if (pauseTriggers.isEmpty()) {
+      nativePauseEmulator()
+      ForgeLogger.info("Emulator paused by $trigger")
+    }
+    pauseTriggers.add(trigger)
+  }
+
+  fun resumeEmulator(trigger: PauseTrigger) {
+    pauseTriggers.remove(trigger)
+    if (pauseTriggers.isEmpty()) {
+      nativeResumeEmulator()
+      ForgeLogger.info("Emulator resumed (last trigger cleared: $trigger)")
+    } else {
+      ForgeLogger.info("Emulator still paused. Remaining triggers: $pauseTriggers")
+    }
+  }
 
   fun loadROM(ROM: ByteArray, ROM_URI: String)
   {
+    resetActivityFlag()
     this.currentRomUri = ROM_URI
     updateStaticRomUri(ROM_URI)
-    App.appModule.linkCable.onByteReceived = { byte -> nativeRecieveByte(byte.toByte()) }
     nativeLoadROM(ROM, ROM.size)
   }
 
-  fun startEmulator(VOLUMES : FloatArray )   { nativeStartEmulator(VOLUMES) }
-  fun stopEmulator()    { nativeStopEmulator() }
+  fun startEmulator()   { 
+    pauseTriggers.clear()
+    nativeStartEmulator() 
+  }
+  fun stopEmulator()    { 
+    pauseTriggers.clear()
+    nativeStopEmulator() 
+  }
   fun resumeEmulator()  { nativeResumeEmulator() }
   fun pauseEmulator()   { nativePauseEmulator() }
-  fun setVolumes(VOLUMES: FloatArray) { nativeSetVolumes(VOLUMES); }
-  fun flushSave() { nativeFlushSave() }
-  fun setPalette(INDEX : Int) { nativeChangePallete(INDEX) }
-  fun setShader(INDEX : Int) { nativeSetShader(INDEX); }
+  fun setVolumes(VOLUMES: FloatArray) { nativeSetVolumes(VOLUMES) }
+  fun flushSave()       { nativeFlushSave() }
+  fun setPalette(PALETTE: Palette) {
+    val colors = PALETTE.colors.map { android.graphics.Color.parseColor(it) }.toIntArray()
+    val packedColors = colors.map { argb: Int ->
+        val r = (argb shr 16) and 0xFF
+        val g = (argb shr 8) and 0xFF
+        val b = argb and 0xFF
+        val a = (argb shr 24) and 0xFF
+        (r) or (g shl 8) or (b shl 16) or (a shl 24)
+    }.toIntArray()
+    nativeChangePalette(packedColors)
+  }
+
+  fun setShader(INDEX : Int)  { nativeChangeShader(INDEX) }
+  fun setFastForward(ENABLED : Boolean) { nativeSetFastForward(ENABLED) }
 
   // - - - Input
   fun sendButton(
@@ -54,22 +100,31 @@ class GameBoy
     IS_PRESSED: Boolean
   ) { nativeSetButtonState(BUTTON.ordinal, IS_PRESSED) }
 
-  // - - - Native Bindings for Emulator Core (existing) - - -
+  // - - - Native Bindings for Emulator Core - - -
 
   private external fun nativeLoadROM(ROM: ByteArray, SIZE: Int)
   private external fun nativeSetButtonState(BUTTON: Int, PRESSED: Boolean)
-  private external fun nativeStartEmulator(VOLUMES : FloatArray)
+  private external fun nativeStartEmulator()
   private external fun nativeStopEmulator()
   private external fun nativePauseEmulator()
   private external fun nativeResumeEmulator()
   private external fun nativeSetVolumes(VOLUMES: FloatArray)
 
-  private external fun nativeRecieveByte(BYTE : Byte)
-  private external fun nativeFlushSave();
-  private external fun nativeChangePallete(INDEX : Int)
-  private external fun nativeSetShader(INDEX: Int)
+  private external fun nativeFlushSave()
+  private external fun nativeChangePalette(COLORS : IntArray)
+  private external fun nativeChangeShader(INDEX: Int)
+  private external fun nativeSetFastForward(ENABLED : Boolean)
 
-  // - - - Native Bindings for OpenGL ES Rendering (existing)
+  external fun nativeCaptureFrame(): IntArray?
+
+  // - - - Save State support
+  fun saveState(): ByteArray? = nativeSaveState()
+  fun loadState(DATA: ByteArray): Boolean = nativeLoadState(DATA, DATA.size)
+
+  private external fun nativeSaveState(): ByteArray?
+  private external fun nativeLoadState(DATA: ByteArray, SIZE: Int): Boolean
+
+  // - - - Native Bindings for OpenGL ES Rendering
   external fun nativeOnSurfaceCreated()
   external fun nativeOnSurfaceChanged(width: Int, height: Int)
   external fun nativeOnDrawFrame()
@@ -105,7 +160,7 @@ class GameBoy
   // - - - Static method for C++ to call back to request a render
   companion object
   {
-    init { System.loadLibrary("native-lib") }
+    init { System.loadLibrary("PocketPixel") }
 
     // - - - Reference to the GLSurfaceView instance to call requestRender()
     @SuppressLint("StaticFieldLeak")
@@ -114,16 +169,24 @@ class GameBoy
 
     @Volatile // Ensure visibility across threads
     private var staticCurrentRomUri: String? = null
+    
+    var onFirstActivity: (() -> Unit)? = null
+    @Volatile
+    private var activityDetected = false
 
     @JvmStatic
     fun setGLSurfaceView(view: android.opengl.GLSurfaceView)
     { glSurfaceViewInstance = view }
+    
+    fun resetActivityFlag() {
+      activityDetected = false
+      ForgeLogger.info("Core activity flag reset.")
+    }
 
     @JvmStatic
     fun sendByte(BYTE: Byte)
     {
       val sb : Int = BYTE.toInt() and 0xFF
-      App.appModule.linkCable.sendByte(sb)
     }
 
     // - - - Function to update the static ROM URI from a GameBoy instance
@@ -138,12 +201,22 @@ class GameBoy
     @JvmStatic
     fun requestRenderFromNative()
     {
-      glSurfaceViewInstance?.queueEvent { glSurfaceViewInstance?.requestRender() }
+      if (!activityDetected) {
+        activityDetected = true
+        onFirstActivity?.invoke()
+      }
+      glSurfaceViewInstance?.requestRender()
     }
 
     @JvmStatic
-    fun nativePlayAudio(SAMPLE_BUFFER : ByteArray)
-    { speaker.play(SAMPLE_BUFFER)  }
+    fun nativePlayAudio(SAMPLE_BUFFER : FloatArray)
+    { 
+      if (!activityDetected) {
+        activityDetected = true
+        onFirstActivity?.invoke()
+      }
+      speaker.play(SAMPLE_BUFFER)  
+    }
 
     @JvmStatic
     fun nativeStopAudio()
@@ -266,8 +339,10 @@ class GameBoy
       }
 
       ForgeLogger.info("Kotlin: Attempting to save RAM (size: $RAM_SIZE)")
-
-      CoroutineScope(Dispatchers.IO).launch()
+      
+      // We are on the native thread here. 
+      // We block it entirely until the write is done.
+      return runBlocking(Dispatchers.IO)
       {
         val saveFileUri = getGameSaveFileUri()
         if (saveFileUri != null)
@@ -277,20 +352,22 @@ class GameBoy
           {
             ForgeLogger.info("Kotlin: Successfully saved RAM to $saveFileUri.")
             SnackbarController.sendEvent(SnackbarEvent("Successfully saved game"))
+            true
           }
           else
           {
             ForgeLogger.error("Kotlin: Failed to save RAM to $saveFileUri.")
             SnackbarController.sendEvent(SnackbarEvent("Failed to save game : write error"))
+            false
           }
         }
         else
         {
           ForgeLogger.error("Kotlin: Could not resolve save file URI. Save failed.")
           SnackbarController.sendEvent(SnackbarEvent("Failed to save game : couldn't resolve save file"))
+          false
         }
       }
-      return true
     }
 
     @JvmStatic
@@ -304,11 +381,12 @@ class GameBoy
       }
 
       ForgeLogger.info("Kotlin: Attempting to load RAM (expected size: $BUFFER_SIZE)")
+      App.appModule.gameBoy.pauseEmulator(PauseTrigger.IO)
 
       return runBlocking(Dispatchers.IO)
       {
         val saveFileUri = getGameSaveFileUri()
-        if (saveFileUri != null)
+        val result = if (saveFileUri != null)
         {
           val loadedData = App.appModule.externalStorageManager.readFileFromUri(saveFileUri)
           if (loadedData != null)
@@ -340,6 +418,8 @@ class GameBoy
           RAM_DATA_BUFFER.fill(0)
           false
         }
+        App.appModule.gameBoy.resumeEmulator(PauseTrigger.IO)
+        result
       }
     }
 

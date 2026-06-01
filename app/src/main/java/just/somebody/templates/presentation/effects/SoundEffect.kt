@@ -10,12 +10,24 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow
 
+/**
+ * Structural categorization cataloging the supported low-latency systemic acoustic elements
+ * mapped within the application workspace environment.
+ */
 enum class SoundEffect
 {
+  /** Quick crisp mechanical validation chirp mapping physical or digital keypad interactions. */
   Click,
+
+  /** Dynamic initialization wave chime triggered when moving past introductory layout screens. */
   Splash
 }
 
+/**
+ * Central hardware audio routing broker wrapping Android's underlying native [SoundPool] API layer.
+ * Coordinates swift, concurrent, low-latency audio resource translations while isolating media allocation streams
+ * directly away from primary presentation lifecycle blocks.
+ */
 object SoundController
 {
   private val soundPool : SoundPool
@@ -40,9 +52,20 @@ object SoundController
     soundMap[SoundEffect.Splash] = soundPool.load(App.appModule.context, R.raw.splash, 1);
   }
 
+  /**
+   * Commits an explicit playback task payload into the asynchronous streaming queue pipeline.
+   *
+   * @param EFFECT Structured categorization identifier mapping the requested acoustic asset.
+   */
   suspend fun playSound(EFFECT : SoundEffect)
   { _effects.send(EFFECT) }
 
+  /**
+   * Triggers explicit audio playback waveforms instantly over native system mixing channels.
+   * Intercepts ongoing executions of previous samples to prevent chaotic sonic crowding mutations.
+   *
+   * @param EFFECT Structured categorization identifier mapping the requested acoustic asset.
+   */
   fun play(EFFECT : SoundEffect)
   {
     currentID?.let { soundPool.stop(it) }
@@ -50,5 +73,6 @@ object SoundController
     { sound -> currentID = soundPool.play(sound, 1f, 1f, 0, 0, 1f) }
   }
 
+  /** Unloads and deallocates active audio hardware cache layers, returning structural blocks cleanly back to the OS. */
   fun release() { soundPool.release() }
 }

@@ -8,23 +8,31 @@ import just.somebody.templates.domain.models.Game
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
+/**
+ * Concrete domain broker data controller managing mapping bridges over database data access operations.
+ * Coordinates Storage Access Framework query steps to translate raw storage contents into core data properties.
+ *
+ * @property DAO Local access database driver mapping operations for persistent entries.
+ */
 class DefaultGameRepository(private val DAO : GameDao) : GameRepository
 {
+  /** Extension mapping method translating a relational [GameEntity] to a pure domain [Game] record. */
   private fun GameEntity.toDomain() : Game = Game(
     id              = id,
     title           = title,
     romUri          = romUri,
     lastPlayed      = lastPlayed,
-    isFavorite      = isFavorite
-  )
+    isFavorite      = isFavorite,
+    boxArtUrl       = boxArtUrl)
 
+  /** Extension mapping method translating a pure domain [Game] record to a relational [GameEntity]. */
   private fun Game.toEntity() : GameEntity = GameEntity(
     id              = id,
     title           = title,
     romUri          = romUri,
     lastPlayed      = lastPlayed,
-    isFavorite      = isFavorite
-  )
+    isFavorite      = isFavorite,
+    boxArtUrl       = boxArtUrl)
 
   override suspend fun insertGames(KEY: String)
   {
@@ -46,8 +54,7 @@ class DefaultGameRepository(private val DAO : GameDao) : GameRepository
         title      = cleanName,
         romUri     = file.uri.toString(),
         lastPlayed = null,
-        isFavorite = false
-      )
+        isFavorite = false)
     }
 
     DAO.insertGames(games.map { it.toEntity() })
@@ -128,8 +135,7 @@ class DefaultGameRepository(private val DAO : GameDao) : GameRepository
         title           = name.replace(Regex("\\.gbc?$", RegexOption.IGNORE_CASE), ""),
         romUri          = uri,
         lastPlayed      = null,
-        isFavorite      = false
-      )
+        isFavorite      = false)
     }
 
     // - - - Step 3: Fetch games from database

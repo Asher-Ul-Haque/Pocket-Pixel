@@ -222,7 +222,7 @@ void cartridgeTick(void)
 
 void cartridgeFlushRAM(void)
 {
-  FORGE_ASSERT_MESSAGE(ctx.initialized, "Cartridge not initialized");
+  if (!ctx.initialized) return;
 
   if (!ctx.hasBattery) return;
   if (!ctx.ramDirty)   return;

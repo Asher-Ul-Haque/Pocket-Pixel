@@ -7,10 +7,14 @@ import just.somebody.templates.domain.GameBoy
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
-/*
- Custom GLSurfaceView to render the Game Boy emulator's output using OpenGL ES.
- This view acts as the bridge between the Android UI and the native C++ OpenGL rendering.
-*/
+/**
+ * A custom [GLSurfaceView] that renders the Game Boy emulator's display output using OpenGL ES.
+ *
+ * This component acts as the hardware graphics bridge between the Android UI environment and
+ * the native execution layer. It relies on a synchronized frame state loop to process pixel maps.
+ *
+ * @param CONTEXT The execution context of the host view hierarchy.
+ */
 class GameBoyFrame(CONTEXT: Context) : GLSurfaceView(CONTEXT)
 {
   private var gameBoy: GameBoy = App.appModule.gameBoy
@@ -28,18 +32,29 @@ class GameBoyFrame(CONTEXT: Context) : GLSurfaceView(CONTEXT)
     GameBoy.setGLSurfaceView(this)
   }
 
-  // - - - Inner class implementing the GLSurfaceView.Renderer interface. Defines the callbacks for OpenGL ES rendering events.
+  /**
+   * Dedicated hardware renderer implementation connecting OpenGL callbacks to native surface registers.
+   */
   inner class GameBoyRenderer : Renderer
   {
-    // - - - Called once to create the OpenGL ES rendering context.
+    /**
+     * Triggered once when the OpenGL ES execution layer is established.
+     * Sets up hardware shaders, matrix transformations, and graphic textures.
+     */
     override fun onSurfaceCreated(GL : GL10?, CONFIG : EGLConfig?)
     { gameBoy.nativeOnSurfaceCreated() }
 
-    // - - - update on a change like rotation
+    /**
+     * Triggered when screen dimensions update, such as layout resizing or screen orientation shifts.
+     * Updates viewport mapping boundaries to preserve correct pixel geometry.
+     */
     override fun onSurfaceChanged(GL : GL10?, WIDTH : Int, HEIGHT : Int)
     { gameBoy.nativeOnSurfaceChanged(WIDTH, HEIGHT) }
 
-    // - - - draw
+    /**
+     * Executed on demand whenever a frame buffer synchronization requests a refresh pass.
+     * Flushes the decoded VRAM matrix straight to the GPU display panel.
+     */
     override fun onDrawFrame(GL : GL10?)
     { gameBoy.nativeOnDrawFrame() }
   }

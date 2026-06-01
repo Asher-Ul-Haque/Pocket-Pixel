@@ -1,5 +1,6 @@
 import java.util.Properties
 import java.io.FileInputStream
+import java.net.URI
 
 val properties = Properties().apply {
   val file = rootProject.file("keystore.properties")
@@ -14,6 +15,7 @@ plugins {
   alias(libs.plugins.kotlin.compose)
   id("com.google.devtools.ksp") // Apply KSP plugin
   kotlin("plugin.serialization") version "2.2.0"
+  id("org.jetbrains.dokka") version "1.9.20" // <-- 1. ADDED DOKKA PLUGIN
 }
 
 android {
@@ -29,14 +31,12 @@ android {
     }
   }
 
-
-
   defaultConfig {
     applicationId = "just.somebody.templates"
     minSdk = 24
     targetSdk = 35
-    versionCode = 8
-    versionName = "1.5"
+    versionCode = 9
+    versionName = "2.0"
     androidResources {
       localeFilters.add("en") // Keep only English
     }
@@ -52,7 +52,7 @@ android {
           "-DLOG_DEBUG_ENABLED=0",
           "-DLOG_TRACE_ENABLED=0",
           "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
-        )
+                           )
       }
     }
   }
@@ -65,7 +65,7 @@ android {
       proguardFiles(
         getDefaultProguardFile("proguard-android-optimize.txt"),
         "proguard-rules.pro"
-      )
+                   )
     }
   }
   compileOptions {
@@ -88,7 +88,6 @@ android {
 }
 
 dependencies {
-
   implementation(libs.androidx.core.ktx)
   implementation(libs.androidx.lifecycle.runtime.ktx)
   implementation(libs.androidx.activity.compose)
@@ -103,7 +102,6 @@ dependencies {
     exclude(group = "org.json", module = "json") // prevent version conflicts
   }
 
-
   implementation(libs.kotlinx.serialization.json)
   implementation(libs.kotlinx.collections.immutable)
   implementation(libs.kotlinx.serialization.json.v132)
@@ -112,9 +110,14 @@ dependencies {
   implementation(libs.androidx.navigation.compose)
   implementation(libs.androidx.lifecycle.runtime.compose)
   implementation(libs.androidx.documentfile)
+
+  // Room dependencies
   implementation(libs.androidx.room.runtime)
+  ksp(libs.androidx.room.compiler)
+
   implementation(libs.androidx.sqlite.bundled)
 
+  // Ktor & Coil
   implementation(libs.coil.compose)
   implementation(libs.ktor.client.android)
   implementation(libs.ktor.client.core)
@@ -122,9 +125,7 @@ dependencies {
   implementation(libs.ktor.client.logging)
   implementation(libs.ktor.serialization.kotlinx.json)
 
-  implementation(libs.androidx.room.runtime)
-  ksp(libs.androidx.room.compiler)
-
+  // Testing
   testImplementation(libs.junit)
   androidTestImplementation(libs.androidx.junit)
   androidTestImplementation(libs.androidx.espresso.core)
@@ -132,4 +133,18 @@ dependencies {
   androidTestImplementation(libs.androidx.ui.test.junit4)
   debugImplementation(libs.androidx.ui.tooling)
   debugImplementation(libs.androidx.ui.test.manifest)
+}
+
+// <-- 2. ADDED DOKKA CONFIGURATION TASK
+tasks.dokkaHtml {
+  dokkaSourceSets {
+    configureEach {
+      skipDeprecated.set(true)
+
+      // Link to standard Android documentation so your Android classes are clickable
+      externalDocumentationLink {
+        url.set(URI.create("https://developer.android.com/reference/kotlin/").toURL())
+      }
+    }
+  }
 }

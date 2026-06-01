@@ -3,21 +3,45 @@ package just.somebody.templates.appModule.storage
 import android.content.Context
 import java.io.File
 
+/**
+ * Controller hub managing private application storage boundaries, covering both persistent
+ * internal files and non-persistent cache file lifecycles.
+ */
 interface InternalStorageManager
 {
   // - - - persistent files
+  /** Validates existence flags for a specific structural filename located inside internal spaces. */
   fun doesFileExist (NAME : String)                           : Boolean
+
+  /** Writes a raw continuous binary block onto disk inside the private `filesDir` sandboxed path. */
   fun saveFile      (NAME : String, FILE_CONTENT : ByteArray) : Boolean
+
+  /** Extracts and returns the full raw byte block mapped by an internal file signature identity. */
   fun readFile      (NAME : String)                           : ByteArray?
+
+  /** Unlinks and deletes a targeted file node instance inside private storage boundaries. */
   fun deleteFile    (NAME : String)                           : Boolean
+
+  /** Compiles a complete list indexing all allocated private file signatures. */
   fun listFiles     ()                                        : List<String>
+
+  /** Creates or opens a specialized directory namespace component inside internal storage workspace roots. */
   fun makeDir       (NAME : String)                           : Boolean
 
   // - - - cache
+  /** Validates explicit file existence states inside temporary system cache spaces. */
   fun doesCacheExist(NAME : String)                           : Boolean
+
+  /** Writes dynamic transient payload data records onto disk inside the application `cacheDir` path. */
   fun cacheFile     (NAME : String, FILE_CONTENT: ByteArray)  : Boolean
+
+  /** Reads out binary payloads hosted inside the fast-discard temporary cache storage pipeline. */
   fun readCache     (NAME : String)                           : ByteArray?
+
+  /** Drops an explicit single record entry from the system cache directory block. */
   fun deleteCache   (NAME : String)                           : Boolean
+
+  /** Wipes out all volatile transient cache contents residing inside the temporary workspace sector. */
   fun clearAllCache ()                                        : Boolean
 }
 

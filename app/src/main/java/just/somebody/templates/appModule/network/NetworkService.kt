@@ -13,8 +13,13 @@ import io.ktor.serialization.kotlinx.json.*
 import just.somebody.templates.appModule.ForgeLogger
 import kotlinx.serialization.json.Json
 
+/**
+ * Wrapper client facilitating platform data transfers via Ktor asynchronous engines.
+ * Includes standardized logging, timeouts, structure marshalling, and automated safe exception mappings.
+ */
 class NetworkService
 {
+  /** Internal pipeline executor client, configured with system feature plugins. */
   val client = HttpClient()
   {
     install(ContentNegotiation)
@@ -23,7 +28,7 @@ class NetworkService
     }
     install(HttpTimeout)
     {
-      socketTimeoutMillis = 20_000L
+      socketTimeoutMillis  = 20_000L
       requestTimeoutMillis = 20_000L
     }
     install(Logging)
@@ -38,11 +43,19 @@ class NetworkService
     defaultRequest() { contentType(ContentType.Application.Json) }
   }
 
+  /**
+   * Executes an asynchronous HTTP GET request against a target URL.
+   *
+   * @param T Expected model schema mapping for incoming response payload.
+   * @param URL Complete remote path string.
+   * @param HEADERS Map metadata headers added to the outbound request structure.
+   * @param PARAMS Dynamic query descriptors appended into the path query payload section.
+   * @return A wrapping [NetworkResult] signaling the status of parsing operations.
+   */
   suspend inline fun <reified T> get(
     URL     : String,
     HEADERS : Map<String, String> = emptyMap(),
-    PARAMS  : Map<String, Any?>   = emptyMap()
-  ): NetworkResult<T>
+    PARAMS  : Map<String, Any?>   = emptyMap()): NetworkResult<T>
   {
     return safeRequest()
     {
@@ -59,12 +72,19 @@ class NetworkService
     }
   }
 
-
+  /**
+   * Executes an asynchronous HTTP POST request dispatching JSON configurations.
+   *
+   * @param T Expected model schema mapping for incoming response payload.
+   * @param URL Complete remote path string.
+   * @param BODY Payload instance structure parsed down to request body stream.
+   * @param HEADERS Map metadata headers added to the outbound request structure.
+   * @return A wrapping [NetworkResult] signaling the status of parsing operations.
+   */
   suspend inline fun <reified T> post(
     URL     : String,
     BODY    : Any?                = null,
-    HEADERS : Map<String, String> = emptyMap()
-  ): NetworkResult<T>
+    HEADERS : Map<String, String> = emptyMap()): NetworkResult<T>
   {
     return safeRequest ()
     {
@@ -76,10 +96,16 @@ class NetworkService
     }
   }
 
+  /**
+   * Executes an HTTP HEAD request payload check evaluating connectivity and validation states.
+   *
+   * @param URL Complete remote path string.
+   * @param HEADERS Map metadata headers added to the outbound request structure.
+   * @return A wrapping [NetworkResult] validating successful status bounds.
+   */
   suspend fun head(
     URL     : String,
-    HEADERS : Map<String, String> = emptyMap()
-  ): NetworkResult<Boolean>
+    HEADERS : Map<String, String> = emptyMap()): NetworkResult<Boolean>
   {
     return safeRequest ()
     {
@@ -92,7 +118,14 @@ class NetworkService
     }
   }
 
-
+  /**
+   * Intercepts, runs, and wraps functional blocks within comprehensive system try-catch blocks,
+   * normalising native engine exceptions into unified [NetworkResult] constructs.
+   *
+   * @param T Target type evaluation container passed from callers.
+   * @param BLOCK Suspended task pipeline execution clause.
+   * @return Managed [NetworkResult] state block mappings.
+   */
   suspend inline fun <T> safeRequest(crossinline BLOCK : suspend () -> T): NetworkResult<T>
   {
     return try
