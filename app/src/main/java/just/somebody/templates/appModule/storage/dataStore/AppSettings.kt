@@ -27,9 +27,9 @@ data class AppSettings
 (
 	val otherThings     				: PersistentList<Int>     = persistentListOf(),
 	val externalUris    				: Map<String, String>     = emptyMap(),
-	val channelVolume   				: List<Float>             = persistentListOf(0.6f, 0.6f, 0.6f, 0.6f),
+	val channelVolume   				: List<Float>             = persistentListOf(0.6f, 0.6f, 0.6f, 0.3f),
 	val paletteIndex    				: Int                     = 0,
-	val shaderIndex     				: Int                     = 0,
+	val shaderIndex     				: Int                     = 4,
 	val customPalettes  				: List<Palette>           = emptyList(),
 	val gamepadMapping  				: GamepadMapping          = GamepadMapping(),
 	val launchCount             : Int                     = 0,

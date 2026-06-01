@@ -57,13 +57,15 @@ static u32 g_romSize = 0;
 // - - - OpenGL State - - -
 static GLuint g_program = 0;
 static GLuint g_texture = 0;
+static GLuint g_prevTexture = 0;
 static GLuint g_vbo = 0;
 static GLint g_positionLoc = -1;
 static GLint g_texCoordLoc = -1;
 static GLint g_samplerLoc = -1;
+static GLint g_prevSamplerLoc = -1;
 static GLint g_shaderTypeLoc = -1;
 static GLint g_resolutionLoc = -1;
-static int g_currentShader = 0; // 0: Sharp, 1: CRT, 2: LCD, 3: Chromatic Aberration
+static int g_currentShader = 0; // 0: LCD Ghosting, 1: CRT, 2: LCD, 3: Chromatic Aberration
 
 // - - - Forward Declarations for Platform Hooks - - -
 extern "C" {
@@ -174,6 +176,7 @@ const char* fShaderSrc = R"(
     precision mediump float;
     varying vec2 v_texCoord;
     uniform sampler2D s_texture;
+    uniform sampler2D s_prevTexture;
     uniform int u_shaderType;
     uniform vec2 u_resolution;
 
@@ -185,8 +188,11 @@ const char* fShaderSrc = R"(
     }
 
     void main() {
-        if (u_shaderType == 0) { // Sharp Retro
-            gl_FragColor = texture2D(s_texture, v_texCoord);
+        if (u_shaderType == 0) { // LCD Ghosting
+            vec4 current = texture2D(s_texture, v_texCoord);
+            vec4 previous = texture2D(s_prevTexture, v_texCoord);
+            // Simulating LCD persistence: mix current frame with previous
+            gl_FragColor = mix(current, previous, 0.35);
             return;
         }
 
@@ -210,7 +216,7 @@ const char* fShaderSrc = R"(
             // 3. Phosphor Mask & Vignette Shadowing
             float phosphor = sin(uv.x * u_resolution.x * 0.75) * 0.1 + 0.9;
             float vignette = uv.x * uv.y * (1.0 - uv.x) * (1.0 - uv.y);
-            vignette = clamp(pow(16.0 * vignette, 0.25), 0.0, 1.0);
+            vignette = clamp(pow(16.0 * vignette, 0.25), 0.75, 1.0);
 
             gl_FragColor = vec4(color.rgb * scanline * phosphor * vignette, 1.0);
             return;
@@ -485,11 +491,20 @@ Java_just_somebody_templates_domain_GameBoy_nativeOnSurfaceCreated(JNIEnv *env, 
     g_positionLoc = glGetAttribLocation(g_program, "a_position");
     g_texCoordLoc = glGetAttribLocation(g_program, "a_texCoord");
     g_samplerLoc = glGetUniformLocation(g_program, "s_texture");
+    g_prevSamplerLoc = glGetUniformLocation(g_program, "s_prevTexture");
     g_shaderTypeLoc = glGetUniformLocation(g_program, "u_shaderType");
     g_resolutionLoc = glGetUniformLocation(g_program, "u_resolution");
 
     glGenTextures(1, &g_texture);
     glBindTexture(GL_TEXTURE_2D, g_texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 160, 144, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    glGenTextures(1, &g_prevTexture);
+    glBindTexture(GL_TEXTURE_2D, g_prevTexture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 160, 144, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -523,20 +538,31 @@ Java_just_somebody_templates_domain_GameBoy_nativeOnDrawFrame(JNIEnv *env, jobje
 
     u32* pixels = androidGetFrameBuffer();
     if (pixels) {
-        glBindTexture(GL_TEXTURE_2D, g_texture);
+        // Use texture unit 0 for current, texture unit 1 for previous
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, g_prevTexture); // Upload to the oldest texture
 
         // --- DYNAMIC TEXTURE FILTERING SWITCH ---
-        // Shaders 1 (CRT) and 3 (Chromatic Aberration) need smooth sub-pixel blending.
-        // Shaders 0 (Sharp) and 2 (LCD Grid) require crisp pixel boundaries.
-        if (g_currentShader == 1 || g_currentShader == 3) {
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        } else {
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        }
+        GLint filter = (g_currentShader == 1 || g_currentShader == 3) ? GL_LINEAR : GL_NEAREST;
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
 
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 160, 144, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, g_texture); // Old newest is now previous
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
+
+        // Swap handles so g_texture is always the newest
+        GLuint temp = g_texture;
+        g_texture = g_prevTexture;
+        g_prevTexture = temp;
+    } else {
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, g_texture);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, g_prevTexture);
     }
 
     glBindBuffer(GL_ARRAY_BUFFER, g_vbo);
@@ -548,6 +574,7 @@ Java_just_somebody_templates_domain_GameBoy_nativeOnDrawFrame(JNIEnv *env, jobje
     glVertexAttribPointer(g_texCoordLoc, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)(3 * sizeof(GLfloat)));
 
     glUniform1i(g_samplerLoc, 0);
+    glUniform1i(g_prevSamplerLoc, 1);
     glUniform1i(g_shaderTypeLoc, g_currentShader);
 
     GLint viewport[4];
