@@ -177,28 +177,88 @@ const char* fShaderSrc = R"(
     uniform int u_shaderType;
     uniform vec2 u_resolution;
 
+    // Helper: Distort coordinates to mimic a curved CRT monitor screen
+    vec2 barrelDistort(vec2 coord) {
+        vec2 cc = coord - 0.5;
+        float dist = dot(cc, cc);
+        return coord + cc * dist * 0.08; // 0.08 controls screen bulge curvature
+    }
+
     void main() {
-        vec4 color = texture2D(s_texture, v_texCoord);
         if (u_shaderType == 0) { // Sharp Retro
-            gl_FragColor = color;
-        } else if (u_shaderType == 1) { // CRT
-            vec2 uv = v_texCoord;
-            float scanline = sin(uv.y * 144.0 * 3.14159) * 0.1;
-            gl_FragColor = vec4(color.rgb - scanline, 1.0);
-        } else if (u_shaderType == 2) { // LCD
-            vec2 uv = v_texCoord;
-            vec2 grid = fract(uv * vec2(160.0, 144.0));
-            if (grid.x < 0.1 || grid.y < 0.1) color *= 0.8;
-            gl_FragColor = color;
-        } else if (u_shaderType == 3) { // Chromatic Aberration
-            float offset = 0.003;
-            float r = texture2D(s_texture, v_texCoord + vec2(offset, 0.0)).r;
-            float g = color.g;
-            float b = texture2D(s_texture, v_texCoord - vec2(offset, 0.0)).b;
-            gl_FragColor = vec4(r, g, b, 1.0);
-        } else {
-            gl_FragColor = color;
+            gl_FragColor = texture2D(s_texture, v_texCoord);
+            return;
         }
+
+        if (u_shaderType == 1) { // CRT Display Mode
+            // 1. Apply Screen Curvature Mapping
+            vec2 uv = barrelDistort(v_texCoord);
+
+            // Vignette: Soft-clip boundaries to produce rounded bezel corners
+            if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
+                gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+                return;
+            }
+
+            vec4 color = texture2D(s_texture, uv);
+
+            // 2. High-Fidelity Cosine Scanlines
+            // Maps scanlines flawlessly across varying high-res device screens
+            float scanline = sin(uv.y * u_resolution.y * (144.0 / u_resolution.y) * 3.14159);
+            scanline = mix(1.0, 0.75 + 0.25 * scanline, 0.8);
+
+            // 3. Phosphor Mask & Vignette Shadowing
+            float phosphor = sin(uv.x * u_resolution.x * 0.75) * 0.1 + 0.9;
+            float vignette = uv.x * uv.y * (1.0 - uv.x) * (1.0 - uv.y);
+            vignette = clamp(pow(16.0 * vignette, 0.25), 0.0, 1.0);
+
+            gl_FragColor = vec4(color.rgb * scanline * phosphor * vignette, 1.0);
+            return;
+        }
+
+        if (u_shaderType == 2) { // Dot-Matrix LCD Simulator
+            vec2 uv = v_texCoord;
+            vec4 color = texture2D(s_texture, uv);
+
+            // 1. Calculate Sub-pixel Grid Coordinate Spaces ($160 \times 144$)
+            vec2 lcdGridSize = vec2(160.0, 144.0);
+            vec2 pixelCoord = uv * lcdGridSize;
+            vec2 grid = fract(pixelCoord);
+
+            // 2. Dual-axis Shadow Mask
+            // Produces crisp rectangular pixel borders instead of single lines
+            float fillFactor = 0.85; // Percent size of the solid pixel face
+            float cellX = smoothstep(fillFactor, fillFactor + 0.05, grid.x) + smoothstep(1.0 - fillFactor, 1.0 - fillFactor - 0.05, grid.x);
+            float cellY = smoothstep(fillFactor, fillFactor + 0.05, grid.y) + smoothstep(1.0 - fillFactor, 1.0 - fillFactor - 0.05, grid.y);
+            float mask = clamp(1.0 - (cellX + cellY), 0.5, 1.0);
+
+            // 3. Sub-Pixel LCD Bleed Emulation
+            // Lightly shifts red and blue tracks inside the cell to mimic un-backlit panels
+            float rFactor = texture2D(s_texture, uv + vec2(0.001, 0.0)).r;
+            float bFactor = texture2D(s_texture, uv - vec2(0.001, 0.0)).b;
+            vec3 dynamicLCDColor = vec3(mix(color.r, rFactor, 0.2), color.g, mix(color.b, bFactor, 0.2));
+
+            gl_FragColor = vec4(dynamicLCDColor * mask, 1.0);
+            return;
+        }
+
+        if (u_shaderType == 3) { // Radial Chromatic Aberration
+            vec2 uv = v_texCoord;
+            vec2 distFromCenter = uv - vec2(0.5);
+
+            // Lens Distortion Factor scales exponentially from screen center outward
+            float strength = 0.015 * length(distFromCenter);
+
+            float r = texture2D(s_texture, uv + distFromCenter * strength).r;
+            float g = texture2D(s_texture, uv).g;
+            float b = texture2D(s_texture, uv - distFromCenter * strength).b;
+
+            gl_FragColor = vec4(r, g, b, 1.0);
+            return;
+        }
+
+        // Fallback Default
+        gl_FragColor = texture2D(s_texture, v_texCoord);
     }
 )";
 
@@ -464,6 +524,18 @@ Java_just_somebody_templates_domain_GameBoy_nativeOnDrawFrame(JNIEnv *env, jobje
     u32* pixels = androidGetFrameBuffer();
     if (pixels) {
         glBindTexture(GL_TEXTURE_2D, g_texture);
+
+        // --- DYNAMIC TEXTURE FILTERING SWITCH ---
+        // Shaders 1 (CRT) and 3 (Chromatic Aberration) need smooth sub-pixel blending.
+        // Shaders 0 (Sharp) and 2 (LCD Grid) require crisp pixel boundaries.
+        if (g_currentShader == 1 || g_currentShader == 3) {
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        } else {
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        }
+
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 160, 144, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
     }
 
