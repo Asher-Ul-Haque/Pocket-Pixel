@@ -21,11 +21,21 @@ import just.somebody.templates.presentation.widgets.CustomText
 import just.somebody.templates.presentation.widgets.SearchBar
 import just.somebody.templates.ui.theme.GameBoyColors
 
+/**
+ * Interactive search interface for querying the local game database library.
+ *
+ * Exposes a structured input bar linked to the backing query pipeline. If no database record
+ * matches the current character array, it displays a standard localized feedback message.
+ * Otherwise, it lists the matching results inside a multi-column scroll layout, supporting
+ * secondary long-press actions to open a contextual utility sheet.
+ *
+ * @param VIEW_MODEL State coordinator managing query evaluation and matching catalog records.
+ * @param MODIFIFER [Modifier] used to establish positional layout bounds or dimension scaling rules.
+ */
 @Composable
 fun SearchScreen(
   VIEW_MODEL : GamesViewModel,
-  MODIFIFER  : Modifier = Modifier
-)
+  MODIFIFER  : Modifier = Modifier)
 {
   val searchQuery  = VIEW_MODEL.searchQuery.collectAsState()
   val results      = VIEW_MODEL.searchResults.collectAsState()
@@ -37,13 +47,13 @@ fun SearchScreen(
       .fillMaxSize()
       .background(GameBoyColors.DarkGreen),
     contentAlignment = Alignment.Center
-  )
+     )
   {
     Column(
       modifier            = Modifier.fillMaxSize(),
       verticalArrangement = Arrangement.Top,
       horizontalAlignment = Alignment.Start
-    )
+          )
     {
       SearchBar(
         SEARCH_QUERY           = searchQuery.value,
@@ -51,20 +61,17 @@ fun SearchScreen(
         ON_SEARCH_TRIGGER      = {},
         MODIFIER               = Modifier
           .padding(16.dp)
-          .fillMaxWidth()
-      )
+          .fillMaxWidth())
 
       if (empty)
       {
         Box(
           modifier         = Modifier.fillMaxSize(),
-          contentAlignment = Alignment.TopCenter
-        )
+          contentAlignment = Alignment.TopCenter)
         {
           CustomText(
             TEXT      = stringResource(R.string.NO_RES),
-            FONT_SIZE = 16
-          )
+            FONT_SIZE = 16)
         }
       }
       else
@@ -73,7 +80,7 @@ fun SearchScreen(
           modifier            = Modifier.fillMaxSize(),
           verticalArrangement = Arrangement.Top,
           horizontalAlignment = Alignment.Start
-        )
+               )
         {
           GameList(
             GAMES         = results.value,
@@ -82,8 +89,7 @@ fun SearchScreen(
             ON_LONG_PRESS = { game -> VIEW_MODEL.selectGame(game) },
             USE_ROW       = false,
             GET_URL       = { game -> VIEW_MODEL.getBoxArtFlow(game) },
-            SHOW_TITLE    = false
-          )
+            SHOW_TITLE    = false)
         }
       }
     }
@@ -94,17 +100,16 @@ fun SearchScreen(
         GAME             = game,
         ON_DISMISS       = { VIEW_MODEL.selectGame(null)},
         ON_PLAY          =
-        {
-          VIEW_MODEL.markAsPlayed(game)
-          VIEW_MODEL.selectGame(null)
-        },
+          {
+            VIEW_MODEL.markAsPlayed(game)
+            VIEW_MODEL.selectGame(null)
+          },
         ON_FAVORITE      =
-        {
-          VIEW_MODEL.toggleFavorite(game)
-          VIEW_MODEL.selectGame(null)
-        },
-        ON_UPDATE_BOXART = { url -> VIEW_MODEL.updateBoxArtUrl(game, url) }
-      )
+          {
+            VIEW_MODEL.toggleFavorite(game)
+            VIEW_MODEL.selectGame(null)
+          },
+        ON_UPDATE_BOXART = { url -> VIEW_MODEL.updateBoxArtUrl(game, url) })
     }
   }
 }

@@ -4,24 +4,24 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import just.somebody.templates.App
-import just.somebody.templates.appModule.ForgeLogger
 import just.somebody.templates.appModule.storage.dataStore.AppSettings
+import just.somebody.templates.appModule.storage.dataStore.DataStoreManager
 import just.somebody.templates.domain.GameBoy
 import just.somebody.templates.domain.PauseTrigger
 import just.somebody.templates.domain.models.Game
-import just.somebody.templates.domain.models.Palette
 import just.somebody.templates.domain.models.PRESET_PALETTES
 import just.somebody.templates.presentation.effects.SnackbarController
 import just.somebody.templates.presentation.effects.SnackbarEvent
 import just.somebody.templates.presentation.screens.Destination
-import kotlinx.collections.immutable.PersistentList
-import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
+/**
+ * Execution coordinator managing operational data mappings between the user layout and the native emulation core.
+ * Runs thread-isolated streaming IO requests to load software assets, manipulate system states, and update user settings.
+ */
 class EmulatorViewModel : ViewModel()
 {
   private val gameBoy         : GameBoy     = App.appModule.gameBoy
@@ -32,64 +32,79 @@ class EmulatorViewModel : ViewModel()
   public  val settings        : MutableStateFlow<AppSettings> = _settings
 
   private val _currentGame : MutableStateFlow<Game?> = MutableStateFlow(null)
-  val currentGame : StateFlow<Game?> = _currentGame
+  val currentGame          : StateFlow<Game?> = _currentGame
 
-  private val _fastForward = MutableStateFlow(false)
-  val fastForward: StateFlow<Boolean> = _fastForward
+  private val _fastForward : MutableStateFlow<Boolean> = MutableStateFlow(false)
+  val fastForward          : StateFlow<Boolean> = _fastForward
 
   init
   {
-    GameBoy.onFirstActivity = {
-      // Re-apply settings on first sign of life from the core
-      applyCurrentSettings()
-      gameBoy.setFastForward(_fastForward.value)
-    }
-    
-    viewModelScope.launch {
-      App.appModule.dataStoreManager.settingsFlow.collect { newSettings ->
+    GameBoy.onFirstActivity =
+      {
+        // - - - Re-apply settings on first sign of life from the core
+        applyCurrentSettings()
+        gameBoy.setFastForward(_fastForward.value)
+      }
+
+    viewModelScope.launch()
+    {
+      App.appModule.dataStoreManager.settingsFlow.collect()
+      { newSettings ->
         _settings.value = newSettings
-        // Apply changes immediately if emulator is running
-        if (emulatorStarted) {
+        // - - - Apply changes immediately if emulator is running
+        if (emulatorStarted)
+        {
           applyCurrentSettings(newSettings)
         }
       }
     }
   }
 
-  private fun applyCurrentSettings(S : AppSettings? = null) {
-    val current = S ?: _settings.value
-    val palette = if (current.paletteIndex < PRESET_PALETTES.size) {
-        PRESET_PALETTES[current.paletteIndex]
-    } else {
-        current.customPalettes.getOrNull(current.paletteIndex - PRESET_PALETTES.size) ?: PRESET_PALETTES[0]
-    }
+  /** Maps configured user preference parameters down onto the underlying execution registers of the machine. */
+  private fun applyCurrentSettings(SETTINGS : AppSettings? = null)
+  {
+    val current = SETTINGS ?: _settings.value
+    val palette =
+      if (current.paletteIndex < PRESET_PALETTES.size)
+      { PRESET_PALETTES[current.paletteIndex] }
+      else
+      { current.customPalettes.getOrNull(current.paletteIndex - PRESET_PALETTES.size) ?: PRESET_PALETTES[0] }
     gameBoy.setPalette(palette)
     gameBoy.setShader(current.shaderIndex)
     gameBoy.setVolumes(current.channelVolume.toFloatArray())
   }
 
+  /** Tears down runtime execution contexts, resets execution state registers, and flushes binary caches. */
   fun stopEmulator()
   {
     viewModelScope.launch()
     {
       GameBoy.resetActivityFlag()
       gameBoy.stopEmulator()
-      romReady        = false
-      emulatorStarted = false
-      _currentGame.value = null
+      romReady            = false
+      emulatorStarted     = false
+      _currentGame.value  = null
     }
   }
 
-  fun pause(trigger: PauseTrigger) = gameBoy.pauseEmulator(trigger)
-  fun resume(trigger: PauseTrigger) = gameBoy.resumeEmulator(trigger)
+  /** Halts internal clock cycle iterations within the core execution loops. */
+  fun pause(TRIGGER: PauseTrigger) = gameBoy.pauseEmulator(TRIGGER)
 
+  /** Resumes clock registration ticks within the core execution loops. */
+  fun resume(TRIGGER: PauseTrigger) = gameBoy.resumeEmulator(TRIGGER)
+
+  /**
+   * Initializes, decodes, and establishes execution scopes targeting an external software asset URI.
+   *
+   * @param URI Platform Storage Access Framework string target pinpointing the destination item.
+   */
   fun runEmulator(URI : String)
   {
     viewModelScope.launch(Dispatchers.IO)
     {
       gameBoy.stopEmulator()
 
-      val game = App.appModule.repo.getGameByUri(URI)
+      val game           = App.appModule.repo.getGameByUri(URI)
       _currentGame.value = game
 
       val romBytes = App.appModule.context
@@ -100,7 +115,7 @@ class EmulatorViewModel : ViewModel()
       if (romBytes != null)
       {
         currentROM = romBytes
-        romReady = true
+        romReady   = true
         incrementLaunchCount()
         tryStartEmulator(URI)
       }
@@ -112,41 +127,50 @@ class EmulatorViewModel : ViewModel()
     }
   }
 
-  fun saveState(slot: Int) {
-      val gameId = _currentGame.value?.id ?: return
-      val data = gameBoy.saveState() ?: return
-      val screenshot = gameBoy.nativeCaptureFrame()
-      viewModelScope.launch {
-          App.appModule.saveStateManager.saveState(gameId, slot, data, screenshot)
-          SnackbarController.sendEvent(SnackbarEvent("State saved to Slot $slot"))
-      }
+  /** Extracts current execution state snapshots and flushes the binary context directly onto storage files. */
+  fun saveState(SLOT: Int)
+  {
+    val gameId : Long       = _currentGame.value?.id ?: return
+    val data   : ByteArray  = gameBoy.saveState() ?: return
+    val screenshot = gameBoy.nativeCaptureFrame()
+    viewModelScope.launch()
+    {
+      App.appModule.saveStateManager.saveState(gameId, SLOT, data, screenshot)
+      SnackbarController.sendEvent(SnackbarEvent("State saved to Slot $SLOT"))
+    }
   }
 
-  fun loadState(slot: Int) {
-      val gameId = _currentGame.value?.id ?: return
-      viewModelScope.launch {
-          val data = App.appModule.saveStateManager.loadState(gameId, slot)
-          if (data != null) {
-              if (gameBoy.loadState(data)) {
-                  SnackbarController.sendEvent(SnackbarEvent("State loaded from Slot $slot"))
-              } else {
-                  SnackbarController.sendEvent(SnackbarEvent("Failed to load state"))
-              }
-          } else {
-              SnackbarController.sendEvent(SnackbarEvent("No state in Slot $slot"))
-          }
+  /** Pulls down historical memory snapshots from disk storage and forces register injection updates. */
+  fun loadState(slot: Int)
+  {
+    val gameId = _currentGame.value?.id ?: return
+    viewModelScope.launch()
+    {
+      val data = App.appModule.saveStateManager.loadState(gameId, slot)
+      if (data != null)
+      {
+        if (gameBoy.loadState(data))
+        { SnackbarController.sendEvent(SnackbarEvent("State loaded from Slot $slot")) }
+        else { SnackbarController.sendEvent(SnackbarEvent("Failed to load state")) }
       }
+      else
+      { SnackbarController.sendEvent(SnackbarEvent("No state in Slot $slot")) }
+    }
   }
 
-  fun toggleFavorite() {
-      val game = _currentGame.value ?: return
-      viewModelScope.launch {
-          val updatedGame = game.copy(isFavorite = !game.isFavorite)
-          App.appModule.repo.updateGame(updatedGame)
-          _currentGame.value = updatedGame
-      }
+  /** Inverts priority parameters across active structures and commits adjustments to local database tables. */
+  fun toggleFavorite()
+  {
+    val game = _currentGame.value ?: return
+    viewModelScope.launch()
+    {
+      val updatedGame = game.copy(isFavorite = !game.isFavorite)
+      App.appModule.repo.updateGame(updatedGame)
+      _currentGame.value = updatedGame
+    }
   }
 
+  /** Unpacks compiled binary buffers, hooks system routing references, and engages native thread loops. */
   private suspend fun tryStartEmulator(URI : String)
   {
     if (!emulatorStarted && romReady && currentROM != null)
@@ -154,27 +178,23 @@ class EmulatorViewModel : ViewModel()
       val currentSettings = App.appModule.dataStoreManager.getSettings()
       _settings.value = currentSettings
 
-      // Order is CRITICAL: loadROM initializes the platform, which resets settings to defaults.
-      // We MUST apply our settings AFTER loading the ROM and starting the emulator.
       gameBoy.loadROM(currentROM!!, URI)
       gameBoy.startEmulator()
-      
-      // Apply settings immediately after launch
       applyCurrentSettings(currentSettings)
-      
+
       emulatorStarted = true
     }
   }
 
+  /** Adjusts sound levels across specific hardware layout dimensions and saves settings updates. */
   fun setVolume(VOLUME : Float, INDEX : Int)
   {
     viewModelScope.launch()
     {
-      val dataStore = App.appModule.dataStoreManager
-      val currentSettings = dataStore.getSettings()
-
-      val newVolumes = currentSettings.channelVolume.toMutableList().apply()
-      { this[INDEX % 5] = Math.max(0f, Math.min(1f, VOLUME)) }
+      val dataStore       : DataStoreManager    = App.appModule.dataStoreManager
+      val currentSettings : AppSettings         = dataStore.getSettings()
+      val newVolumes      : MutableList<Float>  = currentSettings.channelVolume.toMutableList().apply()
+      { this[INDEX % 4] = Math.max(0f, Math.min(1f, VOLUME)) }
 
       val updatedSettings = currentSettings.copy(channelVolume = newVolumes)
 
@@ -185,33 +205,34 @@ class EmulatorViewModel : ViewModel()
     }
   }
 
+  /** Swaps targeted retro visualization layouts and updates systemic color mapping matrices. */
   fun setPaletteIndex(INDEX : Int)
   {
     viewModelScope.launch()
     {
-      val dataStore = App.appModule.dataStoreManager
-      val currentSettings = dataStore.getSettings()
-      val updatedSettings = currentSettings.copy(paletteIndex = INDEX)
+      val dataStore       : DataStoreManager  = App.appModule.dataStoreManager
+      val currentSettings : AppSettings       = dataStore.getSettings()
+      val updatedSettings : AppSettings       = currentSettings.copy(paletteIndex = INDEX)
 
       dataStore.updateSettings(updatedSettings)
       _settings.value = updatedSettings
 
-      val palette = if (INDEX < PRESET_PALETTES.size) {
-          PRESET_PALETTES[INDEX]
-      } else {
-          currentSettings.customPalettes.getOrNull(INDEX - PRESET_PALETTES.size) ?: PRESET_PALETTES[0]
-      }
+      val palette =
+        if (INDEX < PRESET_PALETTES.size) { PRESET_PALETTES[INDEX] }
+        else
+        { currentSettings.customPalettes.getOrNull(INDEX - PRESET_PALETTES.size) ?: PRESET_PALETTES[0] }
       App.appModule.gameBoy.setPalette(palette)
     }
   }
 
+  /** Swaps systemic filtering configurations affecting output canvas matrix blocks. */
   fun setShaderIndex(INDEX : Int)
   {
     viewModelScope.launch()
     {
-      val dataStore = App.appModule.dataStoreManager
-      val currentSettings = dataStore.getSettings()
-      val updatedSettings = currentSettings.copy(shaderIndex = INDEX % 4)
+      val dataStore       : DataStoreManager  = App.appModule.dataStoreManager
+      val currentSettings : AppSettings       = dataStore.getSettings()
+      val updatedSettings : AppSettings       = currentSettings.copy(shaderIndex = INDEX % 4)
 
       dataStore.updateSettings(updatedSettings)
       _settings.value = updatedSettings
@@ -220,26 +241,34 @@ class EmulatorViewModel : ViewModel()
     }
   }
 
-  private fun incrementLaunchCount() {
-      viewModelScope.launch {
-          val current = App.appModule.dataStoreManager.getSettings()
-          App.appModule.dataStoreManager.updateSettings(current.copy(launchCount = current.launchCount + 1))
-      }
+  /** Increments tracking values logging the total software launches executed across cycles. */
+  private fun incrementLaunchCount()
+  {
+    viewModelScope.launch()
+    {
+      val current = App.appModule.dataStoreManager.getSettings()
+      App.appModule.dataStoreManager.updateSettings(current.copy(launchCount = current.launchCount + 1))
+    }
   }
 
-  fun toggleFastForward() {
-      val newState = !_fastForward.value
-      _fastForward.value = newState
-      gameBoy.setFastForward(newState)
+  /** Modifies performance execution flags to engage or disengage accelerated processing. */
+  fun toggleFastForward()
+  {
+    val newState        = !_fastForward.value
+    _fastForward.value  = newState
+    gameBoy.setFastForward(newState)
   }
 
-  fun toggleImmersiveMode() {
-      viewModelScope.launch {
-          val dataStore = App.appModule.dataStoreManager
-          val current = dataStore.getSettings()
-          val updated = current.copy(isImmersiveModeEnabled = !current.isImmersiveModeEnabled)
-          dataStore.updateSettings(updated)
-          _settings.value = updated
-      }
+  /** Switches screen mode flags to maximize visual layouts over display structures. */
+  fun toggleImmersiveMode()
+  {
+    viewModelScope.launch()
+    {
+      val dataStore : DataStoreManager  = App.appModule.dataStoreManager
+      val current   : AppSettings       = dataStore.getSettings()
+      val updated   : AppSettings       = current.copy(isImmersiveModeEnabled = !current.isImmersiveModeEnabled)
+      dataStore.updateSettings(updated)
+      _settings.value = updated
+    }
   }
 }

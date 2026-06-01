@@ -14,6 +14,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
+/**
+ * System bridge managing scoped file systems and persistent storage targets using Android's Storage Access Framework.
+ * Resolves directory trees, manages URI permissions across platform sessions, and executes streaming interactions.
+ */
 interface ExternalStorageManager
 {
   companion object
@@ -29,51 +33,81 @@ interface ExternalStorageManager
     const val MIME_ANY    = "*/*"
   }
 
+  /**
+   * Instantiates a runtime single-document workspace file-picking launch hook within a Composable tree context.
+   *
+   * @param MIME_TYPES Array matrix containing allowed file extensions/types to open.
+   * @param ON_PICKED Functional callback invoked when a document resource pointer is obtained.
+   * @return Callable invocation lambdas to launch the underlying Activity wrapper.
+   */
   @Composable
   fun FilePickerLauncher(
     MIME_TYPES : Array<String>,
     ON_PICKED  : (Uri?) -> Unit
-  ): () -> Unit
+                        ): () -> Unit
 
+  /**
+   * Instantiates a runtime tree directory selection framework configuration within a Composable tree context.
+   * Automatically requests persistable system permissions and caches the result within [DataStoreManager].
+   *
+   * @param KEY Internal storage identifier tracking this specified root destination context map.
+   * @param ON_PICKED Functional callback invoked when a directory tree reference path is approved.
+   * @return Callable invocation lambdas to launch the underlying Activity wrapper.
+   */
   @Composable
   fun DirectoryPickerLauncher(
     KEY       : String,
     ON_PICKED : (Uri?) -> Unit
-  ): () -> Unit
+                             ): () -> Unit
 
+  /** Resolves and builds a tracking [DocumentFile] tree directory matched from a known storage [KEY]. */
   suspend fun getDirectory(KEY : String) : DocumentFile?
+
+  /** Scans, collects, and yields [DocumentFile] structural maps found inside a registered storage container. */
   suspend fun listFiles(
     KEY       : String,
     EXTENSION : String? = null,
     RECURSIVE  : Boolean = true) : List<DocumentFile>
+
+  /** Resolves and returns file structures found within an explicit workspace directory [URI]. */
   suspend fun listFilesFromUri(
     URI       : Uri,
     EXTENSION : String? = null,
     RECURSIVE  : Boolean = true) : List<DocumentFile>
+
+  /** Materializes a new file asset inside a tracked target directory and stream-writes content into it. */
   suspend fun saveFile(
     KEY       : String,
     FILE_NAME : String,
     CONTENT   : ByteArray)      : Boolean
+
+  /** Resolves a document reference stream under a system keyword layout and pulls down data content. */
   suspend fun readFile(
     KEY       : String,
     FILE_NAME : String)         : ByteArray?
+
+  /** Deletes an explicit file target entry registered within a system location keyword map. */
   suspend fun deleteFile(
     KEY       : String,
     FILE_NAME : String)         : Boolean
 
+  /** Overwrites or writes transactional content directly into an isolated explicit [TARGET_FILE_URI]. */
   suspend fun saveFileFromUri(
     TARGET_FILE_URI : Uri,
     CONTENT         : ByteArray
-  ) : Boolean
+                             ) : Boolean
 
+  /** Pulls down byte blocks extracted directly from an explicitly targeted file reference location [TARGET_FILE_URI]. */
   suspend fun readFileFromUri(TARGET_FILE_URI : Uri) : ByteArray?
+
+  /** Unlinks or deletes an element entry matching the raw path signature within [TARGET_FILE_URI]. */
   suspend fun deleteFileFromUri(TARGET_FILE_URI : Uri) : Boolean
 }
 
 class DefaultExternalStorageManager(
   private val CONTEXT             : Context,
   private val DATA_STORE_MANAGER  : DataStoreManager,
-) : ExternalStorageManager
+                                   ) : ExternalStorageManager
 {
   private val contentResolver get() = CONTEXT.contentResolver
 
@@ -81,7 +115,7 @@ class DefaultExternalStorageManager(
   override fun FilePickerLauncher(
     MIME_TYPES : Array<String>,
     ON_PICKED  : (Uri?) -> Unit
-  ): () -> Unit
+                                 ): () -> Unit
   {
     val intent = remember ()
     {
@@ -105,7 +139,7 @@ class DefaultExternalStorageManager(
   override fun DirectoryPickerLauncher(
     KEY       : String,
     ON_PICKED : (Uri?) -> Unit
-  ): () -> Unit
+                                      ): () -> Unit
   {
     val intent = remember()
     {
@@ -113,10 +147,10 @@ class DefaultExternalStorageManager(
       {
         addFlags(
           Intent.FLAG_GRANT_READ_URI_PERMISSION or
-              Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
-              Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION or
-              Intent.FLAG_GRANT_PREFIX_URI_PERMISSION
-        )
+            Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
+            Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION or
+            Intent.FLAG_GRANT_PREFIX_URI_PERMISSION
+                )
       }
     }
 
@@ -130,7 +164,7 @@ class DefaultExternalStorageManager(
           contentResolver.takePersistableUriPermission(
             uri,
             Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-          )
+                                                      )
 
           CoroutineScope(Dispatchers.IO).launch ()
           {
@@ -182,7 +216,7 @@ class DefaultExternalStorageManager(
   private fun collectFilesRecursively(
     DIRECTORY : DocumentFile,
     EXTENSION : String?
-  ): List<DocumentFile>
+                                     ): List<DocumentFile>
   {
     val result = mutableListOf<DocumentFile>()
 
@@ -204,7 +238,7 @@ class DefaultExternalStorageManager(
     KEY       : String,
     EXTENSION : String?,
     RECURSIVE : Boolean
-  ): List<DocumentFile>
+                                ): List<DocumentFile>
   {
     val dir = getDirectory(KEY)
     if (dir == null)
@@ -232,7 +266,7 @@ class DefaultExternalStorageManager(
     URI       : Uri,
     EXTENSION : String?,
     RECURSIVE : Boolean
-  ): List<DocumentFile>
+                                       ): List<DocumentFile>
   {
     val dir = DocumentFile.fromTreeUri(CONTEXT, URI)
     if (dir == null || !dir.exists() || !dir.isDirectory)
@@ -307,7 +341,7 @@ class DefaultExternalStorageManager(
   override suspend fun saveFileFromUri(
     TARGET_FILE_URI : Uri,
     CONTENT         : ByteArray
-  ) : Boolean
+                                      ) : Boolean
   {
     val targetFile = DocumentFile.fromSingleUri(CONTEXT, TARGET_FILE_URI)
     if (targetFile == null || !targetFile.canWrite())

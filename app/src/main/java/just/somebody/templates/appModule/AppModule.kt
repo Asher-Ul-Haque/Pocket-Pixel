@@ -1,6 +1,5 @@
 package just.somebody.templates.appModule
 
-
 import android.content.Context
 import android.content.res.Configuration
 import androidx.compose.runtime.Composable
@@ -33,29 +32,71 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 
-
-// - - - add the necessary components from data and domain
+/**
+ * Dependency injection contract outlining the global instance topology for the application.
+ *
+ * Defines access structures for persistent engines, communication managers, presentation routers,
+ * and background emulation cores, acting as a single manual injection graph container.
+ */
 interface AppModuleInterface
 {
+  /** Client providing connectivity endpoints targeting remote indexing servers. */
   val api                    : Api
+
+  /** Domain access gateway controlling transactions for stored game metadata records. */
   val repo                   : GameRepository
+
+  /** Screen coordinator piping navigation directives across feature boundaries asynchronously. */
   val navigator              : Navigator
+
+  /** Platform checker executing status logic checks for security permissions. */
   val permissionManager      : PermissionManager
+
+  /** Broker processing internal hardware states like battery, thermal levels, or vibrations. */
   val hardwareManager        : HardwareManager
+
+  /** Interface parsing user profile configurations and setting updates asynchronously. */
   val dataStoreManager       : DataStoreManager
+
+  /** Storage interface manipulating private persistent data files or non-persistent cache segments. */
   val internalStorageManager : InternalStorageManager
+
+  /** Storage broker maintaining Storage Access Framework document trees across sessions. */
   val externalStorageManager : ExternalStorageManager
+
+  /** Global application runtime workspace configuration link. */
   val context                : Context
+
+  /** SQLite abstract room database handling tables for games and states. */
   val database               : PixelPocketDB
+
+  /** Ktor transport configuration managing active remote web channels. */
   val networkService         : NetworkService
+
+  /** Location lookup keyword corresponding to the primary external rom directory target tree. */
   val gameRomsKey            : String
+
+  /** Parsing client running queries to cache and present remote cover art images. */
   val boxArtFetcher          : BoxArtFetcher
+
+  /** Isolated core emulation machine processing physical instruction loops. */
   val gameBoy                : GameBoy
+
+  /** Hub mapping physical controller button clicks or thumbstick vectors to the core runtime engine. */
   val gameControllerManager  : GameControllerManager
+
+  /** Workspace supervisor serializing ongoing running emulator states onto local storage files. */
   val saveStateManager       : SaveStateManager
+
+  /** Evaluates if the running device display is in a landscape orientation. */
   @Composable fun isLandscape() : Boolean
 }
 
+/**
+ * Primary manual dependency injection block allocating lazily evaluated components.
+ *
+ * @property APP_CONTEXT Platform background context tracking global execution limits.
+ */
 class AppModule(private val APP_CONTEXT : Context) : AppModuleInterface
 {
   override val context                : Context                 by lazy { APP_CONTEXT }
@@ -77,13 +118,16 @@ class AppModule(private val APP_CONTEXT : Context) : AppModuleInterface
   override val gameControllerManager  : GameControllerManager   by lazy { DefaultGameControllerManager(APP_CONTEXT) }
   override val saveStateManager       : SaveStateManager        by lazy { SaveStateManager(APP_CONTEXT, database.saveStateDAO()) }
 
-
+  /**
+   * Private DataStore instance managing raw persistent mutations of [AppSettings].
+   * Configured on an isolated IO thread using a [SupervisorJob] to survive child routine failures.
+   */
   private val appSettingsDataStore : DataStore<AppSettings> by lazy ()
   {
     DataStoreFactory.create(
       serializer = AppSettingsSerializer,
       scope      = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    )
+                           )
     { APP_CONTEXT.dataStoreFile("app-settings.json") }
   }
 

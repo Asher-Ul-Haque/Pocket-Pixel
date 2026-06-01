@@ -6,6 +6,10 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import just.somebody.templates.R
 
+/**
+ * Font family definition linking local true-type pixelated typography resource variations.
+ * Configured across multiple weight constraints to handle display and typography transformations.
+ */
 val MinecraftFontFamily : FontFamily =
   FontFamily(
     Font(R.font.minecraft, weight = FontWeight.Light),
@@ -13,9 +17,12 @@ val MinecraftFontFamily : FontFamily =
     Font(R.font.minecraft, weight = FontWeight.Medium),
     Font(R.font.minecraft, weight = FontWeight.SemiBold),
     Font(R.font.minecraft, weight = FontWeight.Bold),
-    Font(R.font.minecraft, weight = FontWeight.ExtraBold)
-  )
+    Font(R.font.minecraft, weight = FontWeight.ExtraBold))
 
+/**
+ * Complete typography token matrix applying pixelated font style transformations across
+ * every default Material3 text type allocation block.
+ */
 val MinecraftTypography : Typography =
   Typography().run ()
   {
@@ -39,6 +46,5 @@ val MinecraftTypography : Typography =
 
       labelLarge        = labelLarge.copy    (fontFamily = fontFamily),
       labelMedium       = labelMedium.copy   (fontFamily = fontFamily),
-      labelSmall        = labelSmall.copy    (fontFamily = fontFamily)
-    )
+      labelSmall        = labelSmall.copy    (fontFamily = fontFamily))
   }

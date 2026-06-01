@@ -31,20 +31,35 @@ import just.somebody.templates.R
 import just.somebody.templates.ui.theme.GameBoyColors
 import just.somebody.templates.ui.theme.MinecraftFontFamily
 
-
+/**
+ * Data blueprint mapping properties for a single navigation destination slot.
+ *
+ * @property title The explicit string resource label printed underneath the graphic icon.
+ * @property unselectedIcon Vector resource address reference shown when the node is inactive.
+ * @property selectedIcon Vector resource address reference shown when the node is active.
+ * @property badgeCount Optional numerical alert counter printed on a classic corner square badge.
+ */
 data class NavItem(
   val title          : String,
   val unselectedIcon : Int,
   val selectedIcon   : Int,
-  val badgeCount     : Int? = null,
-)
+  val badgeCount     : Int? = null)
 
+/**
+ * Responsive application navigation bar that adapts to hardware orientation shifts.
+ *
+ * Configures a bottom horizontal [Row] structure for narrow portrait layouts, and
+ * switches cleanly into an anchored vertical [Column] sidebar during landscape gaming orientations.
+ *
+ * @param SELECTED_INDEX The integer pointer matching the current target route.
+ * @param ON_NAVIGATE Execution dispatch lambda passing chosen navigation target indices back upward.
+ * @param MODIFIER [Modifier] used to update sizing variables or padding alignments.
+ */
 @Composable
 fun NavBar(
   SELECTED_INDEX  : Int,
   ON_NAVIGATE     : (Int) -> Unit,
-  MODIFIER        : Modifier = Modifier
-)
+  MODIFIER        : Modifier = Modifier)
 {
   if (App.appModule.isLandscape())
   {
@@ -55,7 +70,7 @@ fun NavBar(
         .background(GameBoyColors.MediumGreen),
       horizontalAlignment =  Alignment.CenterHorizontally,
       verticalArrangement = Arrangement.SpaceEvenly
-    ) { NavList(SELECTED_INDEX, ON_NAVIGATE) }
+           ) { NavList(SELECTED_INDEX, ON_NAVIGATE) }
   }
   else
   {
@@ -65,42 +80,42 @@ fun NavBar(
         .wrapContentHeight()
         .background(GameBoyColors.MediumGreen),
       verticalAlignment     = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.SpaceEvenly
-    ) { NavList(SELECTED_INDEX, ON_NAVIGATE) }
+      horizontalArrangement = Arrangement.SpaceEvenly)
+    { NavList(SELECTED_INDEX, ON_NAVIGATE) }
   }
 }
 
+/**
+ * Iterative component that generates individual tactile navigation slots from standard items.
+ *
+ * Implements clean retro grid-cell parameters, color swapping states, and badge offsets.
+ */
 @Composable
 private fun NavList(
   SELECTED_INDEX  : Int,
-  ON_NAVIGATE     : (Int) -> Unit
-)
+  ON_NAVIGATE     : (Int) -> Unit)
 {
   val navItems = listOf<NavItem>(
     NavItem(
       stringResource(R.string.HOME),
       R.drawable.gamepad,
-      R.drawable.gamepad
-    ),
+      R.drawable.gamepad),
 
     NavItem(
       stringResource(R.string.FAV),
       R.drawable.heart,
-      R.drawable.heart
-    ),
+      R.drawable.heart),
 
     NavItem(
       stringResource(R.string.SEARCH),
       R.drawable.search,
-      R.drawable.search
-    ),
+      R.drawable.search),
 
     NavItem(
       stringResource(R.string.SETTINGS),
       R.drawable.settings,
-      R.drawable.settings
-    ),
-  )
+      R.drawable.settings),
+                                )
 
   navItems.forEachIndexed ()
   { index, item ->
@@ -114,11 +129,10 @@ private fun NavList(
           color =
             if (isSelected) GameBoyColors.Green.copy(alpha = 0.2f)
             else            Color.Transparent,
-          shape = RectangleShape
-        )
+          shape = RectangleShape)
         .padding(8.dp),
       contentAlignment = Alignment.Center
-    )
+       )
     {
       Column(horizontalAlignment = Alignment.CenterHorizontally)
       {
@@ -133,8 +147,7 @@ private fun NavList(
             tint                =
               if (isSelected) GameBoyColors.LightGreen
               else            GameBoyColors.DarkGreen,
-            modifier            = Modifier.size(24.dp)
-          )
+            modifier            = Modifier.size(24.dp))
           if (item.badgeCount != null)
           {
             Box(
@@ -147,8 +160,7 @@ private fun NavList(
                 .background(
                   color = GameBoyColors.LightGreen,
                   shape = RectangleShape),
-              contentAlignment  = Alignment.Center
-            )
+              contentAlignment  = Alignment.Center)
             {
               if (item.badgeCount > 0)
               {
@@ -156,8 +168,7 @@ private fun NavList(
                   text        = item.badgeCount.toString(),
                   color       = GameBoyColors.DarkGreen,
                   fontFamily  = MinecraftFontFamily,
-                  fontSize    = 8.sp,
-                )
+                  fontSize    = 8.sp,)
               }
             }
           }
@@ -171,8 +182,7 @@ private fun NavList(
           fontSize    = 10.sp,
           color       = GameBoyColors.LightGreen,
           softWrap    = false,
-          maxLines    = 1
-        )
+          maxLines    = 1)
       }
     }
   }

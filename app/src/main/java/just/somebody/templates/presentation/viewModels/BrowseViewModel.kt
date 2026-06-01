@@ -10,6 +10,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+/**
+ * Immutable architecture layout snapshot tracking structural presentation variables for shell components.
+ *
+ * @property selectedIndex Main location pointer identifying the currently targeted navigation tab coordinate.
+ * @property showInfoDialog Toggles systemic application documentation visibility modals.
+ * @property showSettings Intercepts visual overrides to manifest overlay property adjustments.
+ * @property showBars Toggles contextual operational menu layers (headers and bottom navigation views).
+ */
 data class BrowseUIState
 (
   val selectedIndex  : Int,
@@ -18,7 +26,10 @@ data class BrowseUIState
   val showBars       : Boolean,
 )
 
-
+/**
+ * Presentation layer coordinator hosting control actions for the global navigation interface framework.
+ * Pipes active navigation changes through manual injection routers to switch presentation screens smoothly.
+ */
 class BrowseViewModel : ViewModel()
 {
   private val _browseState : MutableStateFlow<BrowseUIState> = MutableStateFlow(
@@ -26,10 +37,15 @@ class BrowseViewModel : ViewModel()
       0,
       false,
       false,
-      true)
-  )
+      true))
   public  val browseState  : StateFlow<BrowseUIState>        = _browseState
 
+  /**
+   * Commits an atomic navigation adjustment operation across asynchronous thread pipelines.
+   * Swaps context states via the central [Navigator] to refresh structural screen overlays.
+   *
+   * @param NEW_INDEX Coordinate identifier mapping the target path selection segment.
+   */
   fun onNavigate(NEW_INDEX : Int)
   {
     viewModelScope.launch ()
@@ -39,10 +55,10 @@ class BrowseViewModel : ViewModel()
       _browseState.update ()
       {
         BrowseUIState(
-        NEW_INDEX,
-        _browseState.value.showInfoDialog,
-        _browseState.value.showSettings,
-        _browseState.value.showBars)
+          NEW_INDEX,
+          _browseState.value.showInfoDialog,
+          _browseState.value.showSettings,
+          _browseState.value.showBars)
       }
       val destination =
         when (NEW_INDEX)
@@ -56,6 +72,7 @@ class BrowseViewModel : ViewModel()
     }
   }
 
+  /** Shifts layout configurations to alternate the presentation layer visibility of internal settings. */
   fun goToSettings(TOGGLE : Boolean)
   {
     viewModelScope.launch ()
@@ -71,6 +88,7 @@ class BrowseViewModel : ViewModel()
     }
   }
 
+  /** Toggles display conditions for documentation elements across active layout subtrees. */
   fun toggleSeeInfo()
   {
     viewModelScope.launch ()
@@ -86,6 +104,7 @@ class BrowseViewModel : ViewModel()
     }
   }
 
+  /** Extracts and returns localized string resource identities aligned to active presentation states. */
   fun getDestinationTitle() : Int
   {
     return when (_browseState.value.selectedIndex)
@@ -97,6 +116,7 @@ class BrowseViewModel : ViewModel()
     }
   }
 
+  /** Modifies visibility rules affecting operational shell layers based on runtime configurations. */
   fun showBars(TOGGLE : Boolean)
   {
     viewModelScope.launch ()

@@ -7,6 +7,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
+/**
+ * Lifecycle coordinator managing timing sequences during application startup phases.
+ *
+ * Implements a fixed delay interval to handle asset loading or brand presentations before
+ * flipping readiness indicators observed by root platform navigation routers.
+ */
 class SplashViewModel : ViewModel()
 {
   private val _isReady : MutableStateFlow<Boolean> = MutableStateFlow(false)
@@ -16,7 +22,7 @@ class SplashViewModel : ViewModel()
   {
     viewModelScope.launch ()
     {
-      delay(2000)
+      delay(1000)
       _isReady.value = true
     }
   }

@@ -31,15 +31,19 @@ fun CustomButton(
   ON_CLICK : () -> Unit             = {},
   MODIFIER : Modifier               = Modifier,
   COLOR    : Color                  = GameBoyColors.MediumGreen,
-  CONTENT  : @Composable () -> Unit = {},
-)
+  CONTENT  : @Composable () -> Unit = {})
 {
-  val scope = rememberCoroutineScope()
+  val scope             = rememberCoroutineScope()
   val interactionSource = remember { MutableInteractionSource() }
   val isPressed by interactionSource.collectIsPressedAsState()
-
-  val elevation by animateDpAsState(if (isPressed) 0.dp else 4.dp, label = "elevation")
-  val offset by animateDpAsState(if (isPressed) 2.dp else 0.dp, label = "offset")
+  val elevation by animateDpAsState(
+    if (isPressed)  0.dp
+    else            4.dp,
+    label = "elevation")
+  val offset    by animateDpAsState(
+    if (isPressed)  2.dp
+    else            0.dp,
+    label = "offset")
 
   Box(
     modifier = MODIFIER

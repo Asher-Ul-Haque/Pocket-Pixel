@@ -17,11 +17,20 @@ import just.somebody.templates.presentation.viewModels.GamesViewModel
 import just.somebody.templates.presentation.widgets.CustomText
 import just.somebody.templates.ui.theme.GameBoyColors
 
+/**
+ * Filtered dashboard display view collecting all user-bookmarked game cartridges.
+ *
+ * Checks continuous state indicators evaluating localized favorites. If the database returns an empty sequence,
+ * it renders a standard retro text message. Otherwise, it presents a complete vertical responsive grid structure
+ * of the saved games, maintaining full compatibility with the application's global interactive contextual menu sheet.
+ *
+ * @param VIEW_MODEL State coordinator facilitating persistent database reads and catalog indexing mutations.
+ * @param MODIFIFER [Modifier] used to establish dimensional layout bounds or dimension scaling rules.
+ */
 @Composable
 fun FavoriteScreen(
   VIEW_MODEL : GamesViewModel,
-  MODIFIFER  : Modifier = Modifier
-)
+  MODIFIFER  : Modifier = Modifier)
 {
   val favoriteGames  = VIEW_MODEL.favoriteGames.collectAsState()
   val selectedGame   = VIEW_MODEL.selectedGame.collectAsState()
@@ -30,7 +39,7 @@ fun FavoriteScreen(
   Box(modifier = MODIFIFER
     .fillMaxSize()
     .background(GameBoyColors.DarkGreen),
-    contentAlignment = Alignment.Center)
+      contentAlignment = Alignment.Center)
   {
     if (empty)
     {
@@ -43,8 +52,7 @@ fun FavoriteScreen(
       Column (
         modifier            = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Top,
-        horizontalAlignment = Alignment.Start
-      )
+        horizontalAlignment = Alignment.Start)
       {
         GameList(
           GAMES         = favoriteGames.value,
@@ -53,8 +61,7 @@ fun FavoriteScreen(
           ON_LONG_PRESS = { game -> VIEW_MODEL.selectGame(game)},
           GET_URL       = { game -> VIEW_MODEL.getBoxArtFlow(game) },
           USE_ROW       = false,
-          SHOW_TITLE    = false
-        )
+          SHOW_TITLE    = false)
       }
     }
 
@@ -64,17 +71,16 @@ fun FavoriteScreen(
         GAME             = game,
         ON_DISMISS       = { VIEW_MODEL.selectGame(null)},
         ON_PLAY          =
-        {
-          VIEW_MODEL.markAsPlayed(game)
-          VIEW_MODEL.selectGame(null)
-        },
+          {
+            VIEW_MODEL.markAsPlayed(game)
+            VIEW_MODEL.selectGame(null)
+          },
         ON_FAVORITE      =
-        {
-          VIEW_MODEL.toggleFavorite(game)
-          VIEW_MODEL.selectGame(null)
-        },
-        ON_UPDATE_BOXART = { url -> VIEW_MODEL.updateBoxArtUrl(game, url) }
-      )
+          {
+            VIEW_MODEL.toggleFavorite(game)
+            VIEW_MODEL.selectGame(null)
+          },
+        ON_UPDATE_BOXART = { url -> VIEW_MODEL.updateBoxArtUrl(game, url) })
     }
   }
 }

@@ -56,14 +56,26 @@ import just.somebody.templates.ui.theme.MinecraftFontFamily
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 
+/**
+ * A stylized grid or row item representing an individual game cartridge inside the dashboard list view.
+ *
+ * It features dynamic aspect ratio sizing, custom drop-shadow tap scaling, and processes
+ * remote image asset delivery via asynchronous streams. If a remote asset fails to resolve,
+ * it programmatically computes a text fallback block using the game's title initials.
+ *
+ * @param GAME The specific domain model container instance providing contextual metadata.
+ * @param IMAGE_URL A lifecycle-aware asynchronous pipeline generator mapping the game model to its graphic string URL.
+ * @param ON_CLICK Navigation callback fired when the card container undergoes a standard tap event.
+ * @param ON_LONG_PRESS Secondary overlay action callback fired on an extended hold event.
+ * @param BIG Toggles sizing layouts between high-visibility display modes and compact utility view scales.
+ */
 @Composable
 fun GameCard(
   GAME          : Game,
   IMAGE_URL     : (Game) -> Flow<String?>,
   ON_CLICK      : (Game) -> Unit,
   ON_LONG_PRESS : (Game) -> Unit,
-  BIG           : Boolean
-)
+  BIG           : Boolean)
 {
   val SCALE =
     if (BIG) 1f
@@ -87,8 +99,14 @@ fun GameCard(
 
   val interactionSource = remember { MutableInteractionSource() }
   val isPressed by interactionSource.collectIsPressedAsState()
-  val elevation by animateDpAsState(if (isPressed) 0.dp else 4.dp * SCALE, label = "elevation")
-  val offset by animateDpAsState(if (isPressed) 2.dp else 0.dp, label = "offset")
+  val elevation by animateDpAsState(
+    if (isPressed) 0.dp
+    else           4.dp * SCALE,
+    label = "elevation")
+  val offset    by animateDpAsState(
+    if (isPressed)  2.dp
+    else            0.dp,
+    label = "offset")
 
   Card(
     shape     = RectangleShape,
@@ -99,18 +117,15 @@ fun GameCard(
         interactionSource = interactionSource,
         indication        = null,
         onClick           = { ON_CLICK(GAME) },
-        onLongClick       = { ON_LONG_PRESS(GAME) }
-      ),
-    elevation = CardDefaults.cardElevation(elevation)
-  )
+        onLongClick       = { ON_LONG_PRESS(GAME) }),
+    elevation = CardDefaults.cardElevation(elevation))
   {
     Column(
       modifier = Modifier
         .fillMaxWidth()
-        .background(GameBoyColors.MediumGreen)
-    )
+        .background(GameBoyColors.MediumGreen))
     {
-      val url by IMAGE_URL(GAME).collectAsState(initial = null)
+      val url       by IMAGE_URL(GAME).collectAsState(initial = null)
       var imageFail by remember { mutableStateOf(false) }
 
       Box(
@@ -119,16 +134,13 @@ fun GameCard(
           .aspectRatio(1f)
           .background(
             if (url.isNullOrEmpty() || imageFail) GameBoyColors.LightGreen
-            else Color.Transparent
-          ),
-        contentAlignment = Alignment.Center
-      )
+            else                                  Color.Transparent),
+        contentAlignment = Alignment.Center)
       {
         CustomText(
           TEXT      = initials,
           FONT_SIZE = (36 * SCALE).toInt(),
-          COLOR     = GameBoyColors.DarkGreen
-        )
+          COLOR     = GameBoyColors.DarkGreen)
 
         if (!url.isNullOrEmpty() && !imageFail)
         {
@@ -141,8 +153,7 @@ fun GameCard(
             contentScale        = ContentScale.Crop,
             modifier            = Modifier.fillMaxSize(),
             onError             = { imageFail = true },
-            onSuccess           = { imageFail = false }
-          )
+            onSuccess           = { imageFail = false })
         }
       }
 
@@ -152,16 +163,29 @@ fun GameCard(
         TEXT      = GAME.title,
         FONT_SIZE = titleFont,
         MAX_LINES = 1,
-        MODIFIER  = Modifier.padding(horizontal = 4.dp * SCALE, vertical = 0.dp)
-      )
+        MODIFIER  = Modifier.padding(horizontal = 4.dp * SCALE, vertical = 0.dp))
 
       Spacer(modifier = Modifier.height(2.dp * SCALE))
     }
   }
 }
 
-
-
+/**
+ * Higher-level layout orchestrator that collects collection arrays and presents them inside list shells.
+ *
+ * Supports horizontal scrolling tracks or responsive, configuration-aware grid systems depending
+ * on device positioning (swapping grid columns for rows automatically when device triggers landscape flags).
+ *
+ * @param GAMES Comprehensive collection array mapping out games to display.
+ * @param MODIFIFER [Modifier] used to customize outer surface layout adjustments.
+ * @param TITLE The text string identifier header printed above the compilation layout section.
+ * @param ON_LONG_PRESS Context click bubbling parameter bound to standard collection item sheets.
+ * @param ON_CLICK Core navigation parameter passing target structures straight to game execution pathways.
+ * @param GET_URL Resolution tracking stream fetching active boxart web links.
+ * @param USE_ROW Enforces layout constraints to stack items across a standard inline single horizontal line track.
+ * @param SHOW_TITLE Disables printing the descriptive text label section block above the container frame.
+ * @param BIG Distributes sizing modifications downwards toward child game components.
+ */
 @Composable
 fun GameList(
   GAMES           : List<Game>,
@@ -172,8 +196,7 @@ fun GameList(
   GET_URL         : (Game) -> Flow<String?> = { flowOf(null) },
   USE_ROW         : Boolean                 = true,
   SHOW_TITLE      : Boolean                 = true,
-  BIG             : Boolean                 = false
-)
+  BIG             : Boolean                 = false)
 {
   if (GAMES.isNotEmpty())
   {
@@ -186,8 +209,7 @@ fun GameList(
         if (SHOW_TITLE) CustomText(TITLE)
         LazyRow(
           horizontalArrangement = Arrangement.spacedBy(8.dp),
-          contentPadding        = PaddingValues(horizontal = 16.dp)
-        )
+          contentPadding        = PaddingValues(horizontal = 16.dp))
         {
           items(GAMES)
           { game ->
@@ -196,8 +218,7 @@ fun GameList(
               ON_CLICK      = ON_CLICK,
               ON_LONG_PRESS = ON_LONG_PRESS,
               IMAGE_URL     = GET_URL,
-              BIG           = BIG
-            )
+              BIG           = BIG)
           }
         }
       }
@@ -217,8 +238,7 @@ fun GameList(
             verticalArrangement   = Arrangement.spacedBy(12.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             contentPadding        = PaddingValues(16.dp),
-            modifier              = Modifier.fillMaxSize()
-          )
+            modifier              = Modifier.fillMaxSize())
           {
             items(GAMES)
             { game ->
@@ -238,8 +258,7 @@ fun GameList(
             verticalArrangement   = Arrangement.spacedBy(12.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             contentPadding        = PaddingValues(16.dp),
-            modifier              = Modifier.fillMaxHeight()
-          )
+            modifier              = Modifier.fillMaxHeight())
           {
             items(GAMES)
             { game ->
@@ -257,6 +276,18 @@ fun GameList(
   }
 }
 
+/**
+ * Interactive context menu overlay containing configuration utilities for individual games.
+ *
+ * Provides fields to alter artwork links manually, boot ROM files, modify bookmark parameters,
+ * or securely clear memory blocks (SRAM) related to emulator in-game storage profiles.
+ *
+ * @param GAME Core target item containing operational flags and identifier keys.
+ * @param ON_DISMISS Lifecycle function resetting visibility variables to hide this overlay.
+ * @param ON_PLAY Navigation function preparing internal engines to run the selected ROM.
+ * @param ON_FAVORITE State adjustment pipeline setting bookmark indicators.
+ * @param ON_UPDATE_BOXART Form dispatch forwarding modified image links directly to persistent storage.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GameActionBottomSheet(
@@ -265,7 +296,7 @@ fun GameActionBottomSheet(
   ON_PLAY         : () -> Unit,
   ON_FAVORITE      : () -> Unit,
   ON_UPDATE_BOXART : (String) -> Unit,
-)
+                         )
 {
   var boxArtUrl by remember { mutableStateOf(GAME.boxArtUrl ?: "") }
 
@@ -279,7 +310,7 @@ fun GameActionBottomSheet(
         .fillMaxWidth(),
       verticalArrangement = Arrangement.Top,
       horizontalAlignment = Alignment.Start
-    )
+          )
     {
       CustomText(GAME.title)
 
@@ -296,10 +327,8 @@ fun GameActionBottomSheet(
           unfocusedBorderColor = GameBoyColors.LightGreen,
           focusedLabelColor    = GameBoyColors.Green,
           unfocusedLabelColor  = GameBoyColors.Green,
-          cursorColor          = GameBoyColors.DarkGreen
-        ),
-        shape         = RectangleShape
-      )
+          cursorColor          = GameBoyColors.DarkGreen),
+        shape         = RectangleShape)
 
       CustomButton(
         ON_CLICK = { ON_UPDATE_BOXART(boxArtUrl) },

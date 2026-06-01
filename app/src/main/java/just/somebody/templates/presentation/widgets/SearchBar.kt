@@ -27,14 +27,23 @@ import just.somebody.templates.R
 import just.somebody.templates.ui.theme.GameBoyColors
 import just.somebody.templates.ui.theme.MinecraftFontFamily
 
-
+/**
+ * A stylized search text input element utilizing a custom monospaced typography aesthetic.
+ *
+ * It embeds hardware keyboard integration mapping the software [ImeAction.Search] hook to a custom execution dispatch
+ * pipeline while explicitly configuring overriding bounds for global selection highlights and system soft-key behaviors.
+ *
+ * @param SEARCH_QUERY The dynamic live state sequence string rendered in the editable text body region.
+ * @param ON_SEARCH_QUERY_CHANGE Functional stream capture pipeline handling ongoing text alteration signals.
+ * @param ON_SEARCH_TRIGGER Dispatch action fired when the soft keyboard confirmation key triggers processing flags.
+ * @param MODIFIER [Modifier] used to establish positional alignments, dimension constraints, or border padding.
+ */
 @Composable
 fun SearchBar(
   SEARCH_QUERY            : String,
   ON_SEARCH_QUERY_CHANGE  : (String) -> Unit,
   ON_SEARCH_TRIGGER       : () -> Unit,
-  MODIFIER                : Modifier = Modifier
-)
+  MODIFIER                : Modifier = Modifier)
 {
   // - - - animation
   val keyboardController = LocalSoftwareKeyboardController.current
@@ -42,9 +51,8 @@ fun SearchBar(
   CompositionLocalProvider(
     LocalTextSelectionColors provides TextSelectionColors(
       handleColor     = GameBoyColors.LightGreen,
-      backgroundColor = GameBoyColors.MediumGreen
-    )
-  )
+      backgroundColor = GameBoyColors.MediumGreen)
+                          )
   {
     OutlinedTextField(
       value           = SEARCH_QUERY,
@@ -53,28 +61,25 @@ fun SearchBar(
       colors          = OutlinedTextFieldDefaults.colors(
         focusedBorderColor   = GameBoyColors.Green,
         unfocusedBorderColor = GameBoyColors.Green,
-        cursorColor          = GameBoyColors.DarkGreen,
-      ),
+        cursorColor          = GameBoyColors.DarkGreen),
       keyboardOptions = KeyboardOptions(
         imeAction     = ImeAction.Search,
-        keyboardType  = KeyboardType.Text
-      ),
+        keyboardType  = KeyboardType.Text),
       keyboardActions = KeyboardActions(
         onSearch =
-        {
-          ON_SEARCH_TRIGGER()
-          keyboardController?.hide()
-        }
-      ),
+          {
+            ON_SEARCH_TRIGGER()
+            keyboardController?.hide()
+          }
+                                       ),
       placeholder     =
-      {
-        Text(
-          text        = "Search...",
-          color       = GameBoyColors.MediumGreen,
-          fontSize    = 16.sp,
-          fontFamily  = MinecraftFontFamily,
-        )
-      },
+        {
+          Text(
+            text        = "Search...",
+            color       = GameBoyColors.MediumGreen,
+            fontSize    = 16.sp,
+            fontFamily  = MinecraftFontFamily,)
+        },
       textStyle = TextStyle(
         color           = GameBoyColors.DarkGreen,
         fontSize        = 16.sp,
@@ -82,22 +87,19 @@ fun SearchBar(
         lineHeight      = 28.sp,
         lineHeightStyle = LineHeightStyle(
           alignment = LineHeightStyle.Alignment.Center,
-          trim      = LineHeightStyle.Trim.None
-        )
-      ),
+          trim      = LineHeightStyle.Trim.None)
+                           ),
       leadingIcon     =
-      {
-        Icon(
-          painter             = painterResource(R.drawable.search),
-          contentDescription  = null,
-          tint                = GameBoyColors.DarkGreen,
-          modifier            = Modifier.size(24.dp)
-        )
-      },
+        {
+          Icon(
+            painter             = painterResource(R.drawable.search),
+            contentDescription  = null,
+            tint                = GameBoyColors.DarkGreen,
+            modifier            = Modifier.size(24.dp))
+        },
       singleLine = true,
       modifier   = MODIFIER
         .minimumInteractiveComponentSize()
-        .background(GameBoyColors.Green)
-    )
+        .background(GameBoyColors.Green))
   }
 }
