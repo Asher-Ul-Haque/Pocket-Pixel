@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
@@ -196,8 +197,8 @@ fun EmulatorScreen(
       },
     D_PAD          = { GameBoyDpad(gameBoy) },
     ACTION_BUTTONS = { GameBoyActionButtons(gameBoy) },
-    SELECT_BUTTON  = { NormalButton("Select", Buttons.SELECT, gameBoy) },
-    START_BUTTON   = { NormalButton("Start", Buttons.START, gameBoy) },
+    SELECT_BUTTON  = { NormalButton(stringResource(R.string.select_btn), Buttons.SELECT, gameBoy) },
+    START_BUTTON   = { NormalButton(stringResource(R.string.start_btn), Buttons.START, gameBoy) },
     MODIFIER      = MODIFIER)
 }
 

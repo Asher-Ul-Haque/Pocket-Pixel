@@ -131,7 +131,7 @@ fun BrowseScreen(
                   {
                     Icon(
                       painter            = painterResource(R.drawable.github),
-                      contentDescription = "Check information",
+                      contentDescription = stringResource(R.string.check_info),
                       tint                = GameBoyColors.DarkGreen,
                       modifier            = Modifier.size(24.dp))
                   }

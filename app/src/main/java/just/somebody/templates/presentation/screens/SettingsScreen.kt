@@ -125,7 +125,7 @@ fun SettingsContent(
       // - - - Section: Controller
       item()
       {
-        SettingsSection(TITLE = "Controller")
+        SettingsSection(TITLE = stringResource(R.string.controller))
         {
           Column(verticalArrangement = Arrangement.spacedBy(8.dp))
           {
@@ -134,18 +134,18 @@ fun SettingsContent(
               horizontalArrangement = Arrangement.SpaceBetween,
               verticalAlignment     = Alignment.CenterVertically)
             {
-              CustomText("Device: ${CONTROLLER_STATE.deviceName}", FONT_SIZE = 14)
+              CustomText(stringResource(R.string.device, CONTROLLER_STATE.deviceName), FONT_SIZE = 14)
               IconButton(onClick = ON_REFRESH)
               {
                 Icon(
                   painter             = painterResource(R.drawable.redo),
-                  contentDescription  = "Refresh",
+                  contentDescription  = stringResource(R.string.refresh),
                   tint                = GameBoyColors.LightGreen,
                   modifier            = Modifier.size(24.dp))
               }
             }
 
-            CustomText("Deadzone: ${"%.2f".format(SETTINGS.gamepadMapping.deadzone)}", FONT_SIZE = 12)
+            CustomText(stringResource(R.string.deadzone, "%.2f".format(SETTINGS.gamepadMapping.deadzone)), FONT_SIZE = 12)
             RetroSlider(
               VALUE           = SETTINGS.gamepadMapping.deadzone,
               ON_VALUE_CHANGE = ON_DEADZONE_CHANGE,
@@ -153,7 +153,7 @@ fun SettingsContent(
 
             HorizontalDivider(color = GameBoyColors.MediumGreen, thickness = 1.dp)
 
-            CustomText("Current Bindings (Click to map):", FONT_SIZE = 14)
+            CustomText(stringResource(R.string.current_bindings), FONT_SIZE = 14)
 
             // - - - Active Inputs
             val pressedButtons = CONTROLLER_STATE.buttons.filter { it.value }.keys.toList()
@@ -184,17 +184,17 @@ fun SettingsContent(
 
             HorizontalDivider(color = GameBoyColors.MediumGreen, thickness = 1.dp)
 
-            CustomText("Default Mappings (Reference):", FONT_SIZE = 14)
+            CustomText(stringResource(R.string.default_mappings), FONT_SIZE = 14)
             Column(
               modifier = Modifier
                 .fillMaxWidth()
                 .padding(start = 8.dp))
             {
-              CustomText("A Button -> GB A",                    FONT_SIZE = 12, COLOR = GameBoyColors.Green)
-              CustomText("B/X Button -> GB B",                  FONT_SIZE = 12, COLOR = GameBoyColors.Green)
-              CustomText("Start Button -> GB Start",            FONT_SIZE = 12, COLOR = GameBoyColors.Green)
-              CustomText("Select Button -> GB Select",          FONT_SIZE = 12, COLOR = GameBoyColors.Green)
-              CustomText("D-Pad / Left Stick -> GB Directions", FONT_SIZE = 12, COLOR = GameBoyColors.Green)
+              CustomText(stringResource(R.string.a_mapping),      FONT_SIZE = 12, COLOR = GameBoyColors.Green)
+              CustomText(stringResource(R.string.b_mapping),      FONT_SIZE = 12, COLOR = GameBoyColors.Green)
+              CustomText(stringResource(R.string.start_mapping),  FONT_SIZE = 12, COLOR = GameBoyColors.Green)
+              CustomText(stringResource(R.string.select_mapping), FONT_SIZE = 12, COLOR = GameBoyColors.Green)
+              CustomText(stringResource(R.string.dpad_mapping),   FONT_SIZE = 12, COLOR = GameBoyColors.Green)
             }
           }
         }
@@ -203,11 +203,11 @@ fun SettingsContent(
       // - - - Section: Visual
       item()
       {
-        SettingsSection(TITLE = "Visual")
+        SettingsSection(TITLE = stringResource(R.string.visual))
         {
           Column(verticalArrangement = Arrangement.spacedBy(12.dp))
           {
-            CustomText("DMG Palettes", FONT_SIZE = 14)
+            CustomText(stringResource(R.string.dmg_palettes), FONT_SIZE = 14)
             PRESET_PALETTES.forEachIndexed()
             { index, palette ->
               Row(
@@ -228,8 +228,13 @@ fun SettingsContent(
 
             HorizontalDivider(color = GameBoyColors.MediumGreen, thickness = 2.dp)
 
-            CustomText("Shaders", FONT_SIZE = 14)
-            val shaderOptions = listOf("Sharp Retro", "CRT", "LCD", "Chromatic Aberration", "Default")
+            CustomText(stringResource(R.string.shaders), FONT_SIZE = 14)
+            val shaderOptions = listOf(
+              stringResource(R.string.shader_sharp),
+              stringResource(R.string.shader_crt),
+              stringResource(R.string.shader_lcd),
+              stringResource(R.string.shader_chromatic),
+              stringResource(R.string.shader_default))
             shaderOptions.forEachIndexed()
             { index, shader ->
               CustomText(
@@ -250,9 +255,13 @@ fun SettingsContent(
       // - - - Section: Audio
       item()
       {
-        SettingsSection(TITLE = "Audio")
+        SettingsSection(TITLE = stringResource(R.string.audio))
         {
-          val labels = listOf("Pulse 1", "Pulse 2", "Wave  ", "Noise  ")
+          val labels = listOf(
+            stringResource(R.string.pulse1),
+            stringResource(R.string.pulse2),
+            stringResource(R.string.wave),
+            stringResource(R.string.noise))
           Column(verticalArrangement = Arrangement.spacedBy(8.dp))
           {
             labels.forEachIndexed()
@@ -273,7 +282,7 @@ fun SettingsContent(
       // -  -- Section: Misc
       item()
       {
-        SettingsSection(TITLE = "Misc") {
+        SettingsSection(TITLE = stringResource(R.string.misc)) {
           Column(verticalArrangement = Arrangement.spacedBy(8.dp))
           {
             CustomButton(ON_CLICK = {}, MODIFIER = Modifier.fillMaxWidth())
@@ -281,8 +290,8 @@ fun SettingsContent(
             CustomButton(ON_CLICK = ON_TOGGLE_IMMERSIVE, MODIFIER = Modifier.fillMaxWidth())
             {
               CustomText(
-                if (SETTINGS.isImmersiveModeEnabled)  "Immersive Mode: ON"
-                else                                  "Immersive Mode: OFF")
+                if (SETTINGS.isImmersiveModeEnabled)  stringResource(R.string.immersive_on)
+                else                                  stringResource(R.string.immersive_off))
             }
             CustomButton(ON_CLICK = ON_RESCAN, MODIFIER = Modifier.fillMaxWidth())
             { CustomText(stringResource(R.string.RESCAN)) }
@@ -365,7 +374,7 @@ private fun MappingDialog(ON_DISMISS: () -> Unit, ON_SELECT: (Buttons?) -> Unit)
 {
   AlertDialog(
     onDismissRequest  = ON_DISMISS,
-    title             = { CustomText("Map to Game Boy") },
+    title             = { CustomText(stringResource(R.string.map_to_gb)) },
     text              =
       {
         LazyColumn(modifier = Modifier.height(200.dp))
@@ -375,7 +384,7 @@ private fun MappingDialog(ON_DISMISS: () -> Unit, ON_SELECT: (Buttons?) -> Unit)
             TextButton(
               onClick   = { ON_SELECT(null) },
               modifier  = Modifier.fillMaxWidth())
-            { CustomText("None") }
+            { CustomText(stringResource(R.string.none)) }
         }
         items(Buttons.entries)
         { button ->
@@ -388,7 +397,7 @@ private fun MappingDialog(ON_DISMISS: () -> Unit, ON_SELECT: (Buttons?) -> Unit)
     },
     confirmButton = {},
     dismissButton =
-      { TextButton(onClick = ON_DISMISS) { CustomText("Cancel") } },
+      { TextButton(onClick = ON_DISMISS) { CustomText(stringResource(R.string.cancel)) } },
     containerColor  = GameBoyColors.DarkGreen,
     shape           = RectangleShape)
 }
@@ -418,15 +427,15 @@ private fun getAxisName(AXIS: Int): String
 {
   return when (AXIS)
   {
-    MotionEvent.AXIS_X          -> "X (Left Stick H)"
-    MotionEvent.AXIS_Y          -> "Y (Left Stick V)"
-    MotionEvent.AXIS_Z          -> "Z (Right Stick H)"
-    MotionEvent.AXIS_RZ         -> "RZ (Right Stick V)"
-    MotionEvent.AXIS_HAT_X      -> "HAT_X (D-Pad H)"
-    MotionEvent.AXIS_HAT_Y      -> "HAT_Y (D-Pad V)"
-    MotionEvent.AXIS_LTRIGGER   -> "L-Trigger"
-    MotionEvent.AXIS_RTRIGGER   -> "R-Trigger"
-    else                        -> "Axis $AXIS"
+    MotionEvent.AXIS_X          -> App.appModule.context.getString(R.string.axis_x)
+    MotionEvent.AXIS_Y          -> App.appModule.context.getString(R.string.axis_y)
+    MotionEvent.AXIS_Z          -> App.appModule.context.getString(R.string.axis_z)
+    MotionEvent.AXIS_RZ         -> App.appModule.context.getString(R.string.axis_rz)
+    MotionEvent.AXIS_HAT_X      -> App.appModule.context.getString(R.string.axis_hat_x)
+    MotionEvent.AXIS_HAT_Y      -> App.appModule.context.getString(R.string.axis_hat_y)
+    MotionEvent.AXIS_LTRIGGER   -> App.appModule.context.getString(R.string.axis_ltrigger)
+    MotionEvent.AXIS_RTRIGGER   -> App.appModule.context.getString(R.string.axis_rtrigger)
+    else                        -> App.appModule.context.getString(R.string.axis_generic, AXIS)
   }
 }
 

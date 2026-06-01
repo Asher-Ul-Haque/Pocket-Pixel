@@ -110,24 +110,6 @@ class MainActivity : ComponentActivity()
           MODIFIFER  = Modifier.fillMaxSize())
       }
     }
-
-    handleIntent(intent)
-  }
-
-  override fun onNewIntent(intent: Intent)
-  {
-    super.onNewIntent(intent)
-    setIntent(intent)
-    handleIntent(intent)
-  }
-
-  private fun handleIntent(intent: Intent?)
-  {
-    intent?.data?.let { uri ->
-      lifecycleScope.launch {
-        App.appModule.navigator.replace(Destination.Emulator(uri.toString()))
-      }
-    }
   }
 
   override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {

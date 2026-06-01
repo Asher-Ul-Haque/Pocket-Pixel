@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import just.somebody.templates.App
+import just.somebody.templates.R
 import just.somebody.templates.appModule.storage.dataStore.AppSettings
 import just.somebody.templates.appModule.storage.dataStore.DataStoreManager
 import just.somebody.templates.domain.GameBoy
@@ -121,7 +122,7 @@ class EmulatorViewModel : ViewModel()
       }
       else
       {
-        SnackbarController.sendEvent(SnackbarEvent("Failed to read ROM data"))
+        SnackbarController.sendEvent(SnackbarEvent(App.appModule.context.getString(R.string.failed_rom_data)))
         App.appModule.navigator.replace(Destination.Home)
       }
     }
@@ -136,7 +137,7 @@ class EmulatorViewModel : ViewModel()
     viewModelScope.launch()
     {
       App.appModule.saveStateManager.saveState(gameId, SLOT, data, screenshot)
-      SnackbarController.sendEvent(SnackbarEvent("State saved to Slot $SLOT"))
+      SnackbarController.sendEvent(SnackbarEvent(App.appModule.context.getString(R.string.state_saved, SLOT)))
     }
   }
 
@@ -150,11 +151,11 @@ class EmulatorViewModel : ViewModel()
       if (data != null)
       {
         if (gameBoy.loadState(data))
-        { SnackbarController.sendEvent(SnackbarEvent("State loaded from Slot $slot")) }
-        else { SnackbarController.sendEvent(SnackbarEvent("Failed to load state")) }
+        { SnackbarController.sendEvent(SnackbarEvent(App.appModule.context.getString(R.string.state_loaded, slot))) }
+        else { SnackbarController.sendEvent(SnackbarEvent(App.appModule.context.getString(R.string.failed_load_state))) }
       }
       else
-      { SnackbarController.sendEvent(SnackbarEvent("No state in Slot $slot")) }
+      { SnackbarController.sendEvent(SnackbarEvent(App.appModule.context.getString(R.string.no_state_in_slot, slot))) }
     }
   }
 

@@ -64,7 +64,7 @@ fun SettingsPanel(
         .fillMaxWidth(),
       horizontalAlignment = Alignment.CenterHorizontally)
     {
-      CustomText("Game Settings", FONT_SIZE = 20)
+      CustomText(stringResource(R.string.game_settings), FONT_SIZE = 20)
       Spacer(modifier = Modifier.height(4.dp))
       HorizontalDivider(
         thickness   = 1.dp,
@@ -85,7 +85,11 @@ fun SettingsPanel(
           }
             )
       {
-        val tabs = listOf("Audio", "Visual", "States", "Misc")
+        val tabs = listOf(
+          stringResource(R.string.audio),
+          stringResource(R.string.visual),
+          stringResource(R.string.states),
+          stringResource(R.string.misc))
         tabs.forEachIndexed()
         { index, title ->
           Tab(selected = settingsPage == index, onClick = { settingsPage = index })
@@ -139,7 +143,11 @@ private fun AudioSettingsSection(
   VOLUMES           : List<Float>,
   ON_VOLUME_CHANGE  : (Float, Int) -> Unit)
 {
-  val labels = listOf("Pulse 1", "Pulse 2", "Wave  ", "Noise  ")
+  val labels = listOf(
+    stringResource(R.string.pulse1),
+    stringResource(R.string.pulse2),
+    stringResource(R.string.wave),
+    stringResource(R.string.noise))
   Column(verticalArrangement = Arrangement.spacedBy(8.dp))
   {
     labels.forEachIndexed()
@@ -174,7 +182,12 @@ private fun VisualSettingsSection(
   ON_PALETTE_SELECT : (Int) -> Unit,
   ON_SHADER_SELECT  : (Int) -> Unit)
 {
-  val shaders = listOf("Sharp Retro", "CRT", "LCD", "Chromatic Aberration", "Default")
+  val shaders = listOf(
+    stringResource(R.string.shader_sharp),
+    stringResource(R.string.shader_crt),
+    stringResource(R.string.shader_lcd),
+    stringResource(R.string.shader_chromatic),
+    stringResource(R.string.shader_default))
 
   Column()
   {
@@ -182,7 +195,7 @@ private fun VisualSettingsSection(
       verticalAlignment = Alignment.CenterVertically,
       modifier          = Modifier.fillMaxWidth())
     {
-      CustomText("Palette", FONT_SIZE = 16, MODIFIER = Modifier.padding(end = 6.dp))
+      CustomText(stringResource(R.string.palette), FONT_SIZE = 16, MODIFIER = Modifier.padding(end = 6.dp))
       HorizontalDivider(thickness = 1.dp, color = GameBoyColors.MediumGreen, modifier = Modifier.weight(1f))
     }
 
@@ -220,7 +233,7 @@ private fun VisualSettingsSection(
       verticalAlignment = Alignment.CenterVertically,
       modifier          = Modifier.fillMaxWidth())
     {
-      CustomText("Shader", FONT_SIZE = 16, MODIFIER = Modifier.padding(end = 6.dp))
+      CustomText(stringResource(R.string.shader), FONT_SIZE = 16, MODIFIER = Modifier.padding(end = 6.dp))
       HorizontalDivider(thickness = 1.dp, color = GameBoyColors.MediumGreen, modifier = Modifier.weight(1f))
     }
 
@@ -288,7 +301,7 @@ private fun SaveStateSection(EMULATOR: EmulatorViewModel)
 
   Column(horizontalAlignment = Alignment.CenterHorizontally)
   {
-    CustomText("Save Slots", FONT_SIZE = 16)
+    CustomText(stringResource(R.string.save_slots), FONT_SIZE = 16)
     Spacer(modifier = Modifier.height(4.dp))
 
     LazyRow(
@@ -334,16 +347,16 @@ private fun SaveStateSection(EMULATOR: EmulatorViewModel)
                 contentScale        = ContentScale.Fit)
             }
             else
-            { CustomText("Empty", FONT_SIZE = 8) }
+            { CustomText(stringResource(R.string.empty), FONT_SIZE = 8) }
           }
           if (state != null)
           {
             val date    = Date(state.timestamp)
             val timeStr = DateFormat.format("MM/dd HH:mm", date).toString()
-            CustomText("Slot $slot - $timeStr", FONT_SIZE = 9, COLOR = GameBoyColors.Green)
+            CustomText(stringResource(R.string.slot_format, slot, timeStr), FONT_SIZE = 9, COLOR = GameBoyColors.Green)
           }
           else
-          { CustomText("Slot $slot", FONT_SIZE = 10, COLOR = GameBoyColors.LightGreen) }
+          { CustomText(stringResource(R.string.slot_only, slot), FONT_SIZE = 10, COLOR = GameBoyColors.LightGreen) }
         }
       }
     }
@@ -360,7 +373,7 @@ private fun SaveStateSection(EMULATOR: EmulatorViewModel)
         COLOR     =
           if (selectedSlot != -1) GameBoyColors.MediumGreen
           else                    GameBoyColors.DarkGreen)
-      { CustomText("Save", FONT_SIZE = 14) }
+      { CustomText(stringResource(R.string.save), FONT_SIZE = 14) }
 
       CustomButton(
         ON_CLICK  = { if (selectedSlot != -1) EMULATOR.loadState(selectedSlot) },
@@ -368,7 +381,7 @@ private fun SaveStateSection(EMULATOR: EmulatorViewModel)
         COLOR     =
           if (selectedSlot != -1 && states.any { it.slot == selectedSlot }) GameBoyColors.MediumGreen
           else                                                              GameBoyColors.DarkGreen)
-      { CustomText("Load", FONT_SIZE = 14) }
+      { CustomText(stringResource(R.string.load), FONT_SIZE = 14) }
     }
   }
 }
@@ -392,7 +405,12 @@ private fun MiscSettingsSection(EMULATOR: EmulatorViewModel)
     CustomButton(
       ON_CLICK = { EMULATOR.toggleFastForward() },
       MODIFIER = Modifier.fillMaxWidth())
-    { CustomText(if (fastForward) "Speed: 2x" else "Speed: 1x", FONT_SIZE = 14) }
+    {
+      CustomText(
+        if (fastForward) stringResource(R.string.speed_2x)
+        else             stringResource(R.string.speed_1x),
+        FONT_SIZE = 14)
+    }
 
     val settings by EMULATOR.settings.collectAsState()
     CustomButton(
@@ -400,8 +418,8 @@ private fun MiscSettingsSection(EMULATOR: EmulatorViewModel)
       MODIFIER = Modifier.fillMaxWidth())
     {
       CustomText(
-        if (settings.isImmersiveModeEnabled)  "Immersive Mode: ON"
-        else                                  "Immersive Mode: OFF",
+        if (settings.isImmersiveModeEnabled)  stringResource(R.string.immersive_on)
+        else                                  stringResource(R.string.immersive_off),
         FONT_SIZE = 14)
     }
 

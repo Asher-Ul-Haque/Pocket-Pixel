@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import just.somebody.templates.R
@@ -89,11 +90,11 @@ fun GameBoyActionButtons(GAME_BOY: GameBoy)
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp))
     {
       NormalButton("", Buttons.A, GAME_BOY, Buttons.B, true, IS_INVISIBLE = true)
-      NormalButton("A", Buttons.A, GAME_BOY, null, true)
+      NormalButton(stringResource(R.string.btn_a), Buttons.A, GAME_BOY, null, true)
     }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp))
     {
-      NormalButton("B", Buttons.B, GAME_BOY, null, true)
+      NormalButton(stringResource(R.string.btn_b), Buttons.B, GAME_BOY, null, true)
       NormalButton("", Buttons.B, GAME_BOY, Buttons.A, true, IS_INVISIBLE = true)
     }
   }
@@ -165,7 +166,7 @@ fun GameBoyControls(
 
     Icon(
       painter             = painterResource(R.drawable.settings),
-      contentDescription  = "In-game Settings",
+      contentDescription  = stringResource(R.string.ingame_settings),
       tint                = GameBoyColors.MediumGreen,
       modifier            = Modifier
         .size(32.dp)
@@ -182,9 +183,9 @@ fun GameBoyControls(
       horizontalArrangement   = Arrangement.Center,
       verticalAlignment       = Alignment.CenterVertically)
     {
-      NormalButton("Select", Buttons.SELECT, GAME_BOY)
+      NormalButton(stringResource(R.string.select_btn), Buttons.SELECT, GAME_BOY)
       Spacer(Modifier.width(32.dp))
-      NormalButton("Start", Buttons.START, GAME_BOY)
+      NormalButton(stringResource(R.string.start_btn), Buttons.START, GAME_BOY)
     }
   }
 }

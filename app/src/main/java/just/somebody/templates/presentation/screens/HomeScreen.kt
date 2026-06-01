@@ -81,7 +81,7 @@ fun HomeScreen(
     if (uri != null) VIEW_MODEL.detectAndInsertRoms()
     else scope.launch()
     {
-      SnackbarController.sendEvent(SnackbarEvent(message = "No directory picked"))
+      SnackbarController.sendEvent(SnackbarEvent(message = context.getString(R.string.no_directory_picked)))
     }
   }
 
@@ -111,8 +111,8 @@ fun HomeScreen(
             modifier            = Modifier.padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally)
           {
-            CustomText("Enjoying Pixel Pocket?", FONT_SIZE = 18)
-            CustomText("Your rating helps me make it better!", FONT_SIZE = 12, COLOR = GameBoyColors.Green)
+            CustomText(stringResource(R.string.enjoying_pixel_pocket), FONT_SIZE = 18)
+            CustomText(stringResource(R.string.rating_help), FONT_SIZE = 12, COLOR = GameBoyColors.Green)
             Spacer(modifier = Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp))
             {
@@ -125,13 +125,13 @@ fun HomeScreen(
                   },
                 MODIFIER = Modifier.weight(1f)
                           )
-              { CustomText("Rate Now", FONT_SIZE = 12) }
+              { CustomText(stringResource(R.string.rate_now), FONT_SIZE = 12) }
 
               CustomButton(
                 ON_CLICK  = { VIEW_MODEL.markAsRated() },
                 MODIFIER  = Modifier.weight(1f),
                 COLOR     = GameBoyColors.DarkGreen)
-              { CustomText("Maybe Later", FONT_SIZE = 12) }
+              { CustomText(stringResource(R.string.maybe_later), FONT_SIZE = 12) }
             }
           }
         }
