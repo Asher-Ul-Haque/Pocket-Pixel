@@ -118,6 +118,7 @@ void audioLoop() {
                 localBuffer[i] = g_audioRingBuffer[(r + i) & AUDIO_RING_BUFFER_MASK];
             }
             if (toRead < CHUNK_SIZE) {
+                // Zero-fill to keep a consistent chunk size and prevent audio underruns.
                 std::fill_n(&localBuffer[toRead], CHUNK_SIZE - toRead, 0.0f);
             }
             g_audioReadCursor.store(r + toRead, std::memory_order_release);

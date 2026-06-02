@@ -24,8 +24,9 @@ class GameBoySpeaker
   private val bufferSizeMultiplier   : Int = 2 // 2x min buffer balances latency vs stability
 
   private val minBufferSize     : Int = AudioTrack.getMinBufferSize(sampleRate, channelMask, encoding)
-  private val safeMinBufferSize : Int = if (minBufferSize > 0) minBufferSize else
-    (sampleRate * frameSize * fallbackBufferWindowMs / 1000)
+  private val fallbackBufferSize : Int =
+    sampleRate * frameSize * fallbackBufferWindowMs / 1000
+  private val safeMinBufferSize : Int = if (minBufferSize > 0) minBufferSize else fallbackBufferSize
   private val bufferSizeInBytes : Int = safeMinBufferSize * bufferSizeMultiplier
 
   // - - - Filter state for DC offset removal (High Pass Filter)
@@ -37,7 +38,6 @@ class GameBoySpeaker
 
   private var audioTrack: AudioTrack? = null
 
-  @Synchronized
   private fun ensureAudioTrack(): AudioTrack
   {
     val existing = audioTrack
@@ -68,6 +68,7 @@ class GameBoySpeaker
     return created
   }
 
+  @Synchronized
   fun start()
   {
     val track = ensureAudioTrack()
@@ -84,6 +85,7 @@ class GameBoySpeaker
    *
    * @param SAMPLE_BUFFER Linear array containing alternating left and right stereo audio float samples.
    */
+  @Synchronized
   fun play(SAMPLE_BUFFER: FloatArray)
   {
     if (SAMPLE_BUFFER.isEmpty()) return
@@ -128,6 +130,7 @@ class GameBoySpeaker
    * * Stops active hardware sound rendering and releases the allocated [AudioTrack] instance
    * safely to free up system audio mixers.
    */
+  @Synchronized
   fun release()
   {
     val track = audioTrack ?: return
