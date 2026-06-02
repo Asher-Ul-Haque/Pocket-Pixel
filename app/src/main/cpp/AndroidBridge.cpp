@@ -37,6 +37,13 @@ static jmethodID g_saveRamID = nullptr;
 static jmethodID g_loadRamID = nullptr;
 static jmethodID g_getExpectedSaveSizeID = nullptr;
 
+// - - - Audio JNI Globals - - -
+static jmethodID g_initAudioID = nullptr;
+static jmethodID g_playAudioID = nullptr;
+static jmethodID g_stopAudioID = nullptr;
+static jfloatArray g_audioArray = nullptr;
+static u32 g_audioArraySize = 0;
+
 // - - - Emulator Thread Control - - -
 static std::thread g_emulatorThread;
 static std::atomic<bool> g_running{false};
@@ -91,6 +98,8 @@ void emulatorLoop() {
     CpuContext* cpu = cpuGetContext();
     u32 autoSaveFrameCounter = 0;
 
+    auto lastFrameTime = std::chrono::steady_clock::now();
+
     while (g_running) {
         if (g_paused) {
             std::unique_lock<std::mutex> lock(g_pauseMutex);
@@ -101,12 +110,14 @@ void emulatorLoop() {
         // Run until frame is ready
         while (g_running && !g_paused && !ppu->frameReady) {
             cpuTick();
+
             if (cpu->stopped) {
                 if (ppu->registers.key1 & 0x01) {
                     ppuExecuteSpeedSwitch();
                     cpu->stopped = false;
                 }
             }
+
             timerStepMCycle();
             apuTick();
 
@@ -137,10 +148,19 @@ void emulatorLoop() {
                 }
             }
 
-            // --- NO SLEEP TIMER NEEDED HERE ---
-            // Because Oboe is running in Synchronous Blocking Mode, calling apuTick()
-            // naturally pushes samples to android_audio_push(), which puts the thread to
-            // sleep automatically until the speaker hardware needs more data.
+            // --- THE SPEED FIX: Active Spin-Wait ---
+            double targetFrameTime =
+                    g_fastForward ? (TARGET_FRAME_TIME / 2.0)
+                                  : TARGET_FRAME_TIME;
+
+            auto now = std::chrono::steady_clock::now();
+            while (std::chrono::duration<double>(now - lastFrameTime).count() <
+                   targetFrameTime) {
+                std::this_thread::yield();
+                now = std::chrono::steady_clock::now();
+            }
+
+            lastFrameTime = std::chrono::steady_clock::now();
         }
     }
 
@@ -168,7 +188,6 @@ const char* fShaderSrc = R"(
     uniform int u_shaderType;
     uniform vec2 u_resolution;
 
-    // Helper: Distort coordinates to mimic a curved CRT monitor screen
     vec2 barrelDistort(vec2 coord) {
         vec2 cc = coord - 0.5;
         float dist = dot(cc, cc);
@@ -176,14 +195,14 @@ const char* fShaderSrc = R"(
     }
 
     void main() {
-        if (u_shaderType == 0) { // LCD Ghosting
+        if (u_shaderType == 0) {
             vec4 current = texture2D(s_texture, v_texCoord);
             vec4 previous = texture2D(s_prevTexture, v_texCoord);
             gl_FragColor = mix(current, previous, 0.35);
             return;
         }
 
-        if (u_shaderType == 1) { // CRT Display Mode
+        if (u_shaderType == 1) {
             vec2 uv = barrelDistort(v_texCoord);
             if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
                 gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
@@ -199,7 +218,7 @@ const char* fShaderSrc = R"(
             return;
         }
 
-        if (u_shaderType == 2) { // Dot-Matrix LCD Simulator
+        if (u_shaderType == 2) {
             vec2 uv = v_texCoord;
             vec4 color = texture2D(s_texture, uv);
             vec2 lcdGridSize = vec2(160.0, 144.0);
@@ -216,7 +235,7 @@ const char* fShaderSrc = R"(
             return;
         }
 
-        if (u_shaderType == 3) { // Radial Chromatic Aberration
+        if (u_shaderType == 3) {
             vec2 uv = v_texCoord;
             vec2 distFromCenter = uv - vec2(0.5);
             float strength = 0.015 * length(distFromCenter);
@@ -227,7 +246,6 @@ const char* fShaderSrc = R"(
             return;
         }
 
-        // Fallback Default
         gl_FragColor = texture2D(s_texture, v_texCoord);
     }
 )";
@@ -278,7 +296,11 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
     g_loadRamID = env->GetStaticMethodID(g_gameBoyClass, "loadRamFromFile", "([BI)Z");
     g_getExpectedSaveSizeID = env->GetStaticMethodID(g_gameBoyClass, "getExpectedSaveSize", "()I");
 
-    if (!g_requestRenderID || !g_saveRamID || !g_loadRamID || !g_getExpectedSaveSizeID) {
+    g_initAudioID = env->GetStaticMethodID(g_gameBoyClass, "nativeInitAudio", "()V");
+    g_playAudioID = env->GetStaticMethodID(g_gameBoyClass, "nativePlayAudio", "([F)V");
+    g_stopAudioID = env->GetStaticMethodID(g_gameBoyClass, "nativeStopAudio", "()V");
+
+    if (!g_requestRenderID || !g_saveRamID || !g_loadRamID || !g_getExpectedSaveSizeID || !g_initAudioID || !g_playAudioID || !g_stopAudioID) {
         LOGE("Could not find all JNI method IDs");
         return JNI_ERR;
     }
@@ -335,6 +357,7 @@ Java_just_somebody_templates_domain_GameBoy_nativeStopEmulator(JNIEnv *env, jobj
     g_running = false;
     g_paused = false;
     g_pauseCv.notify_all();
+
     if (g_emulatorThread.joinable()) {
         g_emulatorThread.join();
     }
@@ -364,7 +387,11 @@ Java_just_somebody_templates_domain_GameBoy_nativeResumeEmulator(JNIEnv *env, jo
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeSetVolumes(JNIEnv *env, jobject thiz, jfloatArray volumes) {
     jfloat* vols = env->GetFloatArrayElements(volumes, nullptr);
-    apuSetChannelVolumes(vols[1], vols[2], vols[3], vols[4]);
+
+    // THE BUG IS FIXED HERE. Array indices are 0-based.
+    // This stops the NaN memory reads from destroying Oboe and dropping the FPS.
+    apuSetChannelVolumes(vols[0], vols[1], vols[2], vols[3]);
+
     env->ReleaseFloatArrayElements(volumes, vols, JNI_ABORT);
 }
 
@@ -507,11 +534,9 @@ Java_just_somebody_templates_domain_GameBoy_nativeOnDrawFrame(JNIEnv *env, jobje
 
     u32* pixels = androidGetFrameBuffer();
     if (pixels) {
-        // Use texture unit 0 for current, texture unit 1 for previous
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, g_prevTexture); // Upload to the oldest texture
+        glBindTexture(GL_TEXTURE_2D, g_prevTexture);
 
-        // --- DYNAMIC TEXTURE FILTERING SWITCH ---
         GLint filter = (g_currentShader == 1 || g_currentShader == 3) ? GL_LINEAR : GL_NEAREST;
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
@@ -519,11 +544,10 @@ Java_just_somebody_templates_domain_GameBoy_nativeOnDrawFrame(JNIEnv *env, jobje
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 160, 144, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 
         glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, g_texture); // Old newest is now previous
+        glBindTexture(GL_TEXTURE_2D, g_texture);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
 
-        // Swap handles so g_texture is always the newest
         GLuint temp = g_texture;
         g_texture = g_prevTexture;
         g_prevTexture = temp;
@@ -585,67 +609,39 @@ u32 android_getExpectedSaveSize(void) {
 }
 
 // ============================================================================
-// --- SYNCHRONOUS OBOE AUDIO ENGINE ---
+// --- JNI AUDIO TRACK ENGINE ---
 // ============================================================================
 
-static std::shared_ptr<oboe::AudioStream> g_audioStream;
-
 bool android_audio_init(void) {
-    if (g_audioStream) {
-        if (g_audioStream->getState() != oboe::StreamState::Started) {
-            g_audioStream->requestStart();
-        }
-        return true;
-    }
-
-    oboe::AudioStreamBuilder builder;
-    builder.setDirection(oboe::Direction::Output)
-            ->setPerformanceMode(oboe::PerformanceMode::LowLatency)
-            ->setSharingMode(oboe::SharingMode::Exclusive)
-            ->setFormat(oboe::AudioFormat::Float)
-            ->setChannelCount(oboe::ChannelCount::Stereo)
-            ->setSampleRate(44100)
-                    // Force hardware to faithfully preserve the high-frequency Noise Channel
-            ->setSampleRateConversionQuality(oboe::SampleRateConversionQuality::Best);
-
-    // NOTE: Intentionally NO callback. This forces Synchronous Blocking mode.
-
-    oboe::Result result = builder.openStream(g_audioStream);
-    if (result != oboe::Result::OK) {
-        LOGE("Failed to create Oboe audio stream.");
-        return false;
-    }
-
-    // Set buffer size wide enough to absorb minor OS jitter,
-    // but hardware will natively block the emulator thread when it fills.
-    g_audioStream->setBufferSizeInFrames(g_audioStream->getFramesPerBurst() * 4);
-
-    result = g_audioStream->requestStart();
-    if (result != oboe::Result::OK) return false;
-
-    LOGI("Synchronous Oboe native audio stream started successfully!");
+    JNIEnv* env;
+    if (g_jvm->GetEnv((void**)&env, JNI_VERSION_1_6) != JNI_OK) return false;
+    if (g_initAudioID == nullptr) return false;
+    env->CallStaticVoidMethod(g_gameBoyClass, g_initAudioID);
     return true;
 }
 
 void android_audio_cleanup(void) {
-    if (g_audioStream && g_audioStream->getState() == oboe::StreamState::Started) {
-        g_audioStream->requestPause();
-        g_audioStream->requestFlush();
-    }
+    JNIEnv* env;
+    if (g_jvm->GetEnv((void**)&env, JNI_VERSION_1_6) != JNI_OK) return;
+    if (g_stopAudioID == nullptr) return;
+    env->CallStaticVoidMethod(g_gameBoyClass, g_stopAudioID);
 }
 
 void android_audio_push(const f32* SAMPLES, u32 COUNT) {
-    if (!g_audioStream || g_audioStream->getState() != oboe::StreamState::Started) return;
+    JNIEnv* env;
+    if (g_jvm->GetEnv((void**)&env, JNI_VERSION_1_6) != JNI_OK) return;
+    if (g_playAudioID == nullptr) return;
 
-    // Oboe expects the count in Frames, not individual Floats.
-    // Because we are Stereo, 1 Frame = 2 Floats.
-    int32_t framesToWrite = COUNT / 2;
+    if (g_audioArray == nullptr || g_audioArraySize != COUNT) {
+        if (g_audioArray != nullptr) env->DeleteGlobalRef(g_audioArray);
+        g_audioArraySize = COUNT;
+        jfloatArray local = env->NewFloatArray(COUNT);
+        g_audioArray = (jfloatArray)env->NewGlobalRef(local);
+        env->DeleteLocalRef(local);
+    }
 
-    // The magic happens here: If the speaker buffer is full, this write command
-    // natively blocks the emulator thread until there is room, acting exactly
-    // like SDL_Delay and pacing your Game Boy to a perfect 60 FPS.
-    // The 100,000,000ns timeout (100ms) prevents total deadlocks if the app is killed.
-    g_audioStream->write(SAMPLES, framesToWrite, 100000000);
+    env->SetFloatArrayRegion(g_audioArray, 0, COUNT, SAMPLES);
+    env->CallStaticVoidMethod(g_gameBoyClass, g_playAudioID, g_audioArray);
 }
 
 } // extern "C"
