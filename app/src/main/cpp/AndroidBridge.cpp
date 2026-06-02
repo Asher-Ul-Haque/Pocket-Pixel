@@ -70,7 +70,7 @@ static GLint g_resolutionLoc = -1;
 static int g_currentShader = 0; // 0: LCD Ghosting, 1: CRT, 2: LCD, 3: Chromatic Aberration
 
 // - - - Dedicated Audio Thread Sync - - -
-#define AUDIO_RING_BUFFER_SIZE 32768
+#define AUDIO_RING_BUFFER_SIZE (AUDIO_BUFFER_SIZE * 8)
 #define AUDIO_RING_BUFFER_MASK (AUDIO_RING_BUFFER_SIZE - 1)
 
 static std::thread g_audioThread;
@@ -100,7 +100,7 @@ void audioLoop() {
 
     if (g_jvm->AttachCurrentThread(&env, &args) != JNI_OK) return;
 
-    const u32 CHUNK_SIZE = 1024; // Push in small, safe chunks
+    const u32 CHUNK_SIZE = AUDIO_BUFFER_SIZE; // Match APU output cadence
     f32 localBuffer[CHUNK_SIZE];
 
     while (g_audioRunning) {
@@ -108,12 +108,16 @@ void audioLoop() {
         u32 r = g_audioReadCursor.load(std::memory_order_relaxed);
         u32 available = w - r;
 
-        if (available >= CHUNK_SIZE) {
+        if (available > 0) {
+            const u32 toRead = (available >= CHUNK_SIZE) ? CHUNK_SIZE : available;
             // Pull audio from the C++ ring buffer
-            for (u32 i = 0; i < CHUNK_SIZE; ++i) {
+            for (u32 i = 0; i < toRead; ++i) {
                 localBuffer[i] = g_audioRingBuffer[(r + i) & AUDIO_RING_BUFFER_MASK];
             }
-            g_audioReadCursor.store(r + CHUNK_SIZE, std::memory_order_release);
+            for (u32 i = toRead; i < CHUNK_SIZE; ++i) {
+                localBuffer[i] = 0.0f;
+            }
+            g_audioReadCursor.store(r + toRead, std::memory_order_release);
 
             // Push to Java. WRITE_BLOCKING safely pauses THIS thread, never the emulator!
             if (g_audioArray == nullptr || g_audioArraySize != CHUNK_SIZE) {

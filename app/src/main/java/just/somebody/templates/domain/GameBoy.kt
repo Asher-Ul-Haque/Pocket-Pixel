@@ -2,9 +2,6 @@ package just.somebody.templates.domain
 
 import android.annotation.SuppressLint
 import android.net.Uri
-import android.media.AudioFormat
-import android.media.AudioManager
-import android.media.AudioTrack
 import just.somebody.templates.App
 import just.somebody.templates.appModule.ForgeLogger
 import just.somebody.templates.presentation.widgets.GameBoySpeaker
@@ -21,7 +18,6 @@ import just.somebody.templates.presentation.effects.SnackbarEvent
 import kotlinx.coroutines.coroutineScope
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.math.max
 
 enum class PauseTrigger {
   SETTINGS,
@@ -171,9 +167,6 @@ class GameBoy
     private var glSurfaceViewInstance: android.opengl.GLSurfaceView? = null
     private val speaker = GameBoySpeaker()
 
-    // - - - Native Audio API
-    private var audioTrack: AudioTrack? = null
-
     @Volatile // Ensure visibility across threads
     private var staticCurrentRomUri: String? = null
 
@@ -220,41 +213,19 @@ class GameBoy
     @JvmStatic
     fun nativeInitAudio()
     {
-      if (audioTrack != null) return
-
-      val sampleRate = 44100
-      val minBufferSize = AudioTrack.getMinBufferSize(
-        sampleRate,
-        AudioFormat.CHANNEL_OUT_STEREO,
-        AudioFormat.ENCODING_PCM_FLOAT
-                                                     )
-
-      val bufferSize = max(minBufferSize, 8192 * 4)
-
-      audioTrack = AudioTrack(
-        AudioManager.STREAM_MUSIC,
-        sampleRate,
-        AudioFormat.CHANNEL_OUT_STEREO,
-        AudioFormat.ENCODING_PCM_FLOAT,
-        bufferSize,
-        AudioTrack.MODE_STREAM
-                             )
-
-      audioTrack?.play()
+      speaker.start()
     }
 
     @JvmStatic
     fun nativePlayAudio(SAMPLES: FloatArray)
     {
-      audioTrack?.write(SAMPLES, 0, SAMPLES.size, AudioTrack.WRITE_BLOCKING)
+      speaker.play(SAMPLES)
     }
 
     @JvmStatic
     fun nativeStopAudio()
     {
-      audioTrack?.stop()
-      audioTrack?.release()
-      audioTrack = null
+      speaker.release()
     }
 
     private suspend fun getGameSaveFileUri(): Uri?
