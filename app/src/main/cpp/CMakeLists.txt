@@ -22,7 +22,6 @@ target_include_directories(${CMAKE_PROJECT_NAME}
 target_link_libraries(${CMAKE_PROJECT_NAME}
         android
         GLESv2
-        oboe::oboe
         log
 )
 

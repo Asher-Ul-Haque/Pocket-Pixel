@@ -8,7 +8,6 @@
 #include <android/log.h>
 #include <GLES2/gl2.h>
 #include <chrono>
-#include <oboe/Oboe.h>
 
 extern "C" {
 #include <platform.h>
