@@ -38,7 +38,7 @@ void apuWrite(u16 ADDR, u8 VALUE)
       ctx->channel4.clockDivider = VALUE & NR43_CLOCK_DIV_MASK;
       break;
         
-    case REG_NR44: 
+      case REG_NR44:
       ctx->channel4.lengthEnabled = (VALUE & NR44_LEN_ENABLE_MASK) != 0;
       if (VALUE & NR44_TRIGGER_MASK) noiseTrigger(&ctx->channel4);
       break;

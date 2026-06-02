@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.22.1)
 
 project("PocketPixel")
 
+find_package(oboe REQUIRED CONFIG)
 # Recursively find all source files
 file(GLOB_RECURSE PROJECT_SOURCES
         "${CMAKE_SOURCE_DIR}/src/*.c"
@@ -21,6 +22,7 @@ target_include_directories(${CMAKE_PROJECT_NAME}
 target_link_libraries(${CMAKE_PROJECT_NAME}
         android
         GLESv2
+        oboe::oboe
         log
 )
 

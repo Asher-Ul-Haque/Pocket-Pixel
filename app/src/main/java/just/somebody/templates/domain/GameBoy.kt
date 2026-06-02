@@ -67,13 +67,13 @@ class GameBoy
     nativeLoadROM(ROM, ROM.size)
   }
 
-  fun startEmulator()   { 
+  fun startEmulator()   {
     pauseTriggers.clear()
-    nativeStartEmulator() 
+    nativeStartEmulator()
   }
-  fun stopEmulator()    { 
+  fun stopEmulator()    {
     pauseTriggers.clear()
-    nativeStopEmulator() 
+    nativeStopEmulator()
   }
   fun resumeEmulator()  { nativeResumeEmulator() }
   fun pauseEmulator()   { nativePauseEmulator() }
@@ -82,11 +82,11 @@ class GameBoy
   fun setPalette(PALETTE: Palette) {
     val colors = PALETTE.colors.map { android.graphics.Color.parseColor(it) }.toIntArray()
     val packedColors = colors.map { argb: Int ->
-        val r = (argb shr 16) and 0xFF
-        val g = (argb shr 8) and 0xFF
-        val b = argb and 0xFF
-        val a = (argb shr 24) and 0xFF
-        (r) or (g shl 8) or (b shl 16) or (a shl 24)
+      val r = (argb shr 16) and 0xFF
+      val g = (argb shr 8) and 0xFF
+      val b = argb and 0xFF
+      val a = (argb shr 24) and 0xFF
+      (r) or (g shl 8) or (b shl 16) or (a shl 24)
     }.toIntArray()
     nativeChangePalette(packedColors)
   }
@@ -98,7 +98,7 @@ class GameBoy
   fun sendButton(
     BUTTON: Buttons,
     IS_PRESSED: Boolean
-  ) { nativeSetButtonState(BUTTON.ordinal, IS_PRESSED) }
+                ) { nativeSetButtonState(BUTTON.ordinal, IS_PRESSED) }
 
   // - - - Native Bindings for Emulator Core - - -
 
@@ -169,7 +169,7 @@ class GameBoy
 
     @Volatile // Ensure visibility across threads
     private var staticCurrentRomUri: String? = null
-    
+
     var onFirstActivity: (() -> Unit)? = null
     @Volatile
     private var activityDetected = false
@@ -177,7 +177,7 @@ class GameBoy
     @JvmStatic
     fun setGLSurfaceView(view: android.opengl.GLSurfaceView)
     { glSurfaceViewInstance = view }
-    
+
     fun resetActivityFlag() {
       activityDetected = false
       ForgeLogger.info("Core activity flag reset.")
@@ -207,20 +207,6 @@ class GameBoy
       }
       glSurfaceViewInstance?.requestRender()
     }
-
-    @JvmStatic
-    fun nativePlayAudio(SAMPLE_BUFFER : FloatArray)
-    { 
-      if (!activityDetected) {
-        activityDetected = true
-        onFirstActivity?.invoke()
-      }
-      speaker.play(SAMPLE_BUFFER)  
-    }
-
-    @JvmStatic
-    fun nativeStopAudio()
-    { /*ignore*/ }
 
     private suspend fun getGameSaveFileUri(): Uri?
     {
@@ -339,8 +325,8 @@ class GameBoy
       }
 
       ForgeLogger.info("Kotlin: Attempting to save RAM (size: $RAM_SIZE)")
-      
-      // We are on the native thread here. 
+
+      // We are on the native thread here.
       // We block it entirely until the write is done.
       return runBlocking(Dispatchers.IO)
       {
