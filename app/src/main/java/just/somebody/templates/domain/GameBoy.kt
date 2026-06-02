@@ -2,6 +2,9 @@ package just.somebody.templates.domain
 
 import android.annotation.SuppressLint
 import android.net.Uri
+import android.media.AudioFormat
+import android.media.AudioManager
+import android.media.AudioTrack
 import just.somebody.templates.App
 import just.somebody.templates.appModule.ForgeLogger
 import just.somebody.templates.presentation.widgets.GameBoySpeaker
@@ -18,6 +21,7 @@ import just.somebody.templates.presentation.effects.SnackbarEvent
 import kotlinx.coroutines.coroutineScope
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.math.max
 
 enum class PauseTrigger {
   SETTINGS,
@@ -67,13 +71,13 @@ class GameBoy
     nativeLoadROM(ROM, ROM.size)
   }
 
-  fun startEmulator()   { 
+  fun startEmulator()   {
     pauseTriggers.clear()
-    nativeStartEmulator() 
+    nativeStartEmulator()
   }
-  fun stopEmulator()    { 
+  fun stopEmulator()    {
     pauseTriggers.clear()
-    nativeStopEmulator() 
+    nativeStopEmulator()
   }
   fun resumeEmulator()  { nativeResumeEmulator() }
   fun pauseEmulator()   { nativePauseEmulator() }
@@ -82,11 +86,11 @@ class GameBoy
   fun setPalette(PALETTE: Palette) {
     val colors = PALETTE.colors.map { android.graphics.Color.parseColor(it) }.toIntArray()
     val packedColors = colors.map { argb: Int ->
-        val r = (argb shr 16) and 0xFF
-        val g = (argb shr 8) and 0xFF
-        val b = argb and 0xFF
-        val a = (argb shr 24) and 0xFF
-        (r) or (g shl 8) or (b shl 16) or (a shl 24)
+      val r = (argb shr 16) and 0xFF
+      val g = (argb shr 8) and 0xFF
+      val b = argb and 0xFF
+      val a = (argb shr 24) and 0xFF
+      (r) or (g shl 8) or (b shl 16) or (a shl 24)
     }.toIntArray()
     nativeChangePalette(packedColors)
   }
@@ -98,7 +102,7 @@ class GameBoy
   fun sendButton(
     BUTTON: Buttons,
     IS_PRESSED: Boolean
-  ) { nativeSetButtonState(BUTTON.ordinal, IS_PRESSED) }
+                ) { nativeSetButtonState(BUTTON.ordinal, IS_PRESSED) }
 
   // - - - Native Bindings for Emulator Core - - -
 
@@ -167,9 +171,12 @@ class GameBoy
     private var glSurfaceViewInstance: android.opengl.GLSurfaceView? = null
     private val speaker = GameBoySpeaker()
 
+    // - - - Native Audio API
+    private var audioTrack: AudioTrack? = null
+
     @Volatile // Ensure visibility across threads
     private var staticCurrentRomUri: String? = null
-    
+
     var onFirstActivity: (() -> Unit)? = null
     @Volatile
     private var activityDetected = false
@@ -177,7 +184,7 @@ class GameBoy
     @JvmStatic
     fun setGLSurfaceView(view: android.opengl.GLSurfaceView)
     { glSurfaceViewInstance = view }
-    
+
     fun resetActivityFlag() {
       activityDetected = false
       ForgeLogger.info("Core activity flag reset.")
@@ -208,19 +215,47 @@ class GameBoy
       glSurfaceViewInstance?.requestRender()
     }
 
+    // - - - Kotlin Native Audio API - - -
+
     @JvmStatic
-    fun nativePlayAudio(SAMPLE_BUFFER : FloatArray)
-    { 
-      if (!activityDetected) {
-        activityDetected = true
-        onFirstActivity?.invoke()
-      }
-      speaker.play(SAMPLE_BUFFER)  
+    fun nativeInitAudio()
+    {
+      if (audioTrack != null) return
+
+      val sampleRate = 44100
+      val minBufferSize = AudioTrack.getMinBufferSize(
+        sampleRate,
+        AudioFormat.CHANNEL_OUT_STEREO,
+        AudioFormat.ENCODING_PCM_FLOAT
+                                                     )
+
+      val bufferSize = max(minBufferSize, 8192 * 4)
+
+      audioTrack = AudioTrack(
+        AudioManager.STREAM_MUSIC,
+        sampleRate,
+        AudioFormat.CHANNEL_OUT_STEREO,
+        AudioFormat.ENCODING_PCM_FLOAT,
+        bufferSize,
+        AudioTrack.MODE_STREAM
+                             )
+
+      audioTrack?.play()
+    }
+
+    @JvmStatic
+    fun nativePlayAudio(SAMPLES: FloatArray)
+    {
+      audioTrack?.write(SAMPLES, 0, SAMPLES.size, AudioTrack.WRITE_BLOCKING)
     }
 
     @JvmStatic
     fun nativeStopAudio()
-    { /*ignore*/ }
+    {
+      audioTrack?.stop()
+      audioTrack?.release()
+      audioTrack = null
+    }
 
     private suspend fun getGameSaveFileUri(): Uri?
     {
@@ -339,8 +374,8 @@ class GameBoy
       }
 
       ForgeLogger.info("Kotlin: Attempting to save RAM (size: $RAM_SIZE)")
-      
-      // We are on the native thread here. 
+
+      // We are on the native thread here.
       // We block it entirely until the write is done.
       return runBlocking(Dispatchers.IO)
       {

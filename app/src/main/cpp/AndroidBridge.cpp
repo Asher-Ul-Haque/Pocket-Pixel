@@ -35,11 +35,13 @@ static jmethodID g_requestRenderID = nullptr;
 static jmethodID g_saveRamID = nullptr;
 static jmethodID g_loadRamID = nullptr;
 static jmethodID g_getExpectedSaveSizeID = nullptr;
-static jmethodID g_playAudioID = nullptr;
 
+// - - - Audio JNI Globals - - -
+static jmethodID g_initAudioID = nullptr;
+static jmethodID g_playAudioID = nullptr;
+static jmethodID g_stopAudioID = nullptr;
 static jfloatArray g_audioArray = nullptr;
 static u32 g_audioArraySize = 0;
-static std::mutex g_audioMutex;
 
 // - - - Emulator Thread Control - - -
 static std::thread g_emulatorThread;
@@ -67,13 +69,70 @@ static GLint g_shaderTypeLoc = -1;
 static GLint g_resolutionLoc = -1;
 static int g_currentShader = 0; // 0: LCD Ghosting, 1: CRT, 2: LCD, 3: Chromatic Aberration
 
+// - - - Dedicated Audio Thread Sync - - -
+#define AUDIO_RING_BUFFER_SIZE 32768
+#define AUDIO_RING_BUFFER_MASK (AUDIO_RING_BUFFER_SIZE - 1)
+
+static std::thread g_audioThread;
+static std::atomic<bool> g_audioRunning{false};
+static std::mutex g_audioWaitMutex;
+static std::condition_variable g_audioWaitCv;
+
+static std::atomic<u32> g_audioWriteCursor{0};
+static std::atomic<u32> g_audioReadCursor{0};
+static f32 g_audioRingBuffer[AUDIO_RING_BUFFER_SIZE];
+
 // - - - Forward Declarations for Platform Hooks - - -
 extern "C" {
-    bool android_saveRam(const u8* RAM_DATA, u32 RAM_SIZE);
-    bool android_loadRam(u8* RAM_DATA, u32 RAM_SIZE);
-    u32  android_getExpectedSaveSize(void);
-    u32* androidGetFrameBuffer(void);
-    void androidSetPaletteByIndex(u8 index);
+bool android_saveRam(const u8* RAM_DATA, u32 RAM_SIZE);
+bool android_loadRam(u8* RAM_DATA, u32 RAM_SIZE);
+u32  android_getExpectedSaveSize(void);
+u32* androidGetFrameBuffer(void);
+void androidSetPaletteByIndex(u8 index);
+}
+
+void audioLoop() {
+    JNIEnv* env;
+    JavaVMAttachArgs args;
+    args.version = JNI_VERSION_1_6;
+    args.name = "AudioThread";
+    args.group = nullptr;
+
+    if (g_jvm->AttachCurrentThread(&env, &args) != JNI_OK) return;
+
+    const u32 CHUNK_SIZE = 1024; // Push in small, safe chunks
+    f32 localBuffer[CHUNK_SIZE];
+
+    while (g_audioRunning) {
+        u32 w = g_audioWriteCursor.load(std::memory_order_acquire);
+        u32 r = g_audioReadCursor.load(std::memory_order_relaxed);
+        u32 available = w - r;
+
+        if (available >= CHUNK_SIZE) {
+            // Pull audio from the C++ ring buffer
+            for (u32 i = 0; i < CHUNK_SIZE; ++i) {
+                localBuffer[i] = g_audioRingBuffer[(r + i) & AUDIO_RING_BUFFER_MASK];
+            }
+            g_audioReadCursor.store(r + CHUNK_SIZE, std::memory_order_release);
+
+            // Push to Java. WRITE_BLOCKING safely pauses THIS thread, never the emulator!
+            if (g_audioArray == nullptr || g_audioArraySize != CHUNK_SIZE) {
+                if (g_audioArray != nullptr) env->DeleteGlobalRef(g_audioArray);
+                g_audioArraySize = CHUNK_SIZE;
+                jfloatArray local = env->NewFloatArray(CHUNK_SIZE);
+                g_audioArray = (jfloatArray)env->NewGlobalRef(local);
+                env->DeleteLocalRef(local);
+            }
+            env->SetFloatArrayRegion(g_audioArray, 0, CHUNK_SIZE, localBuffer);
+            env->CallStaticVoidMethod(g_gameBoyClass, g_playAudioID, g_audioArray);
+        } else {
+            // Wait patiently for the emulator thread to generate more audio
+            std::unique_lock<std::mutex> lock(g_audioWaitMutex);
+            g_audioWaitCv.wait_for(lock, std::chrono::milliseconds(2));
+        }
+    }
+
+    g_jvm->DetachCurrentThread();
 }
 
 // - - - Emulator Main Loop - - -
@@ -102,18 +161,19 @@ void emulatorLoop() {
             std::unique_lock<std::mutex> lock(g_pauseMutex);
             g_pauseCv.wait(lock, []{ return !g_paused || !g_running; });
             if (!g_running) break;
-            lastFrameTime = std::chrono::steady_clock::now();
         }
 
         // Run until frame is ready
         while (g_running && !g_paused && !ppu->frameReady) {
             cpuTick();
+
             if (cpu->stopped) {
                 if (ppu->registers.key1 & 0x01) {
                     ppuExecuteSpeedSwitch();
                     cpu->stopped = false;
                 }
             }
+
             timerStepMCycle();
             apuTick();
 
@@ -136,7 +196,7 @@ void emulatorLoop() {
 
             // --- AUTO-SAVE HEARTBEAT ---
             autoSaveFrameCounter++;
-            if (autoSaveFrameCounter >= 300) { // Every 5 seconds (roughly)
+            if (autoSaveFrameCounter >= 300) {
                 autoSaveFrameCounter = 0;
                 CartContext* ctx = cartridgeGetContext();
                 if (ctx && ctx->initialized && ctx->ramDirty) {
@@ -144,15 +204,16 @@ void emulatorLoop() {
                 }
             }
 
+            // --- PERFECT 60 FPS PACER ---
             double targetFrameTime = g_fastForward ? (TARGET_FRAME_TIME / 2.0) : TARGET_FRAME_TIME;
             auto now = std::chrono::steady_clock::now();
-            std::chrono::duration<double> elapsed = now - lastFrameTime;
-
-            if (elapsed.count() < targetFrameTime) {
-                auto sleepTime = std::chrono::duration<double>(targetFrameTime - elapsed.count());
-                std::this_thread::sleep_for(std::chrono::duration_cast<std::chrono::microseconds>(sleepTime));
+            while (std::chrono::duration<double>(now - lastFrameTime).count() < targetFrameTime) {
+                std::this_thread::yield();
+                now = std::chrono::steady_clock::now();
             }
             lastFrameTime = std::chrono::steady_clock::now();
+
+
         }
     }
 
@@ -180,90 +241,64 @@ const char* fShaderSrc = R"(
     uniform int u_shaderType;
     uniform vec2 u_resolution;
 
-    // Helper: Distort coordinates to mimic a curved CRT monitor screen
     vec2 barrelDistort(vec2 coord) {
         vec2 cc = coord - 0.5;
         float dist = dot(cc, cc);
-        return coord + cc * dist * 0.08; // 0.08 controls screen bulge curvature
+        return coord + cc * dist * 0.08;
     }
 
     void main() {
-        if (u_shaderType == 0) { // LCD Ghosting
+        if (u_shaderType == 0) {
             vec4 current = texture2D(s_texture, v_texCoord);
             vec4 previous = texture2D(s_prevTexture, v_texCoord);
-            // Simulating LCD persistence: mix current frame with previous
             gl_FragColor = mix(current, previous, 0.35);
             return;
         }
 
-        if (u_shaderType == 1) { // CRT Display Mode
-            // 1. Apply Screen Curvature Mapping
+        if (u_shaderType == 1) {
             vec2 uv = barrelDistort(v_texCoord);
-
-            // Vignette: Soft-clip boundaries to produce rounded bezel corners
             if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
                 gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
                 return;
             }
-
             vec4 color = texture2D(s_texture, uv);
-
-            // 2. High-Fidelity Cosine Scanlines
-            // Maps scanlines flawlessly across varying high-res device screens
             float scanline = sin(uv.y * u_resolution.y * (144.0 / u_resolution.y) * 3.14159);
             scanline = mix(1.0, 0.75 + 0.25 * scanline, 0.8);
-
-            // 3. Phosphor Mask & Vignette Shadowing
             float phosphor = sin(uv.x * u_resolution.x * 0.75) * 0.1 + 0.9;
             float vignette = uv.x * uv.y * (1.0 - uv.x) * (1.0 - uv.y);
             vignette = clamp(pow(16.0 * vignette, 0.25), 0.75, 1.0);
-
             gl_FragColor = vec4(color.rgb * scanline * phosphor * vignette, 1.0);
             return;
         }
 
-        if (u_shaderType == 2) { // Dot-Matrix LCD Simulator
+        if (u_shaderType == 2) {
             vec2 uv = v_texCoord;
             vec4 color = texture2D(s_texture, uv);
-
-            // 1. Calculate Sub-pixel Grid Coordinate Spaces ($160 \times 144$)
             vec2 lcdGridSize = vec2(160.0, 144.0);
             vec2 pixelCoord = uv * lcdGridSize;
             vec2 grid = fract(pixelCoord);
-
-            // 2. Dual-axis Shadow Mask
-            // Produces crisp rectangular pixel borders instead of single lines
-            float fillFactor = 0.85; // Percent size of the solid pixel face
+            float fillFactor = 0.85;
             float cellX = smoothstep(fillFactor, fillFactor + 0.05, grid.x) + smoothstep(1.0 - fillFactor, 1.0 - fillFactor - 0.05, grid.x);
             float cellY = smoothstep(fillFactor, fillFactor + 0.05, grid.y) + smoothstep(1.0 - fillFactor, 1.0 - fillFactor - 0.05, grid.y);
             float mask = clamp(1.0 - (cellX + cellY), 0.5, 1.0);
-
-            // 3. Sub-Pixel LCD Bleed Emulation
-            // Lightly shifts red and blue tracks inside the cell to mimic un-backlit panels
             float rFactor = texture2D(s_texture, uv + vec2(0.001, 0.0)).r;
             float bFactor = texture2D(s_texture, uv - vec2(0.001, 0.0)).b;
             vec3 dynamicLCDColor = vec3(mix(color.r, rFactor, 0.2), color.g, mix(color.b, bFactor, 0.2));
-
             gl_FragColor = vec4(dynamicLCDColor * mask, 1.0);
             return;
         }
 
-        if (u_shaderType == 3) { // Radial Chromatic Aberration
+        if (u_shaderType == 3) {
             vec2 uv = v_texCoord;
             vec2 distFromCenter = uv - vec2(0.5);
-
-            // Lens Distortion Factor scales exponentially from screen center outward
             float strength = 0.015 * length(distFromCenter);
-
             float r = texture2D(s_texture, uv + distFromCenter * strength).r;
             float g = texture2D(s_texture, uv).g;
             float b = texture2D(s_texture, uv - distFromCenter * strength).b;
-
             gl_FragColor = vec4(r, g, b, 1.0);
             return;
         }
 
-        // Fallback Default
         gl_FragColor = texture2D(s_texture, v_texCoord);
     }
 )";
@@ -313,9 +348,12 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
     g_saveRamID = env->GetStaticMethodID(g_gameBoyClass, "saveRamToFile", "([BI)Z");
     g_loadRamID = env->GetStaticMethodID(g_gameBoyClass, "loadRamFromFile", "([BI)Z");
     g_getExpectedSaveSizeID = env->GetStaticMethodID(g_gameBoyClass, "getExpectedSaveSize", "()I");
-    g_playAudioID = env->GetStaticMethodID(g_gameBoyClass, "nativePlayAudio", "([F)V");
 
-    if (!g_requestRenderID || !g_saveRamID || !g_loadRamID || !g_getExpectedSaveSizeID || !g_playAudioID) {
+    g_initAudioID = env->GetStaticMethodID(g_gameBoyClass, "nativeInitAudio", "()V");
+    g_playAudioID = env->GetStaticMethodID(g_gameBoyClass, "nativePlayAudio", "([F)V");
+    g_stopAudioID = env->GetStaticMethodID(g_gameBoyClass, "nativeStopAudio", "()V");
+
+    if (!g_requestRenderID || !g_saveRamID || !g_loadRamID || !g_getExpectedSaveSizeID || !g_initAudioID || !g_playAudioID || !g_stopAudioID) {
         LOGE("Could not find all JNI method IDs");
         return JNI_ERR;
     }
@@ -334,9 +372,9 @@ Java_just_somebody_templates_domain_GameBoy_nativeLoadROM(JNIEnv *env, jobject t
     env->GetByteArrayRegion(rom, 0, size, (jbyte*)g_romData);
 
     static CartridgeFileIO fileIO = {
-        .saveRamToFile = android_saveRam,
-        .loadRamFromFile = android_loadRam,
-        .getExpectedSaveSize = android_getExpectedSaveSize
+            .saveRamToFile = android_saveRam,
+            .loadRamFromFile = android_loadRam,
+            .getExpectedSaveSize = android_getExpectedSaveSize
     };
 
     if (!cartridgeInit(&fileIO, g_romData, g_romSize)) {
@@ -362,6 +400,13 @@ Java_just_somebody_templates_domain_GameBoy_nativeSetButtonState(JNIEnv *env, jo
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeStartEmulator(JNIEnv *env, jobject thiz) {
     if (g_running) return;
+
+    g_audioWriteCursor = 0;
+    g_audioReadCursor = 0;
+
+    g_audioRunning = true;
+    g_audioThread = std::thread(audioLoop);
+
     g_running = true;
     g_paused = false;
     g_emulatorThread = std::thread(emulatorLoop);
@@ -372,11 +417,18 @@ Java_just_somebody_templates_domain_GameBoy_nativeStopEmulator(JNIEnv *env, jobj
     g_running = false;
     g_paused = false;
     g_pauseCv.notify_all();
-    if (g_emulatorThread.joinable()) {
-        g_emulatorThread.join();
-    }
+    if (g_emulatorThread.joinable()) g_emulatorThread.join();
+
+    g_audioRunning = false;
+    g_audioWaitCv.notify_all();
+    if (g_audioThread.joinable()) g_audioThread.join();
+
+    PlatformContext* platform = platformGetContext();
+    if (platform && platform->audio.cleanup) platform->audio.cleanup();
+
     cartridgeUnload();
 }
+
 
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativePauseEmulator(JNIEnv *env, jobject thiz) {
@@ -395,7 +447,11 @@ Java_just_somebody_templates_domain_GameBoy_nativeResumeEmulator(JNIEnv *env, jo
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeSetVolumes(JNIEnv *env, jobject thiz, jfloatArray volumes) {
     jfloat* vols = env->GetFloatArrayElements(volumes, nullptr);
-    apuSetChannelVolumes(vols[1], vols[2], vols[3], vols[4]);
+
+    // THE BUG IS FIXED HERE. Array indices are 0-based.
+    // This stops the NaN memory reads from destroying Oboe and dropping the FPS.
+    apuSetChannelVolumes(vols[0], vols[1], vols[2], vols[3]);
+
     env->ReleaseFloatArrayElements(volumes, vols, JNI_ABORT);
 }
 
@@ -512,10 +568,10 @@ Java_just_somebody_templates_domain_GameBoy_nativeOnSurfaceCreated(JNIEnv *env, 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
     GLfloat verts[] = {
-        -1.0f,  1.0f, 0.0f,  0.0f, 0.0f,
-        -1.0f, -1.0f, 0.0f,  0.0f, 1.0f,
-         1.0f, -1.0f, 0.0f,  1.0f, 1.0f,
-         1.0f,  1.0f, 0.0f,  1.0f, 0.0f
+            -1.0f,  1.0f, 0.0f,  0.0f, 0.0f,
+            -1.0f, -1.0f, 0.0f,  0.0f, 1.0f,
+            1.0f, -1.0f, 0.0f,  1.0f, 1.0f,
+            1.0f,  1.0f, 0.0f,  1.0f, 0.0f
     };
     glGenBuffers(1, &g_vbo);
     glBindBuffer(GL_ARRAY_BUFFER, g_vbo);
@@ -538,11 +594,9 @@ Java_just_somebody_templates_domain_GameBoy_nativeOnDrawFrame(JNIEnv *env, jobje
 
     u32* pixels = androidGetFrameBuffer();
     if (pixels) {
-        // Use texture unit 0 for current, texture unit 1 for previous
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, g_prevTexture); // Upload to the oldest texture
+        glBindTexture(GL_TEXTURE_2D, g_prevTexture);
 
-        // --- DYNAMIC TEXTURE FILTERING SWITCH ---
         GLint filter = (g_currentShader == 1 || g_currentShader == 3) ? GL_LINEAR : GL_NEAREST;
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
@@ -550,11 +604,10 @@ Java_just_somebody_templates_domain_GameBoy_nativeOnDrawFrame(JNIEnv *env, jobje
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 160, 144, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 
         glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, g_texture); // Old newest is now previous
+        glBindTexture(GL_TEXTURE_2D, g_texture);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
 
-        // Swap handles so g_texture is always the newest
         GLuint temp = g_texture;
         g_texture = g_prevTexture;
         g_prevTexture = temp;
@@ -589,27 +642,6 @@ Java_just_somebody_templates_domain_GameBoy_nativeOnDrawFrame(JNIEnv *env, jobje
 
 // - - - Platform Callbacks implemented in Bridge - - -
 
-void android_audio_push(const f32* SAMPLES, u32 COUNT) {
-    JNIEnv* env;
-    if (g_jvm->GetEnv((void**)&env, JNI_VERSION_1_6) != JNI_OK) return;
-    if (g_playAudioID == nullptr) return;
-
-    std::lock_guard<std::mutex> lock(g_audioMutex);
-
-    if (g_audioArray == nullptr || g_audioArraySize < COUNT) {
-        if (g_audioArray != nullptr) {
-            env->DeleteGlobalRef(g_audioArray);
-        }
-        g_audioArraySize = COUNT;
-        jfloatArray local = env->NewFloatArray(COUNT);
-        g_audioArray = (jfloatArray)env->NewGlobalRef(local);
-        env->DeleteLocalRef(local);
-    }
-
-    env->SetFloatArrayRegion(g_audioArray, 0, COUNT, SAMPLES);
-    env->CallStaticVoidMethod(g_gameBoyClass, g_playAudioID, g_audioArray);
-}
-
 bool android_saveRam(const u8* RAM_DATA, u32 RAM_SIZE) {
     JNIEnv* env;
     if (g_jvm->GetEnv((void**)&env, JNI_VERSION_1_6) != JNI_OK) return false;
@@ -636,4 +668,44 @@ u32 android_getExpectedSaveSize(void) {
     return (u32)env->CallStaticIntMethod(g_gameBoyClass, g_getExpectedSaveSizeID);
 }
 
+// ============================================================================
+// --- JNI AUDIO TRACK ENGINE ---
+// ============================================================================
+
+bool android_audio_init(void) {
+    JNIEnv* env;
+    if (g_jvm->GetEnv((void**)&env, JNI_VERSION_1_6) != JNI_OK) return false;
+    if (g_initAudioID == nullptr) return false;
+    env->CallStaticVoidMethod(g_gameBoyClass, g_initAudioID);
+    return true;
 }
+
+void android_audio_cleanup(void) {
+    JNIEnv* env;
+    if (g_jvm->GetEnv((void**)&env, JNI_VERSION_1_6) != JNI_OK) return;
+    if (g_stopAudioID == nullptr) return;
+    env->CallStaticVoidMethod(g_gameBoyClass, g_stopAudioID);
+}
+
+void android_audio_push(const f32* SAMPLES, u32 COUNT) {
+    if (!g_running || !g_audioRunning) return;
+
+    u32 w = g_audioWriteCursor.load(std::memory_order_relaxed);
+    u32 r = g_audioReadCursor.load(std::memory_order_acquire);
+    u32 available_space = AUDIO_RING_BUFFER_SIZE - (w - r);
+
+    // If the emulator runs slightly faster than the speaker, safely drop the
+    // *oldest* audio samples so we never lag behind real-time.
+    if (COUNT > available_space) {
+        u32 overflow = COUNT - available_space;
+        g_audioReadCursor.store(r + overflow, std::memory_order_release);
+    }
+
+    for (u32 i = 0; i < COUNT; ++i) {
+        g_audioRingBuffer[(w + i) & AUDIO_RING_BUFFER_MASK] = SAMPLES[i];
+    }
+
+    g_audioWriteCursor.store(w + COUNT, std::memory_order_release);
+    g_audioWaitCv.notify_one(); // Wake up the dedicated Audio Thread
+}
+} // extern "C"

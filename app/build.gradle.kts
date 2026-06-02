@@ -124,7 +124,7 @@ dependencies {
   implementation(libs.ktor.client.content.negotiation)
   implementation(libs.ktor.client.logging)
   implementation(libs.ktor.serialization.kotlinx.json)
-
+// Or the latest version
   // Testing
   testImplementation(libs.junit)
   androidTestImplementation(libs.androidx.junit)
