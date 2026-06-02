@@ -5,7 +5,7 @@
 #include <atomic>
 #include <mutex>
 #include <condition_variable>
-#include <cstring>
+#include <algorithm>
 #include <android/log.h>
 #include <GLES2/gl2.h>
 #include <chrono>
@@ -72,7 +72,8 @@ static GLint g_resolutionLoc = -1;
 static int g_currentShader = 0; // 0: LCD Ghosting, 1: CRT, 2: LCD, 3: Chromatic Aberration
 
 // - - - Dedicated Audio Thread Sync - - -
-#define AUDIO_RING_BUFFER_SIZE (AUDIO_BUFFER_SIZE * 8)
+#define AUDIO_RING_BUFFER_MULTIPLIER 8 // Eight APU chunks (~90ms) to balance latency vs underruns
+#define AUDIO_RING_BUFFER_SIZE (AUDIO_BUFFER_SIZE * AUDIO_RING_BUFFER_MULTIPLIER)
 #define AUDIO_RING_BUFFER_MASK (AUDIO_RING_BUFFER_SIZE - 1)
 
 static std::thread g_audioThread;
@@ -117,7 +118,7 @@ void audioLoop() {
                 localBuffer[i] = g_audioRingBuffer[(r + i) & AUDIO_RING_BUFFER_MASK];
             }
             if (toRead < CHUNK_SIZE) {
-                memset(&localBuffer[toRead], 0, (CHUNK_SIZE - toRead) * sizeof(f32));
+                std::fill_n(&localBuffer[toRead], CHUNK_SIZE - toRead, 0.0f);
             }
             g_audioReadCursor.store(r + toRead, std::memory_order_release);
 

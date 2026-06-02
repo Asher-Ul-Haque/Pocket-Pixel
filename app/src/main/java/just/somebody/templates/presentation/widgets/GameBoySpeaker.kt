@@ -20,10 +20,13 @@ class GameBoySpeaker
   private val channelMask : Int = AudioFormat.CHANNEL_OUT_STEREO
   private val encoding    : Int = AudioFormat.ENCODING_PCM_FLOAT
   private val frameSize   : Int = 8 // stereo: 4 bytes per channel (float)
+  private val fallbackBufferWindowMs : Int = 20 // ~20ms fallback if getMinBufferSize fails
+  private val bufferSizeMultiplier   : Int = 2 // 2x min buffer balances latency vs stability
 
   private val minBufferSize     : Int = AudioTrack.getMinBufferSize(sampleRate, channelMask, encoding)
-  private val safeMinBufferSize : Int = if (minBufferSize > 0) minBufferSize else (sampleRate * frameSize / 50)
-  private val bufferSizeInBytes : Int = safeMinBufferSize * 2
+  private val safeMinBufferSize : Int = if (minBufferSize > 0) minBufferSize else
+    (sampleRate * frameSize * fallbackBufferWindowMs / 1000)
+  private val bufferSizeInBytes : Int = safeMinBufferSize * bufferSizeMultiplier
 
   // - - - Filter state for DC offset removal (High Pass Filter)
   private var lastSampleL : Float = 0f
