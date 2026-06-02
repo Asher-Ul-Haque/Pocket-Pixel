@@ -5,6 +5,7 @@
 #include <atomic>
 #include <mutex>
 #include <condition_variable>
+#include <cstring>
 #include <android/log.h>
 #include <GLES2/gl2.h>
 #include <chrono>
@@ -13,6 +14,7 @@ extern "C" {
 #include <platform.h>
 #include <joypad.h>
 #include <apu/apu.h>
+#include <apu/internal.h>
 #include <cpu/cpu.h>
 #include <ppu/ppu.h>
 #include <timer.h>
@@ -114,8 +116,8 @@ void audioLoop() {
             for (u32 i = 0; i < toRead; ++i) {
                 localBuffer[i] = g_audioRingBuffer[(r + i) & AUDIO_RING_BUFFER_MASK];
             }
-            for (u32 i = toRead; i < CHUNK_SIZE; ++i) {
-                localBuffer[i] = 0.0f;
+            if (toRead < CHUNK_SIZE) {
+                memset(&localBuffer[toRead], 0, (CHUNK_SIZE - toRead) * sizeof(f32));
             }
             g_audioReadCursor.store(r + toRead, std::memory_order_release);
 

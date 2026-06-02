@@ -6,7 +6,6 @@ import android.media.AudioTrack
 import android.media.AudioTrack.PLAYSTATE_PLAYING
 import just.somebody.templates.appModule.ForgeLogger
 import android.media.AudioTrack.WRITE_BLOCKING
-import kotlin.math.max
 
 /**
  * High-performance audio renderer handling the real-time audio pipeline for the emulator.
@@ -24,7 +23,7 @@ class GameBoySpeaker
 
   private val minBufferSize     : Int = AudioTrack.getMinBufferSize(sampleRate, channelMask, encoding)
   private val safeMinBufferSize : Int = if (minBufferSize > 0) minBufferSize else (sampleRate * frameSize / 50)
-  private val bufferSizeInBytes : Int = max(safeMinBufferSize * 2, safeMinBufferSize)
+  private val bufferSizeInBytes : Int = safeMinBufferSize * 2
 
   // - - - Filter state for DC offset removal (High Pass Filter)
   private var lastSampleL : Float = 0f
@@ -35,6 +34,7 @@ class GameBoySpeaker
 
   private var audioTrack: AudioTrack? = null
 
+  @Synchronized
   private fun ensureAudioTrack(): AudioTrack
   {
     val existing = audioTrack
