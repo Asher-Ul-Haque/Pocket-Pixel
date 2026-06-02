@@ -246,7 +246,7 @@ class GameBoy
     @JvmStatic
     fun nativePlayAudio(SAMPLES: FloatArray)
     {
-      audioTrack?.write(SAMPLES, 0, SAMPLES.size, AudioTrack.WRITE_NON_BLOCKING)
+      audioTrack?.write(SAMPLES, 0, SAMPLES.size, AudioTrack.WRITE_BLOCKING)
     }
 
     @JvmStatic

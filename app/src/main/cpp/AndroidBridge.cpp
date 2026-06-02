@@ -70,6 +70,19 @@ static GLint g_shaderTypeLoc = -1;
 static GLint g_resolutionLoc = -1;
 static int g_currentShader = 0; // 0: LCD Ghosting, 1: CRT, 2: LCD, 3: Chromatic Aberration
 
+// - - - Dedicated Audio Thread Sync - - -
+#define AUDIO_RING_BUFFER_SIZE 32768
+#define AUDIO_RING_BUFFER_MASK (AUDIO_RING_BUFFER_SIZE - 1)
+
+static std::thread g_audioThread;
+static std::atomic<bool> g_audioRunning{false};
+static std::mutex g_audioWaitMutex;
+static std::condition_variable g_audioWaitCv;
+
+static std::atomic<u32> g_audioWriteCursor{0};
+static std::atomic<u32> g_audioReadCursor{0};
+static f32 g_audioRingBuffer[AUDIO_RING_BUFFER_SIZE];
+
 // - - - Forward Declarations for Platform Hooks - - -
 extern "C" {
 bool android_saveRam(const u8* RAM_DATA, u32 RAM_SIZE);
@@ -77,6 +90,50 @@ bool android_loadRam(u8* RAM_DATA, u32 RAM_SIZE);
 u32  android_getExpectedSaveSize(void);
 u32* androidGetFrameBuffer(void);
 void androidSetPaletteByIndex(u8 index);
+}
+
+void audioLoop() {
+    JNIEnv* env;
+    JavaVMAttachArgs args;
+    args.version = JNI_VERSION_1_6;
+    args.name = "AudioThread";
+    args.group = nullptr;
+
+    if (g_jvm->AttachCurrentThread(&env, &args) != JNI_OK) return;
+
+    const u32 CHUNK_SIZE = 1024; // Push in small, safe chunks
+    f32 localBuffer[CHUNK_SIZE];
+
+    while (g_audioRunning) {
+        u32 w = g_audioWriteCursor.load(std::memory_order_acquire);
+        u32 r = g_audioReadCursor.load(std::memory_order_relaxed);
+        u32 available = w - r;
+
+        if (available >= CHUNK_SIZE) {
+            // Pull audio from the C++ ring buffer
+            for (u32 i = 0; i < CHUNK_SIZE; ++i) {
+                localBuffer[i] = g_audioRingBuffer[(r + i) & AUDIO_RING_BUFFER_MASK];
+            }
+            g_audioReadCursor.store(r + CHUNK_SIZE, std::memory_order_release);
+
+            // Push to Java. WRITE_BLOCKING safely pauses THIS thread, never the emulator!
+            if (g_audioArray == nullptr || g_audioArraySize != CHUNK_SIZE) {
+                if (g_audioArray != nullptr) env->DeleteGlobalRef(g_audioArray);
+                g_audioArraySize = CHUNK_SIZE;
+                jfloatArray local = env->NewFloatArray(CHUNK_SIZE);
+                g_audioArray = (jfloatArray)env->NewGlobalRef(local);
+                env->DeleteLocalRef(local);
+            }
+            env->SetFloatArrayRegion(g_audioArray, 0, CHUNK_SIZE, localBuffer);
+            env->CallStaticVoidMethod(g_gameBoyClass, g_playAudioID, g_audioArray);
+        } else {
+            // Wait patiently for the emulator thread to generate more audio
+            std::unique_lock<std::mutex> lock(g_audioWaitMutex);
+            g_audioWaitCv.wait_for(lock, std::chrono::milliseconds(2));
+        }
+    }
+
+    g_jvm->DetachCurrentThread();
 }
 
 // - - - Emulator Main Loop - - -
@@ -148,19 +205,16 @@ void emulatorLoop() {
                 }
             }
 
-            // --- THE SPEED FIX: Active Spin-Wait ---
-            double targetFrameTime =
-                    g_fastForward ? (TARGET_FRAME_TIME / 2.0)
-                                  : TARGET_FRAME_TIME;
-
+            // --- PERFECT 60 FPS PACER ---
+            double targetFrameTime = g_fastForward ? (TARGET_FRAME_TIME / 2.0) : TARGET_FRAME_TIME;
             auto now = std::chrono::steady_clock::now();
-            while (std::chrono::duration<double>(now - lastFrameTime).count() <
-                   targetFrameTime) {
+            while (std::chrono::duration<double>(now - lastFrameTime).count() < targetFrameTime) {
                 std::this_thread::yield();
                 now = std::chrono::steady_clock::now();
             }
-
             lastFrameTime = std::chrono::steady_clock::now();
+
+
         }
     }
 
@@ -347,6 +401,13 @@ Java_just_somebody_templates_domain_GameBoy_nativeSetButtonState(JNIEnv *env, jo
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeStartEmulator(JNIEnv *env, jobject thiz) {
     if (g_running) return;
+
+    g_audioWriteCursor = 0;
+    g_audioReadCursor = 0;
+
+    g_audioRunning = true;
+    g_audioThread = std::thread(audioLoop);
+
     g_running = true;
     g_paused = false;
     g_emulatorThread = std::thread(emulatorLoop);
@@ -357,18 +418,18 @@ Java_just_somebody_templates_domain_GameBoy_nativeStopEmulator(JNIEnv *env, jobj
     g_running = false;
     g_paused = false;
     g_pauseCv.notify_all();
+    if (g_emulatorThread.joinable()) g_emulatorThread.join();
 
-    if (g_emulatorThread.joinable()) {
-        g_emulatorThread.join();
-    }
+    g_audioRunning = false;
+    g_audioWaitCv.notify_all();
+    if (g_audioThread.joinable()) g_audioThread.join();
 
     PlatformContext* platform = platformGetContext();
-    if (platform && platform->audio.cleanup) {
-        platform->audio.cleanup();
-    }
+    if (platform && platform->audio.cleanup) platform->audio.cleanup();
 
     cartridgeUnload();
 }
+
 
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativePauseEmulator(JNIEnv *env, jobject thiz) {
@@ -628,20 +689,24 @@ void android_audio_cleanup(void) {
 }
 
 void android_audio_push(const f32* SAMPLES, u32 COUNT) {
-    JNIEnv* env;
-    if (g_jvm->GetEnv((void**)&env, JNI_VERSION_1_6) != JNI_OK) return;
-    if (g_playAudioID == nullptr) return;
+    if (!g_running || !g_audioRunning) return;
 
-    if (g_audioArray == nullptr || g_audioArraySize != COUNT) {
-        if (g_audioArray != nullptr) env->DeleteGlobalRef(g_audioArray);
-        g_audioArraySize = COUNT;
-        jfloatArray local = env->NewFloatArray(COUNT);
-        g_audioArray = (jfloatArray)env->NewGlobalRef(local);
-        env->DeleteLocalRef(local);
+    u32 w = g_audioWriteCursor.load(std::memory_order_relaxed);
+    u32 r = g_audioReadCursor.load(std::memory_order_acquire);
+    u32 available_space = AUDIO_RING_BUFFER_SIZE - (w - r);
+
+    // If the emulator runs slightly faster than the speaker, safely drop the
+    // *oldest* audio samples so we never lag behind real-time.
+    if (COUNT > available_space) {
+        u32 overflow = COUNT - available_space;
+        g_audioReadCursor.store(r + overflow, std::memory_order_release);
     }
 
-    env->SetFloatArrayRegion(g_audioArray, 0, COUNT, SAMPLES);
-    env->CallStaticVoidMethod(g_gameBoyClass, g_playAudioID, g_audioArray);
-}
+    for (u32 i = 0; i < COUNT; ++i) {
+        g_audioRingBuffer[(w + i) & AUDIO_RING_BUFFER_MASK] = SAMPLES[i];
+    }
 
+    g_audioWriteCursor.store(w + COUNT, std::memory_order_release);
+    g_audioWaitCv.notify_one(); // Wake up the dedicated Audio Thread
+}
 } // extern "C"
