@@ -39,6 +39,7 @@ import androidx.compose.material3.CardDefaults
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import kotlinx.coroutines.launch
 import androidx.core.net.toUri
 
@@ -144,11 +145,20 @@ fun HomeScreen(
         Column(
           modifier            = Modifier
             .padding(16.dp)
-            .border(4.dp, GameBoyColors.Green, RectangleShape)
+            .fillMaxWidth()
             .wrapContentHeight(),
           verticalArrangement = Arrangement.Center,
           horizontalAlignment = Alignment.CenterHorizontally)
         {
+          androidx.compose.foundation.Image(
+            painter            = painterResource(R.drawable.no_games),
+            contentDescription = null,
+            modifier           = Modifier.size(120.dp),
+            contentScale       = androidx.compose.ui.layout.ContentScale.Fit
+          )
+          
+          Spacer(modifier = Modifier.height(16.dp))
+
           CustomText(
             TEXT      = stringResource(R.string.SELECT),
             FONT_SIZE = 21)
@@ -190,6 +200,15 @@ fun HomeScreen(
           ON_CLICK      = { game -> VIEW_MODEL.markAsPlayed(game) },
           ON_LONG_PRESS = { game -> VIEW_MODEL.selectGame(game) },
           GET_URL       = { game -> VIEW_MODEL.getBoxArtFlow(game) })
+
+        collections.value.filter { !it.isSystem }.forEach { collection ->
+          GameList(
+            GAMES         = collection.games,
+            TITLE         = collection.name,
+            ON_CLICK      = { game -> VIEW_MODEL.markAsPlayed(game) },
+            ON_LONG_PRESS = { game -> VIEW_MODEL.selectGame(game) },
+            GET_URL       = { game -> VIEW_MODEL.getBoxArtFlow(game) })
+        }
       }
     }
 

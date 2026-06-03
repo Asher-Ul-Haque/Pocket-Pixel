@@ -61,11 +61,11 @@ fun CustomButton(
       .shadow(
         elevation    = elevation,
         shape        = RectangleShape,
-        ambientColor = Color.Black,
-        spotColor    = Color.Black
+        ambientColor = GameBoyColors.DarkGreen,
+        spotColor    = GameBoyColors.DarkGreen
       )
       .padding(8.dp)
-      .background(COLOR)
+      .background(if (isPressed) GameBoyColors.Green else COLOR)
       .border(4.dp, GameBoyColors.Green, RectangleShape),
     contentAlignment = Alignment.Center
   )

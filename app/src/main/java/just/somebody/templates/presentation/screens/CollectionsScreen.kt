@@ -1,10 +1,10 @@
 package just.somebody.templates.presentation.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -12,23 +12,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import just.somebody.templates.App
 import just.somebody.templates.R
-import just.somebody.templates.domain.models.GameCollection
 import just.somebody.templates.presentation.viewModels.CollectionsViewModel
 import just.somebody.templates.presentation.widgets.*
 import just.somebody.templates.ui.theme.GameBoyColors
+import just.somebody.templates.ui.theme.MinecraftFontFamily
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CollectionsScreen(
   VIEW_MODEL : CollectionsViewModel,
   MODIFIFER  : Modifier = Modifier)
 {
-  val collections        by VIEW_MODEL.collections.collectAsState()
-  val selectedCollection by VIEW_MODEL.selectedCollection.collectAsState()
-  val selectedGame       by VIEW_MODEL.selectedGame.collectAsState()
-  var showCreateDialog   by remember { mutableStateOf(false) }
+  val collections  by VIEW_MODEL.collections.collectAsState()
+  val selectedGame by VIEW_MODEL.selectedGame.collectAsState()
+  var showCreateDialog by remember { mutableStateOf(false) }
 
   Box(modifier = MODIFIFER
     .fillMaxSize()
@@ -37,49 +38,41 @@ fun CollectionsScreen(
     Column(
       modifier = Modifier
         .fillMaxSize()
-        .padding(16.dp))
+        .verticalScroll(rememberScrollState()))
     {
-      if (selectedCollection == null)
-      {
-        CustomButton(
-          ON_CLICK = { showCreateDialog = true },
-          MODIFIER = Modifier.fillMaxWidth().padding(bottom = 16.dp))
-        { CustomText(stringResource(R.string.CREATE_COLLECTION)) }
+      CustomButton(
+        ON_CLICK = { showCreateDialog = true },
+        MODIFIER = Modifier.fillMaxWidth().padding(16.dp))
+      { CustomText(stringResource(R.string.CREATE_COLLECTION)) }
 
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp))
-        {
-          items(collections)
-          { collection ->
-            CollectionItem(
-              COLLECTION = collection,
-              ON_CLICK   = { VIEW_MODEL.selectCollection(collection) },
-              ON_DELETE  = { VIEW_MODEL.deleteCollection(collection) })
-          }
-        }
-      }
-      else
-      {
+      collections.filter { !it.isSystem }.forEach { collection ->
         Row(
-          modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-          verticalAlignment = Alignment.CenterVertically)
+          modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.SpaceBetween)
         {
-          CustomButton(
-            ON_CLICK = { VIEW_MODEL.selectCollection(null) },
-            MODIFIER = Modifier.width(60.dp))
-          { CustomText("<", FONT_SIZE = 18) }
+          CustomText(collection.name, FONT_SIZE = 18)
           
-          Spacer(modifier = Modifier.width(8.dp))
-          CustomText(selectedCollection!!.name, FONT_SIZE = 18)
+          IconButton(onClick = { VIEW_MODEL.deleteCollection(collection) })
+          {
+            Icon(
+              painter            = painterResource(R.drawable.trash),
+              contentDescription = stringResource(R.string.DELETE_COLLECTION),
+              tint                = GameBoyColors.Green,
+              modifier            = Modifier.size(32.dp))
+          }
         }
 
         GameList(
-          GAMES         = selectedCollection!!.games,
+          GAMES         = collection.games,
           TITLE         = "",
           SHOW_TITLE    = false,
-          USE_ROW       = false,
+          USE_ROW       = true,
           ON_CLICK      = { VIEW_MODEL.markAsPlayed(it) },
           ON_LONG_PRESS = { VIEW_MODEL.selectGame(it) },
           GET_URL       = { game -> VIEW_MODEL.getBoxArtFlow(game) })
+        
+        Spacer(modifier = Modifier.height(16.dp))
       }
     }
 
@@ -95,6 +88,9 @@ fun CollectionsScreen(
 
     selectedGame?.let()
     { game ->
+      // Find which collection this game belongs to (for removal)
+      val inCollection = collections.find { coll -> coll.games.any { it.id == game.id } }
+      
       GameActionBottomSheet(
         GAME       = game,
         ON_DISMISS = { VIEW_MODEL.selectGame(null) },
@@ -106,7 +102,7 @@ fun CollectionsScreen(
           VIEW_MODEL.selectGame(null)
         },
         ON_UPDATE_BOXART = { /* Implement if needed */ },
-        COLLECTIONS = collections,
+        COLLECTIONS = collections.filter { !it.isSystem },
         ON_ADD_TO_COLLECTION = { collectionId -> 
           VIEW_MODEL.addGameToCollection(collectionId, game.id)
           VIEW_MODEL.selectGame(null)
@@ -115,44 +111,8 @@ fun CollectionsScreen(
           VIEW_MODEL.removeGameFromCollection(collectionId, game.id)
           VIEW_MODEL.selectGame(null)
         },
-        IN_COLLECTION_ID = selectedCollection?.id
+        IN_COLLECTION_ID = inCollection?.id
       )
-    }
-  }
-}
-
-
-@Composable
-fun CollectionItem(
-  COLLECTION : GameCollection,
-  ON_CLICK   : () -> Unit,
-  ON_DELETE  : () -> Unit)
-{
-  Row(
-    modifier = Modifier
-      .fillMaxWidth()
-      .background(GameBoyColors.MediumGreen)
-      .clickable { ON_CLICK() }
-      .padding(12.dp),
-    horizontalArrangement = Arrangement.SpaceBetween,
-    verticalAlignment     = Alignment.CenterVertically)
-  {
-    Column()
-    {
-      CustomText(COLLECTION.name, FONT_SIZE = 16)
-      CustomText("${COLLECTION.games.size} Games", FONT_SIZE = 10, COLOR = GameBoyColors.Green)
-    }
-
-    if (!COLLECTION.isSystem)
-    {
-      IconButton(onClick = ON_DELETE)
-      {
-        Icon(
-          painter            = painterResource(R.drawable.trash),
-          contentDescription = stringResource(R.string.DELETE_COLLECTION),
-          tint                = GameBoyColors.DarkGreen,
-          modifier            = Modifier.size(24.dp))
-      }
     }
   }
 }
@@ -171,15 +131,30 @@ fun CreateCollectionDialog(
       OutlinedTextField(
         value         = name,
         onValueChange = { name = it },
-        placeholder   = { Text(stringResource(R.string.COLLECTION_NAME)) },
-        modifier      = Modifier.fillMaxWidth())
+        placeholder   = { Text(stringResource(R.string.COLLECTION_NAME), fontFamily = MinecraftFontFamily, color = GameBoyColors.DarkGreen) },
+        modifier      = Modifier.fillMaxWidth().background(color = GameBoyColors.LightGreen),
+        textStyle     = TextStyle(fontFamily = MinecraftFontFamily, fontSize = 14.sp, color = GameBoyColors.DarkGreen),
+        colors        = OutlinedTextFieldDefaults.colors(
+          focusedTextColor     = GameBoyColors.DarkGreen,
+          unfocusedTextColor   = GameBoyColors.DarkGreen,
+          focusedBorderColor   = GameBoyColors.LightGreen,
+          unfocusedBorderColor = GameBoyColors.LightGreen,
+          focusedLabelColor    = GameBoyColors.Green,
+          unfocusedLabelColor  = GameBoyColors.Green,
+          cursorColor          = GameBoyColors.DarkGreen),
+        shape         = RectangleShape)
     },
     confirmButton = {
-      TextButton(onClick = { if (name.isNotBlank()) ON_CREATE(name) })
+      CustomButton(
+        ON_CLICK = { if (name.isNotBlank()) ON_CREATE(name) },
+        MODIFIER = Modifier.width(80.dp))
       { CustomText("OK") }
     },
     dismissButton = {
-      TextButton(onClick = ON_DISMISS)
+      CustomButton(
+        ON_CLICK = ON_DISMISS,
+        MODIFIER = Modifier.width(100.dp),
+        COLOR    = GameBoyColors.DarkGreen)
       { CustomText(stringResource(R.string.cancel)) }
     },
     containerColor = GameBoyColors.MediumGreen,

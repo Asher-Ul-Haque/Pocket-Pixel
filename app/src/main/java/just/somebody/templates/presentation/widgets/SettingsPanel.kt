@@ -1,5 +1,6 @@
 package just.somebody.templates.presentation.widgets
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -15,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
@@ -397,17 +399,40 @@ private fun MiscSettingsSection(EMULATOR: EmulatorViewModel)
 {
   val fastForward by EMULATOR.fastForward.collectAsState()
   val game        by EMULATOR.currentGame.collectAsState()
+  
+  val infiniteTransition = rememberInfiniteTransition(label = "ff_blink")
+  val ffAlpha by infiniteTransition.animateFloat(
+    initialValue = 1f,
+    targetValue = 0.4f,
+    animationSpec = infiniteRepeatable(
+      animation = tween(500, easing = LinearEasing),
+      repeatMode = RepeatMode.Reverse
+    ),
+    label = "ff_alpha"
+  )
 
   Column(verticalArrangement = Arrangement.spacedBy(8.dp))
   {
     CustomButton(
       ON_CLICK = { EMULATOR.toggleFastForward() },
-      MODIFIER = Modifier.fillMaxWidth())
+      MODIFIER = Modifier.fillMaxWidth(),
+      COLOR    = if (fastForward) GameBoyColors.Green else GameBoyColors.MediumGreen)
     {
-      CustomText(
-        if (fastForward) stringResource(R.string.speed_2x)
-        else             stringResource(R.string.speed_1x),
-        FONT_SIZE = 14)
+      Row(verticalAlignment = Alignment.CenterVertically)
+      {
+        Icon(
+          painter = painterResource(R.drawable.fastforward),
+          contentDescription = null,
+          tint = (if (fastForward) GameBoyColors.LightGreen else GameBoyColors.DarkGreen).copy(alpha = if (fastForward) ffAlpha else 1f),
+          modifier = Modifier.size(24.dp))
+        
+        Spacer(modifier = Modifier.width(8.dp))
+        
+        CustomText(
+          if (fastForward) stringResource(R.string.speed_2x)
+          else             stringResource(R.string.speed_1x),
+          FONT_SIZE = 14)
+      }
     }
 
     val settings by EMULATOR.settings.collectAsState()

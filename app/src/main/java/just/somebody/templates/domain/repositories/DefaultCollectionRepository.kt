@@ -32,7 +32,9 @@ class DefaultCollectionRepository(private val dao: CollectionDao) : CollectionRe
   )
 
   override fun getAllCollections(): Flow<List<GameCollection>> =
-    dao.getAllCollections().map { list -> list.map { it.toDomain() } }
+    dao.getCollectionsWithGames().map { list ->
+      list.map { it.collection.toDomain(it.games.map { g -> g.toDomain() }) }
+    }
 
   override suspend fun createCollection(name: String, isSystem: Boolean): Long =
     dao.insertCollection(CollectionEntity(name = name, isSystem = isSystem))

@@ -1,6 +1,11 @@
 package just.somebody.templates.presentation.widgets
 
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.*
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.expandVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -20,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -61,6 +67,13 @@ fun GameCard(
 
   val interactionSource = remember { MutableInteractionSource() }
   val isPressed by interactionSource.collectIsPressedAsState()
+  
+  val cardScale by animateFloatAsState(
+    targetValue = if (isPressed) 1.05f else 1f,
+    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+    label = "card_scale"
+  )
+
   val elevation by animateDpAsState(if (isPressed) 0.dp else 4.dp * SCALE, label = "elevation")
   val offset by animateDpAsState(if (isPressed) 2.dp else 0.dp, label = "offset")
 
@@ -68,6 +81,7 @@ fun GameCard(
     shape = RectangleShape,
     modifier = Modifier
       .width(cardWidth)
+      .graphicsLayer(scaleX = cardScale, scaleY = cardScale)
       .offset(x = offset, y = offset)
       .combinedClickable(
         interactionSource = interactionSource,
@@ -130,8 +144,14 @@ fun GameList(
         if (SHOW_TITLE) CustomText(TITLE)
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(horizontal = 16.dp))
         {
-          items(GAMES) { game ->
-            GameCard(GAME = game, ON_CLICK = ON_CLICK, ON_LONG_PRESS = ON_LONG_PRESS, IMAGE_URL = GET_URL, BIG = BIG)
+          items(GAMES, key = { it.id }) { game ->
+            androidx.compose.animation.AnimatedVisibility(
+              visible = true,
+              enter = fadeIn() + expandHorizontally(),
+              modifier = Modifier.animateItem()
+            ) {
+              GameCard(GAME = game, ON_CLICK = ON_CLICK, ON_LONG_PRESS = ON_LONG_PRESS, IMAGE_URL = GET_URL, BIG = BIG)
+            }
           }
         }
       }
@@ -151,8 +171,14 @@ fun GameList(
             contentPadding = PaddingValues(16.dp),
             modifier = Modifier.fillMaxSize())
           {
-            items(GAMES) { game ->
-              GameCard(GAME = game, ON_CLICK = ON_CLICK, ON_LONG_PRESS = ON_LONG_PRESS, IMAGE_URL = GET_URL, BIG = BIG)
+            items(GAMES, key = { it.id }) { game ->
+              AnimatedVisibility(
+                visible = true,
+                enter = fadeIn() + expandHorizontally(),
+                modifier = Modifier.animateItem()
+              ) {
+                GameCard(GAME = game, ON_CLICK = ON_CLICK, ON_LONG_PRESS = ON_LONG_PRESS, IMAGE_URL = GET_URL, BIG = BIG)
+              }
             }
           }
         }
@@ -165,8 +191,14 @@ fun GameList(
             contentPadding = PaddingValues(16.dp),
             modifier = Modifier.fillMaxHeight())
           {
-            items(GAMES) { game ->
-              GameCard(GAME = game, ON_CLICK = ON_CLICK, ON_LONG_PRESS = ON_LONG_PRESS, IMAGE_URL = GET_URL, BIG = BIG)
+            items(GAMES, key = { it.id }) { game ->
+              AnimatedVisibility(
+                visible = true,
+                enter = fadeIn() + expandVertically(),
+                modifier = Modifier.animateItem()
+              ) {
+                GameCard(GAME = game, ON_CLICK = ON_CLICK, ON_LONG_PRESS = ON_LONG_PRESS, IMAGE_URL = GET_URL, BIG = BIG)
+              }
             }
           }
         }
