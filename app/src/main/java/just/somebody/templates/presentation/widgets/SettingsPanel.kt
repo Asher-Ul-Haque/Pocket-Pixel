@@ -26,6 +26,7 @@ import just.somebody.templates.presentation.viewModels.EmulatorViewModel
 import just.somebody.templates.ui.theme.GameBoyColors
 import java.util.Date
 import android.text.format.DateFormat
+import androidx.compose.foundation.layout.Arrangement
 import androidx.core.graphics.toColorInt
 
 /**
@@ -301,11 +302,8 @@ private fun SaveStateSection(EMULATOR: EmulatorViewModel)
 
   Column(horizontalAlignment = Alignment.CenterHorizontally)
   {
-    CustomText(stringResource(R.string.save_slots), FONT_SIZE = 16)
-    Spacer(modifier = Modifier.height(4.dp))
-
     LazyRow(
-      horizontalArrangement = Arrangement.spacedBy(8.dp),
+      horizontalArrangement = Arrangement.SpaceEvenly,
       contentPadding        = PaddingValues(horizontal = 16.dp),
       modifier              = Modifier.fillMaxWidth())
     {

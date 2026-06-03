@@ -119,4 +119,15 @@
 
     <string name="btn_a">A</string>
     <string name="btn_b">B</string>
+
+    <!-- Phase 1: Collections & Most Played -->
+    <string name="COLLECTIONS">Collections</string>
+    <string name="MOST_PLAYED">Most Played</string>
+    <string name="ADD_TO_LIST">Add to Collection</string>
+    <string name="REMOVE_FROM_LIST">Remove from Collection</string>
+    <string name="DELETE_COLLECTION">Delete Collection</string>
+    <string name="CREATE_COLLECTION">Create New Collection</string>
+    <string name="COLLECTION_NAME">Collection Name</string>
+    <string name="SCREENSHOT">Screenshot</string>
+    <string name="SCREENSHOT_SAVED">Screenshot saved</string>
 </resources>

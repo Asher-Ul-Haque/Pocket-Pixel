@@ -29,6 +29,7 @@ class EmulatorViewModel : ViewModel()
   private var currentROM      : ByteArray?  = null
   private var romReady        : Boolean     = false
   private var emulatorStarted : Boolean     = false
+  private var playStartTime   : Long        = 0L
   private val _settings       : MutableStateFlow<AppSettings> = MutableStateFlow<AppSettings>(AppSettings())
   public  val settings        : MutableStateFlow<AppSettings> = _settings
 
@@ -80,6 +81,10 @@ class EmulatorViewModel : ViewModel()
   {
     viewModelScope.launch()
     {
+      if (emulatorStarted)
+      {
+        updatePlayTime()
+      }
       GameBoy.resetActivityFlag()
       gameBoy.stopEmulator()
       romReady            = false
@@ -184,6 +189,27 @@ class EmulatorViewModel : ViewModel()
       applyCurrentSettings(currentSettings)
 
       emulatorStarted = true
+      playStartTime   = System.currentTimeMillis()
+      
+      _currentGame.value?.id?.let()
+      { id ->
+        App.appModule.repo.updateLastPlayed(id, playStartTime)
+      }
+    }
+  }
+
+  private fun updatePlayTime()
+  {
+    val gameId = _currentGame.value?.id ?: return
+    if (playStartTime == 0L) return
+
+    val now       = System.currentTimeMillis()
+    val duration  = now - playStartTime
+    playStartTime = now
+
+    viewModelScope.launch(Dispatchers.IO)
+    {
+      App.appModule.repo.updatePlayTime(gameId, duration)
     }
   }
 
@@ -271,5 +297,14 @@ class EmulatorViewModel : ViewModel()
       dataStore.updateSettings(updated)
       _settings.value = updated
     }
+  }
+
+  override fun onCleared()
+  {
+    if (emulatorStarted)
+    {
+      updatePlayTime()
+    }
+    super.onCleared()
   }
 }

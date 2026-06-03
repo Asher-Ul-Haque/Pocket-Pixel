@@ -17,6 +17,8 @@ import just.somebody.templates.appModule.storage.database.DatabaseFactory
 import just.somebody.templates.appModule.storage.database.PixelPocketDB
 import just.somebody.templates.data.Api
 import just.somebody.templates.data.ApiImpl
+import just.somebody.templates.domain.repositories.CollectionRepository
+import just.somebody.templates.domain.repositories.DefaultCollectionRepository
 import just.somebody.templates.domain.repositories.DefaultGameRepository
 import just.somebody.templates.domain.repositories.GameRepository
 import just.somebody.templates.appModule.navigation.DefaultNavigator
@@ -45,6 +47,9 @@ interface AppModuleInterface
 
   /** Domain access gateway controlling transactions for stored game metadata records. */
   val repo                   : GameRepository
+
+  /** Domain access gateway for managing game collections. */
+  val collectionRepo         : CollectionRepository
 
   /** Screen coordinator piping navigation directives across feature boundaries asynchronously. */
   val navigator              : Navigator
@@ -102,6 +107,7 @@ class AppModule(private val APP_CONTEXT : Context) : AppModuleInterface
   override val context                : Context                 by lazy { APP_CONTEXT }
   override val api                    : Api                     by lazy { ApiImpl(); }
   override val repo                   : GameRepository          by lazy { DefaultGameRepository(database.gameDAO());}
+  override val collectionRepo         : CollectionRepository    by lazy { DefaultCollectionRepository(database.collectionDAO()) }
   override val navigator              : Navigator               by lazy { DefaultNavigator(startDestination = Destination.Home) }
   override val hardwareManager        : HardwareManager         by lazy { DefaultHardwareManager(APP_CONTEXT) }
   override val permissionManager      : PermissionManager       by lazy { DefaultPermissionManager() }

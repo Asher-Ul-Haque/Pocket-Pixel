@@ -2,8 +2,11 @@ package just.somebody.templates.appModule.storage.database
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import just.somebody.templates.data.daos.CollectionDao
 import just.somebody.templates.data.daos.GameDao
 import just.somebody.templates.data.daos.SaveStateDao
+import just.somebody.templates.data.entities.CollectionEntity
+import just.somebody.templates.data.entities.CollectionGameCrossRef
 import just.somebody.templates.data.entities.GameEntity
 import just.somebody.templates.data.entities.SaveStateEntity
 
@@ -14,8 +17,8 @@ import just.somebody.templates.data.entities.SaveStateEntity
  * and volatile visual save configurations.
  */
 @Database(
-  entities = [ GameEntity::class, SaveStateEntity::class ],
-  version  = 6)
+  entities = [ GameEntity::class, SaveStateEntity::class, CollectionEntity::class, CollectionGameCrossRef::class ],
+  version  = 7)
 abstract class PixelPocketDB : RoomDatabase()
 {
   /**
@@ -31,6 +34,13 @@ abstract class PixelPocketDB : RoomDatabase()
    * @return Implementation layer mapping data access methods for serialization captures.
    */
   abstract fun saveStateDAO() : SaveStateDao
+
+  /**
+   * Exposes operational access capabilities targeting transaction steps for game collections.
+   *
+   * @return Implementation layer mapping data access methods for collections.
+   */
+  abstract fun collectionDAO() : CollectionDao
 
   companion object
   { /** Name tag defining the tracking workspace file instance allocated inside the OS path. */

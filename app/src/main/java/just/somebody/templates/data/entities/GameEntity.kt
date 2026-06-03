@@ -21,6 +21,7 @@ data class GameEntity(
   val title       : String,
   val romUri      : String,
   val lastPlayed  : Long?,
+  val playTime    : Long = 0,
   val isFavorite  : Boolean = false,
   val boxArtUrl   : String? = null
 )
