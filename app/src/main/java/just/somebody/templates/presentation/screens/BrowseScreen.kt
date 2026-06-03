@@ -45,6 +45,7 @@ import just.somebody.templates.R
 import just.somebody.templates.appModule.navigation.NavigationAction
 import just.somebody.templates.presentation.effects.ObserveAsEvents
 import just.somebody.templates.presentation.viewModels.BrowseViewModel
+import just.somebody.templates.presentation.viewModels.CollectionsViewModel
 import just.somebody.templates.presentation.viewModels.EmulatorViewModel
 import just.somebody.templates.presentation.viewModels.GamesViewModel
 import just.somebody.templates.presentation.viewModels.SettingsViewModel
@@ -93,6 +94,13 @@ fun BrowseScreen(
   val gamesViewModel =
     viewModel<GamesViewModel>(factory = viewModelFactory()
     { GamesViewModel(App.appModule.repo)
+    })
+  val collectionsViewModel =
+    viewModel<CollectionsViewModel>(factory = viewModelFactory()
+    {
+      CollectionsViewModel(
+        collectionRepo = App.appModule.collectionRepo,
+        gameRepo       = App.appModule.repo)
     })
   val settingsViewModel =
     viewModel<SettingsViewModel>(
@@ -216,6 +224,13 @@ fun BrowseScreen(
             VIEW_MODEL = gamesViewModel,
             MODIFIFER  = Modifier.fillMaxSize())
         }
+        composable<Destination.Collections>
+        {
+          LaunchedEffect(Unit) { VIEW_MODEL.showBars(true) }
+          CollectionsScreen(
+            VIEW_MODEL = collectionsViewModel,
+            MODIFIFER  = Modifier.fillMaxSize())
+        }
         composable<Destination.Search>
         {
           LaunchedEffect(Unit) { VIEW_MODEL.showBars(true) }
@@ -288,7 +303,7 @@ fun BrowseScreen(
                     val intent    = Intent(Intent.ACTION_VIEW, Uri.parse(githubUrl)).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
                     App.appModule.context.startActivity(intent)
                   },
-                  COLOR   = Color.Black)
+                  COLOR   = GameBoyColors.DarkGreen)
               }
             }
         )

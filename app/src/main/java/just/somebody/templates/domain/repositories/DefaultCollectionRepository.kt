@@ -53,4 +53,13 @@ class DefaultCollectionRepository(private val dao: CollectionDao) : CollectionRe
     dao.getCollectionWithGames(collectionId).map { rel ->
       rel?.let { it.collection.toDomain(it.games.map { g -> g.toDomain() }) }
     }
+
+  override suspend fun ensureSystemCollections()
+  {
+    val collections = dao.getCollectionById(1) // Assuming 1 is Favorites
+    if (collections == null)
+    {
+      dao.insertCollection(CollectionEntity(id = 1, name = "Favorites", isSystem = true))
+    }
+  }
 }

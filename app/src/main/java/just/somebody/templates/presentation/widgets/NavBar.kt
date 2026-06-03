@@ -110,6 +110,11 @@ private fun NavList(
       R.drawable.heart),
 
     NavItem(
+      stringResource(R.string.COLLECTIONS),
+      R.drawable.list,
+      R.drawable.list),
+
+    NavItem(
       stringResource(R.string.SEARCH),
       R.drawable.search,
       R.drawable.search),

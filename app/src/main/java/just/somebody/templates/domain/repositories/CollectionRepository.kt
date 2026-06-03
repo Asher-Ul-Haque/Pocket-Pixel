@@ -22,4 +22,6 @@ interface CollectionRepository
   suspend fun removeGameFromCollection(collectionId: Long, gameId: Long)
   
   fun getCollectionWithGames(collectionId: Long): Flow<GameCollection?>
+
+  suspend fun ensureSystemCollections()
 }

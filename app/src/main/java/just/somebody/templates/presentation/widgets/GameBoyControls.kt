@@ -269,8 +269,8 @@ fun NormalButton(
             if (isPressed.value) 0.6f
             else                 1.0f
           }),
-      disabledContentColor    = Color.Gray,
-      disabledContainerColor  = Color.Gray
+      disabledContentColor    = GameBoyColors.DarkGreen,
+      disabledContainerColor  = GameBoyColors.DarkGreen
                          ),
     border = BorderStroke(
       if (SECONDARY == null) 4.dp

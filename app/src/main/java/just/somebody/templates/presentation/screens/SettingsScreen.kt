@@ -295,6 +295,10 @@ fun SettingsContent(
             }
             CustomButton(ON_CLICK = ON_RESCAN, MODIFIER = Modifier.fillMaxWidth())
             { CustomText(stringResource(R.string.RESCAN)) }
+            CustomButton(
+              ON_CLICK = { App.appModule.screenshotManager.openAllScreenshots() },
+              MODIFIER = Modifier.fillMaxWidth())
+            { CustomText(stringResource(R.string.VIEW_SCREENSHOTS)) }
             CustomButton(ON_CLICK = ON_FACTORY_RESET, MODIFIER = Modifier.fillMaxWidth(), COLOR = GameBoyColors.Error)
             { CustomText(stringResource(R.string.FACTORY)) }
           }

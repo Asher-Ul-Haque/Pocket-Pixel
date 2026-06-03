@@ -61,6 +61,8 @@ fun HomeScreen(
   val newGames       = VIEW_MODEL.newGames.collectAsState()
   val favoriteGames  = VIEW_MODEL.favoriteGames.collectAsState()
   val recentGames    = VIEW_MODEL.recentlyPlayedGames.collectAsState()
+  val topPlayedGames = VIEW_MODEL.topMostPlayedGames.collectAsState()
+  val collections    = VIEW_MODEL.collections.collectAsState()
   val selectedGame   = VIEW_MODEL.selectedGame.collectAsState()
   val settings       = App.appModule.dataStoreManager.settingsFlow.collectAsState(initial = null)
   val context        = LocalContext.current
@@ -162,6 +164,13 @@ fun HomeScreen(
       else
       {
         GameList(
+          GAMES         = topPlayedGames.value,
+          TITLE         = stringResource(R.string.MOST_PLAYED),
+          ON_CLICK      = { game -> VIEW_MODEL.markAsPlayed(game) },
+          ON_LONG_PRESS = { game -> VIEW_MODEL.selectGame(game)},
+          GET_URL       = { game -> VIEW_MODEL.getBoxArtFlow(game) })
+
+        GameList(
           GAMES         = favoriteGames.value,
           TITLE         = stringResource(R.string.FAV),
           ON_CLICK      = { game -> VIEW_MODEL.markAsPlayed(game) },
@@ -199,7 +208,12 @@ fun HomeScreen(
             VIEW_MODEL.toggleFavorite(game)
             VIEW_MODEL.selectGame(null)
           },
-        ON_UPDATE_BOXART = { url -> VIEW_MODEL.updateBoxArtUrl(game, url) })
+        ON_UPDATE_BOXART = { url -> VIEW_MODEL.updateBoxArtUrl(game, url) },
+        COLLECTIONS      = collections.value,
+        ON_ADD_TO_COLLECTION = { collectionId -> 
+          VIEW_MODEL.addToCollection(collectionId, game.id)
+          VIEW_MODEL.selectGame(null)
+        })
     }
   }
 }

@@ -146,6 +146,28 @@ class EmulatorViewModel : ViewModel()
     }
   }
 
+  /** Captures a high-quality PNG screenshot of the current emulator frame. */
+  fun takeScreenshot()
+  {
+    val game = _currentGame.value ?: return
+    val pixels = gameBoy.nativeCaptureFrame() ?: return
+    viewModelScope.launch()
+    {
+      val success = App.appModule.screenshotManager.saveScreenshot(game.title, pixels)
+      if (success)
+      {
+        SnackbarController.sendEvent(SnackbarEvent(App.appModule.context.getString(R.string.SCREENSHOT_SAVED)))
+      }
+    }
+  }
+
+  /** Opens the directory containing screenshots for the currently running game. */
+  fun openScreenshots()
+  {
+    val game = _currentGame.value ?: return
+    App.appModule.screenshotManager.openScreenshotsForGame(game.title)
+  }
+
   /** Pulls down historical memory snapshots from disk storage and forces register injection updates. */
   fun loadState(slot: Int)
   {

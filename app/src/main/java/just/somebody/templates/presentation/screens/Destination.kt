@@ -18,6 +18,9 @@ sealed interface Destination
   /** Represents the filtered bookmarked layout collection view. */
   @Serializable data object Favorites                   : Destination
 
+  /** Represents the user-defined custom game list management screen. */
+  @Serializable data object Collections                 : Destination
+
   /** Represents the dedicated searchable query input and matching result grid panel. */
   @Serializable data object Search                      : Destination
 

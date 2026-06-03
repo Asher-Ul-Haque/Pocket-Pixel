@@ -6,6 +6,7 @@ import just.somebody.templates.App
 import just.somebody.templates.appModule.ForgeLogger
 import just.somebody.templates.appModule.NetworkStatus
 import just.somebody.templates.domain.models.Game
+import just.somebody.templates.domain.models.GameCollection
 import just.somebody.templates.domain.repositories.GameRepository
 import just.somebody.templates.presentation.screens.Destination
 import kotlinx.coroutines.Dispatchers
@@ -71,6 +72,23 @@ class GamesViewModel(private val REPO : GameRepository) : ViewModel()
   val newGames : StateFlow<List<Game>> =
     REPO
       .getNeverPlayedGames()
+      .stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        emptyList())
+
+  /** Hot flow broadcasting the top 10 games by total play time accumulation. */
+  val topMostPlayedGames : StateFlow<List<Game>> =
+    REPO
+      .getTopMostPlayedGames(10)
+      .stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        emptyList())
+
+  /** Hot flow broadcasting all custom and system game collections. */
+  val collections : StateFlow<List<GameCollection>> =
+    App.appModule.collectionRepo.getAllCollections()
       .stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5000),
@@ -167,6 +185,13 @@ class GamesViewModel(private val REPO : GameRepository) : ViewModel()
       val key                     = "GAME_BOY_ROMS"
       val repo                    = App.appModule.repo
       repo.syncGamesWithStorage(key)
+    }
+  }
+
+  fun addToCollection(collectionId: Long, gameId: Long)
+  {
+    viewModelScope.launch {
+      App.appModule.collectionRepo.addGameToCollection(collectionId, gameId)
     }
   }
 

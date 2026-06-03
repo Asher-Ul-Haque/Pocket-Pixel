@@ -2,6 +2,7 @@ package just.somebody.templates.presentation.viewModels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import just.somebody.templates.App
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,6 +23,7 @@ class SplashViewModel : ViewModel()
   {
     viewModelScope.launch ()
     {
+      App.appModule.collectionRepo.ensureSystemCollections()
       delay(1000)
       _isReady.value = true
     }

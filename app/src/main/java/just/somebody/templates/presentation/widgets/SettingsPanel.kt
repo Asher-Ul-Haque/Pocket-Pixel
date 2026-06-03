@@ -333,7 +333,7 @@ private fun SaveStateSection(EMULATOR: EmulatorViewModel)
             modifier = Modifier
               .fillMaxWidth()
               .aspectRatio(160f / 144f)
-              .background(Color.Black),
+              .background(GameBoyColors.DarkGreen),
             contentAlignment = Alignment.Center)
           {
             if (screenshotFile.exists())
@@ -419,6 +419,20 @@ private fun MiscSettingsSection(EMULATOR: EmulatorViewModel)
         if (settings.isImmersiveModeEnabled)  stringResource(R.string.immersive_on)
         else                                  stringResource(R.string.immersive_off),
         FONT_SIZE = 14)
+    }
+
+    CustomButton(
+      ON_CLICK = { EMULATOR.takeScreenshot() },
+      MODIFIER = Modifier.fillMaxWidth())
+    {
+      CustomText(stringResource(R.string.SCREENSHOT), FONT_SIZE = 14)
+    }
+
+    CustomButton(
+      ON_CLICK = { EMULATOR.openScreenshots() },
+      MODIFIER = Modifier.fillMaxWidth())
+    {
+      CustomText(stringResource(R.string.VIEW_SCREENSHOTS), FONT_SIZE = 14)
     }
 
     if (game != null)

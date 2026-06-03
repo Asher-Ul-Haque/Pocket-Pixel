@@ -29,6 +29,7 @@ import just.somebody.templates.data.DefaultBoxArtFetcher
 import just.somebody.templates.appModule.storage.DefaultExternalStorageManager
 import just.somebody.templates.appModule.storage.ExternalStorageManager
 import just.somebody.templates.appModule.storage.SaveStateManager
+import just.somebody.templates.appModule.storage.ScreenshotManager
 import just.somebody.templates.domain.GameBoy
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -93,6 +94,12 @@ interface AppModuleInterface
   /** Workspace supervisor serializing ongoing running emulator states onto local storage files. */
   val saveStateManager       : SaveStateManager
 
+  /** Controller managing the capturing and viewing of game screenshots. */
+  val screenshotManager      : ScreenshotManager
+
+  /** Global scope for background operations. */
+  val mainScope              : CoroutineScope
+
   /** Evaluates if the running device display is in a landscape orientation. */
   @Composable fun isLandscape() : Boolean
 }
@@ -123,6 +130,8 @@ class AppModule(private val APP_CONTEXT : Context) : AppModuleInterface
   override val gameBoy                : GameBoy                 by lazy { GameBoy() }
   override val gameControllerManager  : GameControllerManager   by lazy { DefaultGameControllerManager(APP_CONTEXT) }
   override val saveStateManager       : SaveStateManager        by lazy { SaveStateManager(APP_CONTEXT, database.saveStateDAO()) }
+  override val screenshotManager      : ScreenshotManager       by lazy { ScreenshotManager(APP_CONTEXT) }
+  override val mainScope              : CoroutineScope          by lazy { CoroutineScope(Dispatchers.Main + SupervisorJob()) }
 
   /**
    * Private DataStore instance managing raw persistent mutations of [AppSettings].

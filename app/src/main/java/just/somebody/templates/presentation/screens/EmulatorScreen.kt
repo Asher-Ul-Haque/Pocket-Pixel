@@ -385,7 +385,7 @@ private fun EmulatorPreviewPortrait()
     SHOW_SETTINGS       = false,
     ON_INTERACTION      = {},
     ON_TOGGLE_SETTINGS  = {},
-    VIEWPORT            = { Box(modifier = it.background(Color.DarkGray)) },
+    VIEWPORT            = { Box(modifier = it.background(GameBoyColors.DarkGreen)) },
     CONTROLS            =
       {
         Box(
@@ -400,28 +400,28 @@ private fun EmulatorPreviewPortrait()
         Box(
           modifier = Modifier
             .size(120.dp)
-            .background(Color.Gray))
+            .background(GameBoyColors.DarkGreen))
       },
     ACTION_BUTTONS    =
       {
         Box(
           modifier = Modifier
             .size(120.dp)
-            .background(Color.Gray))
+            .background(GameBoyColors.DarkGreen))
       },
     SELECT_BUTTON     =
       {
         Box(
           modifier = Modifier
             .size(80.dp, 40.dp)
-            .background(Color.Gray))
+            .background(GameBoyColors.DarkGreen))
       },
     START_BUTTON      =
       {
         Box(
           modifier = Modifier
             .size(80.dp, 40.dp)
-            .background(Color.Gray))
+            .background(GameBoyColors.DarkGreen))
       })
 }
 
@@ -439,7 +439,7 @@ private fun EmulatorPreviewLandscape()
     SHOW_SETTINGS       = false,
     ON_INTERACTION      = {},
     ON_TOGGLE_SETTINGS  = {},
-    VIEWPORT            = { Box(modifier = it.background(Color.DarkGray)) },
+    VIEWPORT            = { Box(modifier = it.background(GameBoyColors.DarkGreen)) },
     CONTROLS            = {},
     SETTINGS_PANEL      = {},
     D_PAD               =
@@ -447,27 +447,27 @@ private fun EmulatorPreviewLandscape()
         Box(
           modifier = Modifier
             .size(120.dp)
-            .background(Color.Gray))
+            .background(GameBoyColors.DarkGreen))
       },
     ACTION_BUTTONS      =
       {
         Box(
           modifier = Modifier
             .size(120.dp)
-            .background(Color.Gray))
+            .background(GameBoyColors.DarkGreen))
       },
     SELECT_BUTTON =
       {
         Box(
           modifier = Modifier
             .size(80.dp, 40.dp)
-            .background(Color.Gray))
+            .background(GameBoyColors.DarkGreen))
       },
     START_BUTTON  =
       {
         Box(
           modifier = Modifier
             .size(80.dp, 40.dp)
-            .background(Color.Gray))
+            .background(GameBoyColors.DarkGreen))
       })
 }

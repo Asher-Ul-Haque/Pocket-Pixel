@@ -34,6 +34,7 @@ fun FavoriteScreen(
 {
   val favoriteGames  = VIEW_MODEL.favoriteGames.collectAsState()
   val selectedGame   = VIEW_MODEL.selectedGame.collectAsState()
+  val collections    = VIEW_MODEL.collections.collectAsState()
   val empty          = favoriteGames.value.isEmpty()
 
   Box(modifier = MODIFIFER
@@ -80,7 +81,12 @@ fun FavoriteScreen(
             VIEW_MODEL.toggleFavorite(game)
             VIEW_MODEL.selectGame(null)
           },
-        ON_UPDATE_BOXART = { url -> VIEW_MODEL.updateBoxArtUrl(game, url) })
+        ON_UPDATE_BOXART = { url -> VIEW_MODEL.updateBoxArtUrl(game, url) },
+        COLLECTIONS      = collections.value,
+        ON_ADD_TO_COLLECTION = { collectionId ->
+          VIEW_MODEL.addToCollection(collectionId, game.id)
+          VIEW_MODEL.selectGame(null)
+        })
     }
   }
 }
