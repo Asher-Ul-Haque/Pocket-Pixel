@@ -15,7 +15,7 @@ import just.somebody.templates.data.entities.SaveStateEntity
  */
 @Database(
   entities = [ GameEntity::class, SaveStateEntity::class ],
-  version  = 5)
+  version  = 6)
 abstract class PixelPocketDB : RoomDatabase()
 {
   /**

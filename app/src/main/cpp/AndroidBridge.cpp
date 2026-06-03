@@ -48,6 +48,7 @@ static std::thread g_emulatorThread;
 static std::atomic<bool> g_running{false};
 static std::atomic<bool> g_paused{false};
 static std::mutex g_pauseMutex;
+static std::mutex g_stateMutex;
 static std::condition_variable g_pauseCv;
 
 static std::atomic<bool> g_fastForward{false};
@@ -163,23 +164,26 @@ void emulatorLoop() {
             if (!g_running) break;
         }
 
-        // Run until frame is ready
-        while (g_running && !g_paused && !ppu->frameReady) {
-            cpuTick();
+        {
+            std::lock_guard<std::mutex> lock(g_stateMutex);
+            // Run until frame is ready
+            while (g_running && !g_paused && !ppu->frameReady) {
+                cpuTick();
 
-            if (cpu->stopped) {
-                if (ppu->registers.key1 & 0x01) {
-                    ppuExecuteSpeedSwitch();
-                    cpu->stopped = false;
+                if (cpu->stopped) {
+                    if (ppu->registers.key1 & 0x01) {
+                        ppuExecuteSpeedSwitch();
+                        cpu->stopped = false;
+                    }
                 }
-            }
 
-            timerStepMCycle();
-            apuTick();
+                timerStepMCycle();
+                apuTick();
 
-            u8 dotsToTick = (ppu->registers.key1 & 0x80) ? 2 : 4;
-            for (u8 i = 0; i < dotsToTick; ++i) {
-                ppuTick();
+                u8 dotsToTick = (ppu->registers.key1 & 0x80) ? 2 : 4;
+                for (u8 i = 0; i < dotsToTick; ++i) {
+                    ppuTick();
+                }
             }
         }
 
@@ -500,6 +504,7 @@ Java_just_somebody_templates_domain_GameBoy_nativeCaptureFrame(JNIEnv *env, jobj
 
 JNIEXPORT jbyteArray JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeSaveState(JNIEnv *env, jobject thiz) {
+    std::lock_guard<std::mutex> lock(g_stateMutex);
     u32 size = 0;
     u8* data = systemSaveStateToMemory(&size);
     if (!data) return nullptr;
@@ -511,6 +516,7 @@ Java_just_somebody_templates_domain_GameBoy_nativeSaveState(JNIEnv *env, jobject
 
 JNIEXPORT jboolean JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeLoadState(JNIEnv *env, jobject thiz, jbyteArray data, jint size) {
+    std::lock_guard<std::mutex> lock(g_stateMutex);
     u8* buffer = (u8*)malloc(size);
     env->GetByteArrayRegion(data, 0, size, (jbyte*)buffer);
     bool success = systemLoadStateFromMemory(buffer, size);
