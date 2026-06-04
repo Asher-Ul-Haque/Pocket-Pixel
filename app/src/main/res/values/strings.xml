@@ -1,15 +1,15 @@
 <resources>
-    <string name = "app_name">     Pixel Pocket                </string>
+    <string name = "app_name">Pocket Pixel</string>
     <string name = "HOME">         Home                        </string>
     <string name = "FAV">          Favorites                   </string>
     <string name = "SEARCH">       Search                      </string>
     <string name = "SETTINGS">     Settings                    </string>
-    <string name = "HOW_TO">       How do I use Pixel Pocket   </string>
+    <string name = "HOW_TO">       How do I use Pocket Pixel   </string>
     <string name = "NOT_WORKING">  Why is your app not working </string>
     <string name = "LEGAL">        Is this app legal           </string>
     <string name = "USAGE">
       Copy all your .gb ROM files into a directory on your device and select it.
-      This gives pixel pocket access to all files in this directory.
+      This gives Pocket Pixel access to all files in this directory.
       After the scan is complete, you should see your games
     </string>
     <string name = "TROUBLESHOOT">
@@ -28,7 +28,7 @@
     <string name = "GITHUB"> Github link </string>
     <string name = "SELECT"> Select ROMs directory </string>
     <string name = "SCAN">
-      Pixel Pocket needs to scan a directory containing Game Boy ROMs.
+      Pocket Pixel needs to scan a directory containing Game Boy ROMs.
       This might take a few seconds.
     </string>
     <string name = "DIRECTORY"> Select Directory </string>
@@ -47,7 +47,7 @@
     <string name = "DELTE_SAV"> Delete Save File </string>
 
     <string name="no_directory_picked">No directory picked</string>
-    <string name="enjoying_pixel_pocket">Enjoying Pixel Pocket?</string>
+    <string name="enjoying_pixel_pocket">Enjoying Pocket Pixel?</string>
     <string name="rating_help">Your rating helps me make it better!</string>
     <string name="rate_now">Rate Now</string>
     <string name="maybe_later">Maybe Later</string>

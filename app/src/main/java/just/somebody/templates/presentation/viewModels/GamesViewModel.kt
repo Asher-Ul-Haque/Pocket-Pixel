@@ -8,6 +8,8 @@ import just.somebody.templates.appModule.NetworkStatus
 import just.somebody.templates.domain.models.Game
 import just.somebody.templates.domain.models.GameCollection
 import just.somebody.templates.domain.repositories.GameRepository
+import just.somebody.templates.presentation.effects.SoundController
+import just.somebody.templates.presentation.effects.SoundEffect
 import just.somebody.templates.presentation.screens.Destination
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -154,7 +156,10 @@ class GamesViewModel(private val REPO : GameRepository) : ViewModel()
   /** Inverts relational visibility flags on target rows and posts updates onto persistent storage. */
   fun toggleFavorite(GAME : Game)
   {
-    viewModelScope.launch { REPO.updateGame(GAME.copy(isFavorite = !GAME.isFavorite)) }
+    viewModelScope.launch {
+      REPO.updateGame(GAME.copy(isFavorite = !GAME.isFavorite))
+      SoundController.playSound(SoundEffect.Ping2)
+    }
   }
 
   /** Commits direct data modifications adding graphic path link fields into targeted database profiles. */
@@ -173,6 +178,7 @@ class GamesViewModel(private val REPO : GameRepository) : ViewModel()
     viewModelScope.launch ()
     {
       REPO.updateLastPlayed(GAME.id, System.currentTimeMillis())
+      SoundController.playSound(SoundEffect.Click)
       App.appModule.navigator.navigate(Destination.Emulator(GAME.romUri))
     }
   }
@@ -192,6 +198,7 @@ class GamesViewModel(private val REPO : GameRepository) : ViewModel()
   {
     viewModelScope.launch {
       App.appModule.collectionRepo.addGameToCollection(collectionId, gameId)
+      SoundController.playSound(SoundEffect.Ping2)
     }
   }
 

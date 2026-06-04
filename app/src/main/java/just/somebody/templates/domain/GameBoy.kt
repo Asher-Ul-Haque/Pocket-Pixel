@@ -244,6 +244,7 @@ class GameBoy
     }
 
     @JvmStatic
+    @Synchronized
     fun nativePlayAudio(SAMPLES: FloatArray)
     {
       audioTrack?.write(SAMPLES, 0, SAMPLES.size, AudioTrack.WRITE_BLOCKING)

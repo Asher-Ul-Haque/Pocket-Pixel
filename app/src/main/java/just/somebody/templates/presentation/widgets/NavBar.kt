@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -32,6 +33,7 @@ import just.somebody.templates.ui.theme.GameBoyColors
 import just.somebody.templates.ui.theme.MinecraftFontFamily
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.runtime.getValue
 
 /**
  * Data blueprint mapping properties for a single navigation destination slot.
@@ -149,13 +151,23 @@ private fun NavList(
           val icon =
             if (isSelected) item.selectedIcon
             else            item.unselectedIcon;
+          
+          val iconScale by androidx.compose.animation.core.animateFloatAsState(
+            targetValue = if (isSelected) 1.2f else 1f,
+            animationSpec = androidx.compose.animation.core.spring(
+              dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+              stiffness = androidx.compose.animation.core.Spring.StiffnessLow
+            ),
+            label = "nav_icon_scale"
+          )
+
           Icon(
             painter             = painterResource(icon),
             contentDescription  = item.title,
             tint                =
               if (isSelected) GameBoyColors.LightGreen
               else            GameBoyColors.DarkGreen,
-            modifier            = Modifier.size(24.dp))
+            modifier            = Modifier.size(24.dp).graphicsLayer(scaleX = iconScale, scaleY = iconScale))
           if (item.badgeCount != null)
           {
             Box(

@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
@@ -79,6 +80,7 @@ fun GameCard(
 
   Card(
     shape = RectangleShape,
+    colors = CardDefaults.cardColors(containerColor = GameBoyColors.MediumGreen),
     modifier = Modifier
       .width(cardWidth)
       .graphicsLayer(scaleX = cardScale, scaleY = cardScale)
@@ -162,43 +164,20 @@ fun GameList(
       {
         if (SHOW_TITLE) CustomText(TITLE)
 
-        if (App.appModule.isLandscape())
+        LazyVerticalGrid(
+          columns = GridCells.Adaptive(minSize = if (BIG) 180.dp else 130.dp),
+          verticalArrangement = Arrangement.spacedBy(12.dp),
+          horizontalArrangement = Arrangement.spacedBy(12.dp),
+          contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 100.dp),
+          modifier = Modifier.fillMaxSize())
         {
-          LazyHorizontalGrid(
-            rows = GridCells.Fixed(1),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = PaddingValues(16.dp),
-            modifier = Modifier.fillMaxSize())
-          {
-            items(GAMES, key = { it.id }) { game ->
-              AnimatedVisibility(
-                visible = true,
-                enter = fadeIn() + expandHorizontally(),
-                modifier = Modifier.animateItem()
-              ) {
-                GameCard(GAME = game, ON_CLICK = ON_CLICK, ON_LONG_PRESS = ON_LONG_PRESS, IMAGE_URL = GET_URL, BIG = BIG)
-              }
-            }
-          }
-        }
-        else
-        {
-          LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = PaddingValues(16.dp),
-            modifier = Modifier.fillMaxHeight())
-          {
-            items(GAMES, key = { it.id }) { game ->
-              AnimatedVisibility(
-                visible = true,
-                enter = fadeIn() + expandVertically(),
-                modifier = Modifier.animateItem()
-              ) {
-                GameCard(GAME = game, ON_CLICK = ON_CLICK, ON_LONG_PRESS = ON_LONG_PRESS, IMAGE_URL = GET_URL, BIG = BIG)
-              }
+          items(GAMES, key = { it.id }) { game ->
+            AnimatedVisibility(
+              visible = true,
+              enter = fadeIn() + expandVertically(),
+              modifier = Modifier.animateItem()
+            ) {
+              GameCard(GAME = game, ON_CLICK = ON_CLICK, ON_LONG_PRESS = ON_LONG_PRESS, IMAGE_URL = GET_URL, BIG = BIG)
             }
           }
         }
@@ -253,28 +232,91 @@ fun GameActionBottomSheet(
           shape = RectangleShape)
 
         CustomButton(ON_CLICK = { ON_UPDATE_BOXART(boxArtUrl) }, MODIFIER = Modifier.fillMaxWidth())
-        { CustomText(stringResource(R.string.UPDATE_BOX_ART)) }
+        { 
+          Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Start) {
+            Icon(painterResource(R.drawable.redo), null, tint = GameBoyColors.DarkGreen, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(12.dp))
+            CustomText(stringResource(R.string.UPDATE_BOX_ART), FONT_SIZE = 14, MODIFIER = Modifier) 
+          }
+        }
 
         CustomButton(ON_CLICK = ON_PLAY, MODIFIER = Modifier.fillMaxWidth())
-        { CustomText(stringResource(R.string.PLAY)) }
+        { 
+          Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Start) {
+            Icon(painterResource(R.drawable.gamepad), null, tint = GameBoyColors.DarkGreen, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(12.dp))
+            CustomText(stringResource(R.string.PLAY), FONT_SIZE = 14, MODIFIER = Modifier) 
+          }
+        }
 
         CustomButton(ON_CLICK = { App.appModule.screenshotManager.openScreenshotsForGame(GAME.title) }, MODIFIER = Modifier.fillMaxWidth())
-        { CustomText(stringResource(R.string.VIEW_SCREENSHOTS)) }
+        { 
+          Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Start) {
+            Icon(painterResource(R.drawable.camera), null, tint = GameBoyColors.DarkGreen, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(12.dp))
+            CustomText(stringResource(R.string.VIEW_SCREENSHOTS), FONT_SIZE = 14, MODIFIER = Modifier) 
+          }
+        }
 
         if (IN_COLLECTION_ID != null)
         {
           CustomButton(ON_CLICK = { ON_REMOVE_FROM_COLLECTION(IN_COLLECTION_ID) }, MODIFIER = Modifier.fillMaxWidth(), COLOR = GameBoyColors.Error)
-          { CustomText(stringResource(R.string.REMOVE_FROM_LIST)) }
+          { 
+            Row(
+              modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.Start) {
+              Icon(painterResource(R.drawable.trash), null, tint = GameBoyColors.DarkGreen, modifier = Modifier.size(18.dp))
+              Spacer(Modifier.width(12.dp))
+              CustomText(stringResource(R.string.REMOVE_FROM_LIST), FONT_SIZE = 14, MODIFIER = Modifier) 
+            }
+          }
         }
 
         CustomButton(ON_CLICK = { showCollectionPicker = true }, MODIFIER = Modifier.fillMaxWidth())
-        { CustomText(stringResource(R.string.ADD_TO_LIST)) }
+        { 
+          Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Start) {
+            Icon(painterResource(R.drawable.list), null, tint = GameBoyColors.DarkGreen, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(12.dp))
+            CustomText(stringResource(R.string.ADD_TO_LIST), FONT_SIZE = 14, MODIFIER = Modifier) 
+          }
+        }
 
         CustomButton(ON_CLICK = ON_FAVORITE, MODIFIER = Modifier.fillMaxWidth())
-        { CustomText(if (!GAME.isFavorite) stringResource(R.string.ADD_FAV) else stringResource(R.string.REMOVE_FAV)) }
+        { 
+          Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Start) {
+            Icon(painterResource(R.drawable.heart), null, tint = GameBoyColors.DarkGreen, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(12.dp))
+            CustomText(if (!GAME.isFavorite) stringResource(R.string.ADD_FAV) else stringResource(R.string.REMOVE_FAV), FONT_SIZE = 14, MODIFIER = Modifier)
+          }
+        }
 
         CustomButton(ON_CLICK = { App.appModule.gameBoy.deleteRamFile(GAME.romUri) }, MODIFIER = Modifier.fillMaxWidth(), COLOR = GameBoyColors.Error)
-        { CustomText(TEXT = stringResource(R.string.DELTE_SAV)) }
+        { 
+          Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Start) {
+            Icon(painterResource(R.drawable.trash), null, tint = GameBoyColors.DarkGreen, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(12.dp))
+            CustomText(TEXT = stringResource(R.string.DELTE_SAV), FONT_SIZE = 14, MODIFIER = Modifier)
+          }
+        }
       }
       else
       {

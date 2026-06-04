@@ -27,6 +27,8 @@ import just.somebody.templates.App
 import just.somebody.templates.R
 import just.somebody.templates.domain.Buttons
 import just.somebody.templates.domain.PauseTrigger
+import just.somebody.templates.presentation.effects.SoundController
+import just.somebody.templates.presentation.effects.SoundEffect
 import just.somebody.templates.presentation.viewModels.EmulatorViewModel
 import just.somebody.templates.presentation.widgets.GameBoyActionButtons
 import just.somebody.templates.presentation.widgets.GameBoyControls
@@ -109,7 +111,10 @@ fun EmulatorScreen(
   // - - - Handle Settings Modal Pause
   LaunchedEffect(showSettings.value)
   {
-    if (showSettings.value) VIEW_MODEL.pause(PauseTrigger.SETTINGS)
+    if (showSettings.value) {
+      SoundController.playSound(SoundEffect.Menu)
+      VIEW_MODEL.pause(PauseTrigger.SETTINGS)
+    }
     else                    VIEW_MODEL.resume(PauseTrigger.SETTINGS)
   }
 

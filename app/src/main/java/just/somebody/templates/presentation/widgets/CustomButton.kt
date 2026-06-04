@@ -1,6 +1,9 @@
 package just.somebody.templates.presentation.widgets
 
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -19,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import just.somebody.templates.presentation.effects.SoundController
 import just.somebody.templates.presentation.effects.SoundEffect
@@ -36,6 +40,13 @@ fun CustomButton(
   val scope             = rememberCoroutineScope()
   val interactionSource = remember { MutableInteractionSource() }
   val isPressed by interactionSource.collectIsPressedAsState()
+  
+  val scale by animateFloatAsState(
+    targetValue = if (isPressed) 0.96f else 1f,
+    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+    label = "button_scale"
+  )
+
   val elevation by animateDpAsState(
     if (isPressed)  0.dp
     else            4.dp,
@@ -48,6 +59,7 @@ fun CustomButton(
   Box(
     modifier = MODIFIER
       .minimumInteractiveComponentSize()
+      .graphicsLayer(scaleX = scale, scaleY = scale)
       .clickable(
         interactionSource = interactionSource,
         indication        = null,

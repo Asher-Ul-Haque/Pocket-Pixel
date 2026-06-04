@@ -13,6 +13,8 @@ import just.somebody.templates.domain.models.Game
 import just.somebody.templates.domain.models.PRESET_PALETTES
 import just.somebody.templates.presentation.effects.SnackbarController
 import just.somebody.templates.presentation.effects.SnackbarEvent
+import just.somebody.templates.presentation.effects.SoundController
+import just.somebody.templates.presentation.effects.SoundEffect
 import just.somebody.templates.presentation.screens.Destination
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -139,10 +141,14 @@ class EmulatorViewModel : ViewModel()
     val gameId : Long       = _currentGame.value?.id ?: return
     val data   : ByteArray  = gameBoy.saveState() ?: return
     val screenshot = gameBoy.nativeCaptureFrame()
+
+    pause(PauseTrigger.IO)
     viewModelScope.launch()
     {
       App.appModule.saveStateManager.saveState(gameId, SLOT, data, screenshot)
+      SoundController.playSound(SoundEffect.Ping)
       SnackbarController.sendEvent(SnackbarEvent(App.appModule.context.getString(R.string.state_saved, SLOT)))
+      resume(PauseTrigger.IO)
     }
   }
 
@@ -156,7 +162,12 @@ class EmulatorViewModel : ViewModel()
       val success = App.appModule.screenshotManager.saveScreenshot(game.title, pixels)
       if (success)
       {
+        SoundController.playSound(SoundEffect.Screenshot)
         SnackbarController.sendEvent(SnackbarEvent(App.appModule.context.getString(R.string.SCREENSHOT_SAVED)))
+      }
+      else
+      {
+        SoundController.playSound(SoundEffect.Error)
       }
     }
   }
@@ -172,17 +183,30 @@ class EmulatorViewModel : ViewModel()
   fun loadState(slot: Int)
   {
     val gameId = _currentGame.value?.id ?: return
+    
+    pause(PauseTrigger.IO)
     viewModelScope.launch()
     {
       val data = App.appModule.saveStateManager.loadState(gameId, slot)
       if (data != null)
       {
         if (gameBoy.loadState(data))
-        { SnackbarController.sendEvent(SnackbarEvent(App.appModule.context.getString(R.string.state_loaded, slot))) }
-        else { SnackbarController.sendEvent(SnackbarEvent(App.appModule.context.getString(R.string.failed_load_state))) }
+        {
+          SoundController.playSound(SoundEffect.Ping2)
+          SnackbarController.sendEvent(SnackbarEvent(App.appModule.context.getString(R.string.state_loaded, slot)))
+        }
+        else
+        {
+          SoundController.playSound(SoundEffect.Error)
+          SnackbarController.sendEvent(SnackbarEvent(App.appModule.context.getString(R.string.failed_load_state)))
+        }
       }
       else
-      { SnackbarController.sendEvent(SnackbarEvent(App.appModule.context.getString(R.string.no_state_in_slot, slot))) }
+      {
+        SoundController.playSound(SoundEffect.Error)
+        SnackbarController.sendEvent(SnackbarEvent(App.appModule.context.getString(R.string.no_state_in_slot, slot)))
+      }
+      resume(PauseTrigger.IO)
     }
   }
 

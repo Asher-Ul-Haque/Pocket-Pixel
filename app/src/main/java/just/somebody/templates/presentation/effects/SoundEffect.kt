@@ -20,7 +20,22 @@ enum class SoundEffect
   Click,
 
   /** Dynamic initialization wave chime triggered when moving past introductory layout screens. */
-  Splash
+  Splash,
+
+  /** Feedback sound for invalid actions or system errors. */
+  Error,
+
+  /** Soft sound for opening menus or bottom sheets. */
+  Menu,
+
+  /** Bright success notification sound. */
+  Ping,
+
+  /** Softer, subtle success or interaction sound. */
+  Ping2,
+
+  /** Mechanical shutter sound for capturing screen frames. */
+  Screenshot
 }
 
 /**
@@ -48,8 +63,13 @@ object SoundController
       .setAudioAttributes(audioAttributes)
       .build()
 
-    soundMap[SoundEffect.Click]  = soundPool.load(App.appModule.context, R.raw.click, 1);
-    soundMap[SoundEffect.Splash] = soundPool.load(App.appModule.context, R.raw.splash, 1);
+    soundMap[SoundEffect.Click]      = soundPool.load(App.appModule.context, R.raw.click, 1)
+    soundMap[SoundEffect.Splash]     = soundPool.load(App.appModule.context, R.raw.splash, 1)
+    soundMap[SoundEffect.Error]      = soundPool.load(App.appModule.context, R.raw.error, 1)
+    soundMap[SoundEffect.Menu]       = soundPool.load(App.appModule.context, R.raw.menu, 1)
+    soundMap[SoundEffect.Ping]       = soundPool.load(App.appModule.context, R.raw.ping, 1)
+    soundMap[SoundEffect.Ping2]      = soundPool.load(App.appModule.context, R.raw.ping_2, 1)
+    soundMap[SoundEffect.Screenshot] = soundPool.load(App.appModule.context, R.raw.screenshot, 1)
   }
 
   /**

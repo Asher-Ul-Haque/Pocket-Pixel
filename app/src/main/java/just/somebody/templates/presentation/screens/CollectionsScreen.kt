@@ -17,6 +17,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import just.somebody.templates.App
 import just.somebody.templates.R
+import just.somebody.templates.presentation.effects.SoundController
+import just.somebody.templates.presentation.effects.SoundEffect
 import just.somebody.templates.presentation.viewModels.CollectionsViewModel
 import just.somebody.templates.presentation.widgets.*
 import just.somebody.templates.ui.theme.GameBoyColors
@@ -30,6 +32,13 @@ fun CollectionsScreen(
   val collections  by VIEW_MODEL.collections.collectAsState()
   val selectedGame by VIEW_MODEL.selectedGame.collectAsState()
   var showCreateDialog by remember { mutableStateOf(false) }
+  val scope = rememberCoroutineScope()
+
+  LaunchedEffect(selectedGame) {
+    if (selectedGame != null) {
+      SoundController.playSound(SoundEffect.Menu)
+    }
+  }
 
   Box(modifier = MODIFIFER
     .fillMaxSize()
@@ -43,7 +52,13 @@ fun CollectionsScreen(
       CustomButton(
         ON_CLICK = { showCreateDialog = true },
         MODIFIER = Modifier.fillMaxWidth().padding(16.dp))
-      { CustomText(stringResource(R.string.CREATE_COLLECTION)) }
+      { 
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Icon(painterResource(R.drawable.list), null, tint = GameBoyColors.DarkGreen, modifier = Modifier.size(20.dp))
+          Spacer(Modifier.width(8.dp))
+          CustomText(stringResource(R.string.CREATE_COLLECTION), FONT_SIZE = 14) 
+        }
+      }
 
       collections.filter { !it.isSystem }.forEach { collection ->
         Row(
@@ -68,12 +83,15 @@ fun CollectionsScreen(
           TITLE         = "",
           SHOW_TITLE    = false,
           USE_ROW       = true,
+          BIG           = true,
           ON_CLICK      = { VIEW_MODEL.markAsPlayed(it) },
           ON_LONG_PRESS = { VIEW_MODEL.selectGame(it) },
           GET_URL       = { game -> VIEW_MODEL.getBoxArtFlow(game) })
         
         Spacer(modifier = Modifier.height(16.dp))
       }
+      
+      Spacer(modifier = Modifier.height(80.dp))
     }
 
     if (showCreateDialog)

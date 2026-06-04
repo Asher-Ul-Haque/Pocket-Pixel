@@ -9,6 +9,8 @@ import just.somebody.templates.domain.repositories.CollectionRepository
 import just.somebody.templates.domain.repositories.GameRepository
 import just.somebody.templates.presentation.effects.SnackbarController
 import just.somebody.templates.presentation.effects.SnackbarEvent
+import just.somebody.templates.presentation.effects.SoundController
+import just.somebody.templates.presentation.effects.SoundEffect
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -67,6 +69,7 @@ class CollectionsViewModel(
   {
     viewModelScope.launch {
       collectionRepo.addGameToCollection(collectionId, gameId)
+      SoundController.playSound(SoundEffect.Ping2)
       SnackbarController.sendEvent(SnackbarEvent("Added to collection"))
     }
   }
@@ -75,6 +78,7 @@ class CollectionsViewModel(
   {
     viewModelScope.launch {
       collectionRepo.removeGameFromCollection(collectionId, gameId)
+      SoundController.playSound(SoundEffect.Ping2)
       SnackbarController.sendEvent(SnackbarEvent("Removed from collection"))
       // Refresh current collection if selected
       _selectedCollection.value?.let { current ->

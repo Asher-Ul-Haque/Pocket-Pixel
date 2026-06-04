@@ -31,6 +31,7 @@ import just.somebody.templates.presentation.screens.Destination
 import just.somebody.templates.presentation.viewModels.BrowseViewModel
 import just.somebody.templates.presentation.viewModels.SplashViewModel
 import just.somebody.templates.presentation.viewModels.viewModelFactory
+import just.somebody.templates.domain.PauseTrigger
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity()
@@ -136,13 +137,13 @@ class MainActivity : ComponentActivity()
   override fun onStop()
   {
     super.onStop()
-    App.appModule.gameBoy.pauseEmulator()
+    App.appModule.gameBoy.pauseEmulator(PauseTrigger.FOCUS)
   }
 
   override fun onRestart()
   {
     super.onRestart()
-    App.appModule.gameBoy.resumeEmulator()
+    App.appModule.gameBoy.resumeEmulator(PauseTrigger.FOCUS)
   }
 
   override fun onDestroy()
