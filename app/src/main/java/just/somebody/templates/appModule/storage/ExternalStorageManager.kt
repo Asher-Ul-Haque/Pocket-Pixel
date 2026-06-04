@@ -102,6 +102,9 @@ interface ExternalStorageManager
 
   /** Unlinks or deletes an element entry matching the raw path signature within [TARGET_FILE_URI]. */
   suspend fun deleteFileFromUri(TARGET_FILE_URI : Uri) : Boolean
+
+  /** Resolves or creates a subdirectory within a parent [DocumentFile]. */
+  suspend fun getOrCreateDirectory(PARENT: DocumentFile, NAME: String): DocumentFile?
 }
 
 class DefaultExternalStorageManager(
@@ -392,5 +395,10 @@ class DefaultExternalStorageManager(
     val deleted = targetFile.delete()
     ForgeLogger.info("Deleted file from URI $TARGET_FILE_URI: $deleted")
     return deleted
+  }
+
+  override suspend fun getOrCreateDirectory(PARENT: DocumentFile, NAME: String): DocumentFile?
+  {
+    return PARENT.findFile(NAME) ?: PARENT.createDirectory(NAME)
   }
 }

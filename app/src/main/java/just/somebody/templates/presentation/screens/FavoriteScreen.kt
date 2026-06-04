@@ -7,25 +7,25 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import just.somebody.templates.R
+import just.somebody.templates.presentation.effects.SoundController
+import just.somebody.templates.presentation.effects.SoundEffect
 import just.somebody.templates.presentation.viewModels.GamesViewModel
 import just.somebody.templates.presentation.widgets.CustomText
 import just.somebody.templates.ui.theme.GameBoyColors
 
 /**
  * Filtered dashboard display view collecting all user-bookmarked game cartridges.
- *
- * Checks continuous state indicators evaluating localized favorites. If the database returns an empty sequence,
- * it renders a standard retro text message. Otherwise, it presents a complete vertical responsive grid structure
- * of the saved games, maintaining full compatibility with the application's global interactive contextual menu sheet.
- *
- * @param VIEW_MODEL State coordinator facilitating persistent database reads and catalog indexing mutations.
- * @param MODIFIFER [Modifier] used to establish dimensional layout bounds or dimension scaling rules.
  */
 @Composable
 fun FavoriteScreen(
@@ -34,7 +34,14 @@ fun FavoriteScreen(
 {
   val favoriteGames  = VIEW_MODEL.favoriteGames.collectAsState()
   val selectedGame   = VIEW_MODEL.selectedGame.collectAsState()
+  val collections    = VIEW_MODEL.collections.collectAsState()
   val empty          = favoriteGames.value.isEmpty()
+
+  androidx.compose.runtime.LaunchedEffect(selectedGame.value) {
+    if (selectedGame.value != null) {
+      SoundController.playSound(SoundEffect.Menu)
+    }
+  }
 
   Box(modifier = MODIFIFER
     .fillMaxSize()
@@ -43,9 +50,18 @@ fun FavoriteScreen(
   {
     if (empty)
     {
-      CustomText(
-        TEXT      = stringResource(R.string.NO_FAV),
-        FONT_SIZE = 21)
+      Column(horizontalAlignment = Alignment.CenterHorizontally)
+      {
+        Icon(
+          painter = painterResource(R.drawable.heart),
+          contentDescription = null,
+          tint = GameBoyColors.MediumGreen,
+          modifier = Modifier.size(64.dp).padding(bottom = 16.dp)
+        )
+        CustomText(
+          TEXT      = stringResource(R.string.NO_FAV),
+          FONT_SIZE = 21)
+      }
     }
     else
     {
@@ -61,7 +77,8 @@ fun FavoriteScreen(
           ON_LONG_PRESS = { game -> VIEW_MODEL.selectGame(game)},
           GET_URL       = { game -> VIEW_MODEL.getBoxArtFlow(game) },
           USE_ROW       = false,
-          SHOW_TITLE    = false)
+          SHOW_TITLE    = false,
+          BIG           = false)
       }
     }
 
@@ -80,7 +97,12 @@ fun FavoriteScreen(
             VIEW_MODEL.toggleFavorite(game)
             VIEW_MODEL.selectGame(null)
           },
-        ON_UPDATE_BOXART = { url -> VIEW_MODEL.updateBoxArtUrl(game, url) })
+        ON_UPDATE_BOXART = { url -> VIEW_MODEL.updateBoxArtUrl(game, url) },
+        COLLECTIONS      = collections.value,
+        ON_ADD_TO_COLLECTION = { collectionId ->
+          VIEW_MODEL.addToCollection(collectionId, game.id)
+          VIEW_MODEL.selectGame(null)
+        })
     }
   }
 }

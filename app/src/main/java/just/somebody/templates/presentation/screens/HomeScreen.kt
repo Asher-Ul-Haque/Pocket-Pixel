@@ -2,6 +2,8 @@ package just.somebody.templates.presentation.screens
 
 import just.somebody.templates.presentation.widgets.GameActionBottomSheet
 import just.somebody.templates.presentation.widgets.GameList
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -12,10 +14,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -30,15 +35,20 @@ import just.somebody.templates.App
 import just.somebody.templates.R
 import just.somebody.templates.presentation.effects.SnackbarController
 import just.somebody.templates.presentation.effects.SnackbarEvent
+import just.somebody.templates.presentation.effects.SoundController
+import just.somebody.templates.presentation.effects.SoundEffect
 import just.somebody.templates.presentation.viewModels.GamesViewModel
 import just.somebody.templates.presentation.widgets.CustomButton
 import just.somebody.templates.presentation.widgets.CustomText
 import just.somebody.templates.ui.theme.GameBoyColors
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.material3.Icon
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import kotlinx.coroutines.launch
 import androidx.core.net.toUri
 
@@ -61,9 +71,17 @@ fun HomeScreen(
   val newGames       = VIEW_MODEL.newGames.collectAsState()
   val favoriteGames  = VIEW_MODEL.favoriteGames.collectAsState()
   val recentGames    = VIEW_MODEL.recentlyPlayedGames.collectAsState()
+  val topPlayedGames = VIEW_MODEL.topMostPlayedGames.collectAsState()
+  val collections    = VIEW_MODEL.collections.collectAsState()
   val selectedGame   = VIEW_MODEL.selectedGame.collectAsState()
   val settings       = App.appModule.dataStoreManager.settingsFlow.collectAsState(initial = null)
   val context        = LocalContext.current
+
+  LaunchedEffect(selectedGame.value) {
+    if (selectedGame.value != null) {
+      SoundController.playSound(SoundEffect.Menu)
+    }
+  }
 
   val showRatePrompt = remember(settings.value)
   {
@@ -111,6 +129,12 @@ fun HomeScreen(
             modifier            = Modifier.padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally)
           {
+            Icon(
+              painter = painterResource(R.drawable.heart),
+              contentDescription = null,
+              tint = GameBoyColors.DarkGreen,
+              modifier = Modifier.size(32.dp).padding(bottom = 8.dp)
+            )
             CustomText(stringResource(R.string.enjoying_pixel_pocket), FONT_SIZE = 18)
             CustomText(stringResource(R.string.rating_help), FONT_SIZE = 12, COLOR = GameBoyColors.Green)
             Spacer(modifier = Modifier.height(12.dp))
@@ -142,11 +166,31 @@ fun HomeScreen(
         Column(
           modifier            = Modifier
             .padding(16.dp)
-            .border(4.dp, GameBoyColors.Green, RectangleShape)
+            .fillMaxWidth()
             .wrapContentHeight(),
           verticalArrangement = Arrangement.Center,
           horizontalAlignment = Alignment.CenterHorizontally)
         {
+          val infiniteTransition = rememberInfiniteTransition(label = "floating")
+          val floatOffset by infiniteTransition.animateFloat(
+            initialValue = -10f,
+            targetValue = 10f,
+            animationSpec = infiniteRepeatable(
+              animation = tween(2000, easing = LinearOutSlowInEasing),
+              repeatMode = RepeatMode.Reverse
+            ),
+            label = "float_offset"
+          )
+
+          Image(
+            painter            = painterResource(R.drawable.no_games),
+            contentDescription = null,
+            modifier           = Modifier.size(120.dp).offset(y = floatOffset.dp),
+            contentScale       = androidx.compose.ui.layout.ContentScale.Fit
+          )
+          
+          Spacer(modifier = Modifier.height(16.dp))
+
           CustomText(
             TEXT      = stringResource(R.string.SELECT),
             FONT_SIZE = 21)
@@ -161,6 +205,13 @@ fun HomeScreen(
       }
       else
       {
+        GameList(
+          GAMES         = topPlayedGames.value,
+          TITLE         = stringResource(R.string.MOST_PLAYED),
+          ON_CLICK      = { game -> VIEW_MODEL.markAsPlayed(game) },
+          ON_LONG_PRESS = { game -> VIEW_MODEL.selectGame(game)},
+          GET_URL       = { game -> VIEW_MODEL.getBoxArtFlow(game) })
+
         GameList(
           GAMES         = favoriteGames.value,
           TITLE         = stringResource(R.string.FAV),
@@ -181,6 +232,17 @@ fun HomeScreen(
           ON_CLICK      = { game -> VIEW_MODEL.markAsPlayed(game) },
           ON_LONG_PRESS = { game -> VIEW_MODEL.selectGame(game) },
           GET_URL       = { game -> VIEW_MODEL.getBoxArtFlow(game) })
+
+        collections.value.filter { !it.isSystem }.forEach { collection ->
+          GameList(
+            GAMES         = collection.games,
+            TITLE         = collection.name,
+            ON_CLICK      = { game -> VIEW_MODEL.markAsPlayed(game) },
+            ON_LONG_PRESS = { game -> VIEW_MODEL.selectGame(game) },
+            GET_URL       = { game -> VIEW_MODEL.getBoxArtFlow(game) })
+        }
+        
+        Spacer(modifier = Modifier.height(80.dp))
       }
     }
 
@@ -199,7 +261,12 @@ fun HomeScreen(
             VIEW_MODEL.toggleFavorite(game)
             VIEW_MODEL.selectGame(null)
           },
-        ON_UPDATE_BOXART = { url -> VIEW_MODEL.updateBoxArtUrl(game, url) })
+        ON_UPDATE_BOXART = { url -> VIEW_MODEL.updateBoxArtUrl(game, url) },
+        COLLECTIONS      = collections.value,
+        ON_ADD_TO_COLLECTION = { collectionId -> 
+          VIEW_MODEL.addToCollection(collectionId, game.id)
+          VIEW_MODEL.selectGame(null)
+        })
     }
   }
 }

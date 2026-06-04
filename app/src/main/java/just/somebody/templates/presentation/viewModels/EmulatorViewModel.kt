@@ -13,6 +13,8 @@ import just.somebody.templates.domain.models.Game
 import just.somebody.templates.domain.models.PRESET_PALETTES
 import just.somebody.templates.presentation.effects.SnackbarController
 import just.somebody.templates.presentation.effects.SnackbarEvent
+import just.somebody.templates.presentation.effects.SoundController
+import just.somebody.templates.presentation.effects.SoundEffect
 import just.somebody.templates.presentation.screens.Destination
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,6 +31,7 @@ class EmulatorViewModel : ViewModel()
   private var currentROM      : ByteArray?  = null
   private var romReady        : Boolean     = false
   private var emulatorStarted : Boolean     = false
+  private var playStartTime   : Long        = 0L
   private val _settings       : MutableStateFlow<AppSettings> = MutableStateFlow<AppSettings>(AppSettings())
   public  val settings        : MutableStateFlow<AppSettings> = _settings
 
@@ -80,6 +83,10 @@ class EmulatorViewModel : ViewModel()
   {
     viewModelScope.launch()
     {
+      if (emulatorStarted)
+      {
+        updatePlayTime()
+      }
       GameBoy.resetActivityFlag()
       gameBoy.stopEmulator()
       romReady            = false
@@ -134,28 +141,72 @@ class EmulatorViewModel : ViewModel()
     val gameId : Long       = _currentGame.value?.id ?: return
     val data   : ByteArray  = gameBoy.saveState() ?: return
     val screenshot = gameBoy.nativeCaptureFrame()
+
+    pause(PauseTrigger.IO)
     viewModelScope.launch()
     {
       App.appModule.saveStateManager.saveState(gameId, SLOT, data, screenshot)
+      SoundController.playSound(SoundEffect.Ping)
       SnackbarController.sendEvent(SnackbarEvent(App.appModule.context.getString(R.string.state_saved, SLOT)))
+      resume(PauseTrigger.IO)
     }
+  }
+
+  /** Captures a high-quality PNG screenshot of the current emulator frame. */
+  fun takeScreenshot()
+  {
+    val game = _currentGame.value ?: return
+    val pixels = gameBoy.nativeCaptureFrame() ?: return
+    viewModelScope.launch()
+    {
+      val success = App.appModule.screenshotManager.saveScreenshot(game.title, pixels)
+      if (success)
+      {
+        SoundController.playSound(SoundEffect.Screenshot)
+        SnackbarController.sendEvent(SnackbarEvent(App.appModule.context.getString(R.string.SCREENSHOT_SAVED)))
+      }
+      else
+      {
+        SoundController.playSound(SoundEffect.Error)
+      }
+    }
+  }
+
+  /** Opens the directory containing screenshots for the currently running game. */
+  fun openScreenshots()
+  {
+    val game = _currentGame.value ?: return
+    App.appModule.screenshotManager.openScreenshotsForGame(game.title)
   }
 
   /** Pulls down historical memory snapshots from disk storage and forces register injection updates. */
   fun loadState(slot: Int)
   {
     val gameId = _currentGame.value?.id ?: return
+    
+    pause(PauseTrigger.IO)
     viewModelScope.launch()
     {
       val data = App.appModule.saveStateManager.loadState(gameId, slot)
       if (data != null)
       {
         if (gameBoy.loadState(data))
-        { SnackbarController.sendEvent(SnackbarEvent(App.appModule.context.getString(R.string.state_loaded, slot))) }
-        else { SnackbarController.sendEvent(SnackbarEvent(App.appModule.context.getString(R.string.failed_load_state))) }
+        {
+          SoundController.playSound(SoundEffect.Ping2)
+          SnackbarController.sendEvent(SnackbarEvent(App.appModule.context.getString(R.string.state_loaded, slot)))
+        }
+        else
+        {
+          SoundController.playSound(SoundEffect.Error)
+          SnackbarController.sendEvent(SnackbarEvent(App.appModule.context.getString(R.string.failed_load_state)))
+        }
       }
       else
-      { SnackbarController.sendEvent(SnackbarEvent(App.appModule.context.getString(R.string.no_state_in_slot, slot))) }
+      {
+        SoundController.playSound(SoundEffect.Error)
+        SnackbarController.sendEvent(SnackbarEvent(App.appModule.context.getString(R.string.no_state_in_slot, slot)))
+      }
+      resume(PauseTrigger.IO)
     }
   }
 
@@ -184,6 +235,27 @@ class EmulatorViewModel : ViewModel()
       applyCurrentSettings(currentSettings)
 
       emulatorStarted = true
+      playStartTime   = System.currentTimeMillis()
+      
+      _currentGame.value?.id?.let()
+      { id ->
+        App.appModule.repo.updateLastPlayed(id, playStartTime)
+      }
+    }
+  }
+
+  private fun updatePlayTime()
+  {
+    val gameId = _currentGame.value?.id ?: return
+    if (playStartTime == 0L) return
+
+    val now       = System.currentTimeMillis()
+    val duration  = now - playStartTime
+    playStartTime = now
+
+    viewModelScope.launch(Dispatchers.IO)
+    {
+      App.appModule.repo.updatePlayTime(gameId, duration)
     }
   }
 
@@ -271,5 +343,14 @@ class EmulatorViewModel : ViewModel()
       dataStore.updateSettings(updated)
       _settings.value = updated
     }
+  }
+
+  override fun onCleared()
+  {
+    if (emulatorStarted)
+    {
+      updatePlayTime()
+    }
+    super.onCleared()
   }
 }

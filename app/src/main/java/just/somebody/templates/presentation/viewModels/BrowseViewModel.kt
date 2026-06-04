@@ -64,8 +64,9 @@ class BrowseViewModel : ViewModel()
         when (NEW_INDEX)
         {
           1    -> Destination.Favorites
-          2    -> Destination.Search
-          3    -> Destination.Settings
+          2    -> Destination.Collections
+          3    -> Destination.Search
+          4    -> Destination.Settings
           else -> Destination.Home
         }
       App.appModule.navigator.replace(destination)
@@ -110,8 +111,9 @@ class BrowseViewModel : ViewModel()
     return when (_browseState.value.selectedIndex)
     {
       1    -> R.string.FAV
-      2    -> R.string.SEARCH
-      3    -> R.string.SETTINGS
+      2    -> R.string.COLLECTIONS
+      3    -> R.string.SEARCH
+      4    -> R.string.SETTINGS
       else -> R.string.HOME
     }
   }

@@ -1,5 +1,6 @@
 package just.somebody.templates.presentation.widgets
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -15,9 +16,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import just.somebody.templates.App
 import just.somebody.templates.R
 import just.somebody.templates.domain.GameBoy
@@ -26,6 +30,7 @@ import just.somebody.templates.presentation.viewModels.EmulatorViewModel
 import just.somebody.templates.ui.theme.GameBoyColors
 import java.util.Date
 import android.text.format.DateFormat
+import androidx.compose.foundation.layout.Arrangement
 import androidx.core.graphics.toColorInt
 
 /**
@@ -86,15 +91,33 @@ fun SettingsPanel(
             )
       {
         val tabs = listOf(
-          stringResource(R.string.audio),
-          stringResource(R.string.visual),
-          stringResource(R.string.states),
-          stringResource(R.string.misc))
-        tabs.forEachIndexed()
-        { index, title ->
-          Tab(selected = settingsPage == index, onClick = { settingsPage = index })
-          {
-            CustomText(title, FONT_SIZE = 12, MODIFIER = Modifier.padding(6.dp))
+          R.string.audio  to R.drawable.speaker,
+          R.string.visual to R.drawable.paint_blob,
+          R.string.states to R.drawable.gameboy,
+          R.string.misc   to R.drawable.settings
+        )
+        tabs.forEachIndexed { index, (titleRes, iconRes) ->
+          Tab(
+            selected = settingsPage == index,
+            onClick = { settingsPage = index }
+          ) {
+            Column(
+              horizontalAlignment = Alignment.CenterHorizontally,
+              modifier = Modifier.padding(6.dp)
+            ) {
+              Icon(
+                painter = painterResource(iconRes),
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = if (settingsPage == index) GameBoyColors.LightGreen else GameBoyColors.MediumGreen
+              )
+              CustomText(
+                stringResource(titleRes),
+                FONT_SIZE = 10,
+                MODIFIER = Modifier,
+                COLOR = if (settingsPage == index) GameBoyColors.LightGreen else GameBoyColors.MediumGreen
+              )
+            }
           }
         }
       }
@@ -301,11 +324,8 @@ private fun SaveStateSection(EMULATOR: EmulatorViewModel)
 
   Column(horizontalAlignment = Alignment.CenterHorizontally)
   {
-    CustomText(stringResource(R.string.save_slots), FONT_SIZE = 16)
-    Spacer(modifier = Modifier.height(4.dp))
-
     LazyRow(
-      horizontalArrangement = Arrangement.spacedBy(8.dp),
+      horizontalArrangement = Arrangement.SpaceEvenly,
       contentPadding        = PaddingValues(horizontal = 16.dp),
       modifier              = Modifier.fillMaxWidth())
     {
@@ -335,13 +355,16 @@ private fun SaveStateSection(EMULATOR: EmulatorViewModel)
             modifier = Modifier
               .fillMaxWidth()
               .aspectRatio(160f / 144f)
-              .background(Color.Black),
+              .background(GameBoyColors.DarkGreen),
             contentAlignment = Alignment.Center)
           {
             if (screenshotFile.exists())
             {
               AsyncImage(
-                model               = screenshotFile,
+                model               = ImageRequest.Builder(LocalContext.current)
+                  .data(screenshotFile)
+                  .memoryCacheKey("${screenshotFile.absolutePath}_${state?.timestamp ?: 0}")
+                  .build(),
                 contentDescription  = null,
                 modifier            = Modifier.fillMaxSize(),
                 contentScale        = ContentScale.Fit)
@@ -399,6 +422,17 @@ private fun MiscSettingsSection(EMULATOR: EmulatorViewModel)
 {
   val fastForward by EMULATOR.fastForward.collectAsState()
   val game        by EMULATOR.currentGame.collectAsState()
+  
+  val infiniteTransition = rememberInfiniteTransition(label = "ff_blink")
+  val ffAlpha by infiniteTransition.animateFloat(
+    initialValue = 1f,
+    targetValue = 0.4f,
+    animationSpec = infiniteRepeatable(
+      animation = tween(500, easing = LinearEasing),
+      repeatMode = RepeatMode.Reverse
+    ),
+    label = "ff_alpha"
+  )
 
   Column(verticalArrangement = Arrangement.spacedBy(8.dp))
   {
@@ -406,10 +440,25 @@ private fun MiscSettingsSection(EMULATOR: EmulatorViewModel)
       ON_CLICK = { EMULATOR.toggleFastForward() },
       MODIFIER = Modifier.fillMaxWidth())
     {
-      CustomText(
-        if (fastForward) stringResource(R.string.speed_2x)
-        else             stringResource(R.string.speed_1x),
-        FONT_SIZE = 14)
+      Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Start)
+      {
+        Icon(
+          painter = painterResource(R.drawable.fastforward),
+          contentDescription = null,
+          tint = (if (fastForward) GameBoyColors.Green else GameBoyColors.DarkGreen).copy(alpha = if (fastForward) ffAlpha else 1f),
+          modifier = Modifier.size(24.dp))
+        
+        Spacer(modifier = Modifier.width(12.dp))
+        
+        CustomText(
+          if (fastForward) stringResource(R.string.speed_2x)
+          else             stringResource(R.string.speed_1x),
+          FONT_SIZE = 14, MODIFIER = Modifier,
+          COLOR = GameBoyColors.LightGreen)
+      }
     }
 
     val settings by EMULATOR.settings.collectAsState()
@@ -417,10 +466,45 @@ private fun MiscSettingsSection(EMULATOR: EmulatorViewModel)
       ON_CLICK = { EMULATOR.toggleImmersiveMode() },
       MODIFIER = Modifier.fillMaxWidth())
     {
-      CustomText(
-        if (settings.isImmersiveModeEnabled)  stringResource(R.string.immersive_on)
-        else                                  stringResource(R.string.immersive_off),
-        FONT_SIZE = 14)
+      Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Start) {
+        Icon(painterResource(R.drawable.gameboy), null, tint = GameBoyColors.DarkGreen, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(12.dp))
+        CustomText(
+          if (settings.isImmersiveModeEnabled)  stringResource(R.string.immersive_on)
+          else                                  stringResource(R.string.immersive_off),
+          FONT_SIZE = 14, MODIFIER = Modifier)
+      }
+    }
+
+    CustomButton(
+      ON_CLICK = { EMULATOR.takeScreenshot() },
+      MODIFIER = Modifier.fillMaxWidth())
+    {
+      Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Start) {
+        Icon(painterResource(R.drawable.camera), null, tint = GameBoyColors.DarkGreen, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(12.dp))
+        CustomText(stringResource(R.string.SCREENSHOT), FONT_SIZE = 14, MODIFIER = Modifier)
+      }
+    }
+
+    CustomButton(
+      ON_CLICK = { EMULATOR.openScreenshots() },
+      MODIFIER = Modifier.fillMaxWidth())
+    {
+      Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Start) {
+        Icon(painterResource(R.drawable.camera), null, tint = GameBoyColors.DarkGreen, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(12.dp))
+        CustomText(stringResource(R.string.VIEW_SCREENSHOTS), FONT_SIZE = 14, MODIFIER = Modifier)
+      }
     }
 
     if (game != null)
@@ -429,10 +513,17 @@ private fun MiscSettingsSection(EMULATOR: EmulatorViewModel)
         ON_CLICK = { EMULATOR.toggleFavorite() },
         MODIFIER = Modifier.fillMaxWidth())
       {
-        CustomText(
-          if (game!!.isFavorite)  stringResource(R.string.REMOVE_FAV)
-          else                    stringResource(R.string.ADD_FAV),
-          FONT_SIZE = 14)
+        Row(
+          modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.Start) {
+          Icon(painterResource(R.drawable.heart), null, tint = GameBoyColors.DarkGreen, modifier = Modifier.size(18.dp))
+          Spacer(Modifier.width(12.dp))
+          CustomText(
+            if (game!!.isFavorite)  stringResource(R.string.REMOVE_FAV)
+            else                    stringResource(R.string.ADD_FAV),
+            FONT_SIZE = 14, MODIFIER = Modifier)
+        }
       }
     }
 
@@ -440,6 +531,15 @@ private fun MiscSettingsSection(EMULATOR: EmulatorViewModel)
       ON_CLICK  = { App.appModule.gameBoy.deleteRamFile() },
       MODIFIER  = Modifier.fillMaxWidth(),
       COLOR     = GameBoyColors.Error)
-    { CustomText(stringResource(R.string.DELTE_SAV), FONT_SIZE = 14) }
+    { 
+      Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Start) {
+        Icon(painterResource(R.drawable.trash), null, tint = GameBoyColors.DarkGreen, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(12.dp))
+        CustomText(stringResource(R.string.DELTE_SAV), FONT_SIZE = 14, MODIFIER = Modifier) 
+      }
+    }
   }
 }

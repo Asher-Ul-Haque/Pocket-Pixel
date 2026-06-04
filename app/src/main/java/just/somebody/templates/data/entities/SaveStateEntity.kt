@@ -15,7 +15,7 @@ import androidx.room.PrimaryKey
         childColumns  = ["gameId"],
         onDelete      = ForeignKey.CASCADE)
     ],
-  indices = [Index("gameId")]
+  indices = [Index(value = ["gameId", "slot"], unique = true)]
 )
 data class SaveStateEntity(
   @PrimaryKey(autoGenerate = true)

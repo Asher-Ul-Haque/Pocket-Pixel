@@ -27,6 +27,8 @@ import just.somebody.templates.App
 import just.somebody.templates.R
 import just.somebody.templates.domain.Buttons
 import just.somebody.templates.domain.PauseTrigger
+import just.somebody.templates.presentation.effects.SoundController
+import just.somebody.templates.presentation.effects.SoundEffect
 import just.somebody.templates.presentation.viewModels.EmulatorViewModel
 import just.somebody.templates.presentation.widgets.GameBoyActionButtons
 import just.somebody.templates.presentation.widgets.GameBoyControls
@@ -109,7 +111,10 @@ fun EmulatorScreen(
   // - - - Handle Settings Modal Pause
   LaunchedEffect(showSettings.value)
   {
-    if (showSettings.value) VIEW_MODEL.pause(PauseTrigger.SETTINGS)
+    if (showSettings.value) {
+      SoundController.playSound(SoundEffect.Menu)
+      VIEW_MODEL.pause(PauseTrigger.SETTINGS)
+    }
     else                    VIEW_MODEL.resume(PauseTrigger.SETTINGS)
   }
 
@@ -385,7 +390,7 @@ private fun EmulatorPreviewPortrait()
     SHOW_SETTINGS       = false,
     ON_INTERACTION      = {},
     ON_TOGGLE_SETTINGS  = {},
-    VIEWPORT            = { Box(modifier = it.background(Color.DarkGray)) },
+    VIEWPORT            = { Box(modifier = it.background(GameBoyColors.DarkGreen)) },
     CONTROLS            =
       {
         Box(
@@ -400,28 +405,28 @@ private fun EmulatorPreviewPortrait()
         Box(
           modifier = Modifier
             .size(120.dp)
-            .background(Color.Gray))
+            .background(GameBoyColors.DarkGreen))
       },
     ACTION_BUTTONS    =
       {
         Box(
           modifier = Modifier
             .size(120.dp)
-            .background(Color.Gray))
+            .background(GameBoyColors.DarkGreen))
       },
     SELECT_BUTTON     =
       {
         Box(
           modifier = Modifier
             .size(80.dp, 40.dp)
-            .background(Color.Gray))
+            .background(GameBoyColors.DarkGreen))
       },
     START_BUTTON      =
       {
         Box(
           modifier = Modifier
             .size(80.dp, 40.dp)
-            .background(Color.Gray))
+            .background(GameBoyColors.DarkGreen))
       })
 }
 
@@ -439,7 +444,7 @@ private fun EmulatorPreviewLandscape()
     SHOW_SETTINGS       = false,
     ON_INTERACTION      = {},
     ON_TOGGLE_SETTINGS  = {},
-    VIEWPORT            = { Box(modifier = it.background(Color.DarkGray)) },
+    VIEWPORT            = { Box(modifier = it.background(GameBoyColors.DarkGreen)) },
     CONTROLS            = {},
     SETTINGS_PANEL      = {},
     D_PAD               =
@@ -447,27 +452,27 @@ private fun EmulatorPreviewLandscape()
         Box(
           modifier = Modifier
             .size(120.dp)
-            .background(Color.Gray))
+            .background(GameBoyColors.DarkGreen))
       },
     ACTION_BUTTONS      =
       {
         Box(
           modifier = Modifier
             .size(120.dp)
-            .background(Color.Gray))
+            .background(GameBoyColors.DarkGreen))
       },
     SELECT_BUTTON =
       {
         Box(
           modifier = Modifier
             .size(80.dp, 40.dp)
-            .background(Color.Gray))
+            .background(GameBoyColors.DarkGreen))
       },
     START_BUTTON  =
       {
         Box(
           modifier = Modifier
             .size(80.dp, 40.dp)
-            .background(Color.Gray))
+            .background(GameBoyColors.DarkGreen))
       })
 }

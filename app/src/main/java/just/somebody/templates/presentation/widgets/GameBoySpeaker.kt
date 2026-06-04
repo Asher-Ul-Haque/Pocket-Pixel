@@ -20,9 +20,14 @@ class GameBoySpeaker
   private val channelMask : Int = AudioFormat.CHANNEL_OUT_STEREO
   private val encoding    : Int = AudioFormat.ENCODING_PCM_FLOAT
   private val frameSize   : Int = 8 // stereo: 4 bytes per channel (float)
+  private val fallbackBufferWindowMs : Int = 20 // ~20ms fallback if getMinBufferSize fails
+  private val bufferSizeMultiplier   : Int = 2 // 2x min buffer balances latency vs stability
 
   private val minBufferSize     : Int = AudioTrack.getMinBufferSize(sampleRate, channelMask, encoding)
-  private val bufferSizeInBytes : Int = minBufferSize * 8 // Increased for stability and to prevent static
+  private val fallbackBufferSize : Int =
+    sampleRate * frameSize * fallbackBufferWindowMs / 1000
+  private val safeMinBufferSize : Int = if (minBufferSize > 0) minBufferSize else fallbackBufferSize
+  private val bufferSizeInBytes : Int = safeMinBufferSize * bufferSizeMultiplier
 
   // - - - Filter state for DC offset removal (High Pass Filter)
   private var lastSampleL : Float = 0f
@@ -31,9 +36,14 @@ class GameBoySpeaker
   private var filteredR   : Float = 0f
   private val hpfCoeff    : Float = 0.995f
 
-  private val audioTrack: AudioTrack by lazy()
+  private var audioTrack: AudioTrack? = null
+
+  private fun ensureAudioTrack(): AudioTrack
   {
-    AudioTrack.Builder()
+    val existing = audioTrack
+    if (existing != null) return existing
+
+    val created = AudioTrack.Builder()
       .setAudioAttributes(
         AudioAttributes.Builder()
           .setUsage(AudioAttributes.USAGE_GAME)
@@ -53,6 +63,17 @@ class GameBoySpeaker
         { setPerformanceMode(AudioTrack.PERFORMANCE_MODE_LOW_LATENCY) }
       }
       .build().apply { play() }
+
+    audioTrack = created
+    return created
+  }
+
+  @Synchronized
+  fun start()
+  {
+    val track = ensureAudioTrack()
+    if (track.playState != PLAYSTATE_PLAYING)
+    { track.play() }
   }
 
   /**
@@ -64,9 +85,12 @@ class GameBoySpeaker
    *
    * @param SAMPLE_BUFFER Linear array containing alternating left and right stereo audio float samples.
    */
+  @Synchronized
   fun play(SAMPLE_BUFFER: FloatArray)
   {
     if (SAMPLE_BUFFER.isEmpty()) return
+
+    val track = ensureAudioTrack()
 
     // - - - 1. DC OFFSET REMOVAL & SILENCE GATE
     // - - - apply a one-pole High-Pass Filter to eliminate constant offsets that cause static/pops.
@@ -92,13 +116,13 @@ class GameBoySpeaker
     if (peakAbs < 1e-4f) { SAMPLE_BUFFER.fill(0f) }
 
     // - - - 3. SYNCHRONIZED WRITE
-    val written = audioTrack.write(SAMPLE_BUFFER, 0, SAMPLE_BUFFER.size, WRITE_BLOCKING)
+    val written = track.write(SAMPLE_BUFFER, 0, SAMPLE_BUFFER.size, WRITE_BLOCKING)
 
     if (written < 0)
     { ForgeLogger.error("GameBoySpeaker: Audio write failed with code $written") }
 
-    if (audioTrack.playState != PLAYSTATE_PLAYING)
-    { audioTrack.play() }
+    if (track.playState != PLAYSTATE_PLAYING)
+    { track.play() }
   }
 
   /**
@@ -106,10 +130,17 @@ class GameBoySpeaker
    * * Stops active hardware sound rendering and releases the allocated [AudioTrack] instance
    * safely to free up system audio mixers.
    */
+  @Synchronized
   fun release()
   {
-    if (audioTrack.playState == PLAYSTATE_PLAYING)
-    { audioTrack.stop() }
-    audioTrack.release()
+    val track = audioTrack ?: return
+    if (track.playState == PLAYSTATE_PLAYING)
+    { track.stop() }
+    track.release()
+    audioTrack = null
+    lastSampleL = 0f
+    lastSampleR = 0f
+    filteredL = 0f
+    filteredR = 0f
   }
 }

@@ -8,6 +8,8 @@ import just.somebody.templates.appModule.storage.dataStore.DataStoreManager
 import just.somebody.templates.appModule.storage.dataStore.GamepadMapping
 import just.somebody.templates.domain.Buttons
 import just.somebody.templates.domain.repositories.GameRepository
+import just.somebody.templates.presentation.effects.SoundController
+import just.somebody.templates.presentation.effects.SoundEffect
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -41,11 +43,15 @@ class SettingsViewModel(
       val key                     = "GAME_BOY_ROMS"
       val repo                    = App.appModule.repo
       repo.syncGamesWithStorage(key)
+      SoundController.playSound(SoundEffect.Ping)
     }
   }
 
   /** Signals input managers to evaluate connection parameters for physical external hardware attachments. */
-  fun updateControllerConnection() { App.appModule.gameControllerManager.updateConnectionState() }
+  fun updateControllerConnection() { 
+    App.appModule.gameControllerManager.updateConnectionState()
+    viewModelScope.launch { SoundController.playSound(SoundEffect.Ping2) }
+  }
 
   /** Modifies selection pointers tracking target visualization filters inside preference stores. */
   fun setPalette(INDEX: Int)
@@ -55,6 +61,7 @@ class SettingsViewModel(
       val current = DATASTORE.getSettings()
       DATASTORE.updateSettings(current.copy(paletteIndex = INDEX))
       _settings.value = DATASTORE.getSettings()
+      SoundController.playSound(SoundEffect.Ping2)
     }
   }
 
@@ -66,6 +73,7 @@ class SettingsViewModel(
       val current = DATASTORE.getSettings()
       DATASTORE.updateSettings(current.copy(shaderIndex = INDEX))
       _settings.value = DATASTORE.getSettings()
+      SoundController.playSound(SoundEffect.Ping2)
     }
   }
 
@@ -96,6 +104,7 @@ class SettingsViewModel(
       val newGamepadMapping = current.gamepadMapping.copy(buttonToGameBoy = newMap)
       DATASTORE.updateSettings(current.copy(gamepadMapping = newGamepadMapping))
       _settings.value = DATASTORE.getSettings()
+      SoundController.playSound(SoundEffect.Ping2)
     }
   }
 
@@ -117,6 +126,7 @@ class SettingsViewModel(
       val newGamepadMapping = current.gamepadMapping.copy(axisToGameBoy = newAxisMap)
       DATASTORE.updateSettings(current.copy(gamepadMapping = newGamepadMapping))
       _settings.value = DATASTORE.getSettings()
+      SoundController.playSound(SoundEffect.Ping2)
     }
   }
 
@@ -141,6 +151,7 @@ class SettingsViewModel(
       val updated = current.copy(isImmersiveModeEnabled = !current.isImmersiveModeEnabled)
       DATASTORE.updateSettings(updated)
       _settings.value = updated
+      SoundController.playSound(SoundEffect.Ping2)
     }
   }
 
@@ -153,6 +164,7 @@ class SettingsViewModel(
       REPO.factoryReset()
       App.appModule.boxArtFetcher.deleteCache()
       App.appModule.dataStoreManager.clearSettings()
+      SoundController.playSound(SoundEffect.Ping)
     }
   }
 }

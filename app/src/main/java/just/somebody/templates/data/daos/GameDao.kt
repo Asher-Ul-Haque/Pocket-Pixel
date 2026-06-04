@@ -84,6 +84,14 @@ interface GameDao
   @Query("UPDATE games SET lastPlayed = :TIMESTAMP WHERE id = :ID")
   suspend fun updateLastPlayed(ID : Long, TIMESTAMP : Long)
 
+  /** Increments the total accumulation of time spent actively running a specific game engine profile. */
+  @Query("UPDATE games SET playTime = playTime + :INCREMENT WHERE id = :ID")
+  suspend fun updatePlayTime(ID : Long, INCREMENT : Long)
+
+  /** Ranks and retrieves the top most engaged game entries based on total accumulated play time metrics. */
+  @Query("SELECT * FROM games ORDER BY playTime DESC LIMIT :LIMIT")
+  fun getTopMostPlayedGames(LIMIT : Int) : Flow<List<GameEntity>>
+
 
   // - - - Search fuzzy - - -
   /**

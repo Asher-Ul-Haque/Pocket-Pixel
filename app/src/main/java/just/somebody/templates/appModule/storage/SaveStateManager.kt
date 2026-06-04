@@ -90,7 +90,7 @@ class SaveStateManager(
       val green = (color ushr 8) and 0xFF
       val blue  = (color ushr 16) and 0xFF
 
-      correctedPixels[i] = (alpha shl 24) or (blue shl 16) or (green shl 8) or red
+      correctedPixels[i] = (alpha shl 24) or (red shl 16) or (green shl 8) or blue
     }
 
     val bitmap = Bitmap.createBitmap(correctedPixels, 160, 144, Bitmap.Config.ARGB_8888)

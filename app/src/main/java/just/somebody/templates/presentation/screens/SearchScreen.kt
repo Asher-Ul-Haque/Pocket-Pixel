@@ -9,13 +9,18 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import just.somebody.templates.R
+import just.somebody.templates.presentation.effects.SoundController
+import just.somebody.templates.presentation.effects.SoundEffect
 import just.somebody.templates.presentation.viewModels.GamesViewModel
 import just.somebody.templates.presentation.widgets.CustomText
 import just.somebody.templates.presentation.widgets.SearchBar
@@ -23,14 +28,6 @@ import just.somebody.templates.ui.theme.GameBoyColors
 
 /**
  * Interactive search interface for querying the local game database library.
- *
- * Exposes a structured input bar linked to the backing query pipeline. If no database record
- * matches the current character array, it displays a standard localized feedback message.
- * Otherwise, it lists the matching results inside a multi-column scroll layout, supporting
- * secondary long-press actions to open a contextual utility sheet.
- *
- * @param VIEW_MODEL State coordinator managing query evaluation and matching catalog records.
- * @param MODIFIFER [Modifier] used to establish positional layout bounds or dimension scaling rules.
  */
 @Composable
 fun SearchScreen(
@@ -40,7 +37,14 @@ fun SearchScreen(
   val searchQuery  = VIEW_MODEL.searchQuery.collectAsState()
   val results      = VIEW_MODEL.searchResults.collectAsState()
   val selectedGame = VIEW_MODEL.selectedGame.collectAsState()
+  val collections  = VIEW_MODEL.collections.collectAsState()
   val empty        = results.value.isEmpty()
+
+  androidx.compose.runtime.LaunchedEffect(selectedGame.value) {
+    if (selectedGame.value != null) {
+      SoundController.playSound(SoundEffect.Menu)
+    }
+  }
 
   Box(
     modifier = MODIFIFER
@@ -69,9 +73,18 @@ fun SearchScreen(
           modifier         = Modifier.fillMaxSize(),
           contentAlignment = Alignment.TopCenter)
         {
-          CustomText(
-            TEXT      = stringResource(R.string.NO_RES),
-            FONT_SIZE = 16)
+          Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(top = 64.dp))
+          {
+            Icon(
+              painter = painterResource(R.drawable.search),
+              contentDescription = null,
+              tint = GameBoyColors.MediumGreen,
+              modifier = Modifier.size(64.dp).padding(bottom = 16.dp)
+            )
+            CustomText(
+              TEXT      = stringResource(R.string.NO_RES),
+              FONT_SIZE = 16)
+          }
         }
       }
       else
@@ -89,7 +102,8 @@ fun SearchScreen(
             ON_LONG_PRESS = { game -> VIEW_MODEL.selectGame(game) },
             USE_ROW       = false,
             GET_URL       = { game -> VIEW_MODEL.getBoxArtFlow(game) },
-            SHOW_TITLE    = false)
+            SHOW_TITLE    = false,
+            BIG           = false)
         }
       }
     }
@@ -109,7 +123,12 @@ fun SearchScreen(
             VIEW_MODEL.toggleFavorite(game)
             VIEW_MODEL.selectGame(null)
           },
-        ON_UPDATE_BOXART = { url -> VIEW_MODEL.updateBoxArtUrl(game, url) })
+        ON_UPDATE_BOXART = { url -> VIEW_MODEL.updateBoxArtUrl(game, url) },
+        COLLECTIONS      = collections.value,
+        ON_ADD_TO_COLLECTION = { collectionId ->
+          VIEW_MODEL.addToCollection(collectionId, game.id)
+          VIEW_MODEL.selectGame(null)
+        })
     }
   }
 }

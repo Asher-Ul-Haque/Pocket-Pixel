@@ -56,6 +56,12 @@ interface GameRepository
   /** Registers and writes updated system clock metadata values onto a target entry key cell. */
   suspend fun updateLastPlayed      (ID : Long, TIMESTAMP : Long)
 
+  /** Increments the total accumulation of time spent actively running a specific game engine profile. */
+  suspend fun updatePlayTime        (ID : Long, INCREMENT : Long)
+
+  /** Ranks and retrieves the top most engaged game entries based on total accumulated play time metrics. */
+  fun getTopMostPlayedGames(LIMIT : Int = 10) : Flow<List<Game>>
+
   /** Executes localized partial phrase string match sorting lookups against data indices. */
   fun searchGames(QUERY : String) : Flow<List<Game>>
 

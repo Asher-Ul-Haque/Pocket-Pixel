@@ -22,6 +22,7 @@ class DefaultGameRepository(private val DAO : GameDao) : GameRepository
     title           = title,
     romUri          = romUri,
     lastPlayed      = lastPlayed,
+    playTime        = playTime,
     isFavorite      = isFavorite,
     boxArtUrl       = boxArtUrl)
 
@@ -31,6 +32,7 @@ class DefaultGameRepository(private val DAO : GameDao) : GameRepository
     title           = title,
     romUri          = romUri,
     lastPlayed      = lastPlayed,
+    playTime        = playTime,
     isFavorite      = isFavorite,
     boxArtUrl       = boxArtUrl)
 
@@ -101,6 +103,12 @@ class DefaultGameRepository(private val DAO : GameDao) : GameRepository
 
   override suspend fun updateLastPlayed(ID : Long, TIMESTAMP: Long)
   { DAO.updateLastPlayed(ID, TIMESTAMP) }
+
+  override suspend fun updatePlayTime(ID: Long, INCREMENT: Long)
+  { DAO.updatePlayTime(ID, INCREMENT) }
+
+  override fun getTopMostPlayedGames(LIMIT: Int): Flow<List<Game>> =
+    DAO.getTopMostPlayedGames(LIMIT).map { it.map { it.toDomain() } }
 
   override fun searchGames(QUERY : String): Flow<List<Game>> =
     DAO.searchGames(QUERY).map { it.map { it.toDomain() } }

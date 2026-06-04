@@ -72,13 +72,18 @@ bool systemLoadStateFromMemory(const u8* BUFFER, u32 SIZE)
   if (SIZE < minSize) return false; // - - - Corrupted or invalid buffer
 
   CartContext* cart = cartridgeGetContext();
+  ApuContext*  apu  = apuGetContext();
 
-  // - - - Cache pointers
-  const u8*           origRom     = cart->romData;
-  CartridgeMetadata*  origMeta    = cart->metadata;
-  u8*                 origRam     = cart->externalRamData;
-  CartridgeFileIO*    origIO      = cart->fileIO;
-  u32                 origRamSize = cart->externalRamSize;
+  // - - - Cache pointers and user-settings (volumes/speed)
+  const u8*           origRom      = cart->romData;
+  CartridgeMetadata*  origMeta     = cart->metadata;
+  u8*                 origRam      = cart->externalRamData;
+  CartridgeFileIO*    origIO       = cart->fileIO;
+  u32                 origRamSize  = cart->externalRamSize;
+
+  f32                 origSpeed    = apu->speedMultiplier;
+  f32                 origVols[4];
+  memcpy(origVols, apu->channelModifiers, sizeof(origVols));
 
   // - - - 1. Unpack the data sequentially
   const u8* ptr = BUFFER;
@@ -92,12 +97,15 @@ bool systemLoadStateFromMemory(const u8* BUFFER, u32 SIZE)
   
   memcpy(cart, ptr, sizeof(CartContext));                 ptr += sizeof(CartContext);
 
-  // - - - restore pointers 
+  // - - - restore pointers and user-settings
   cart->romData         = origRom;
   cart->metadata        = origMeta;
   cart->externalRamData = origRam;
   cart->fileIO          = origIO;
   cart->externalRamSize = origRamSize;
+
+  apu->speedMultiplier  = origSpeed;
+  memcpy(apu->channelModifiers, origVols, sizeof(origVols));
 
   // - - - 2. Unpack External RAM if present in the save
   if (cart->hasRam && cart->externalRamSize > 0 && cart->externalRamData) 

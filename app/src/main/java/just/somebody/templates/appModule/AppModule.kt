@@ -17,6 +17,8 @@ import just.somebody.templates.appModule.storage.database.DatabaseFactory
 import just.somebody.templates.appModule.storage.database.PixelPocketDB
 import just.somebody.templates.data.Api
 import just.somebody.templates.data.ApiImpl
+import just.somebody.templates.domain.repositories.CollectionRepository
+import just.somebody.templates.domain.repositories.DefaultCollectionRepository
 import just.somebody.templates.domain.repositories.DefaultGameRepository
 import just.somebody.templates.domain.repositories.GameRepository
 import just.somebody.templates.appModule.navigation.DefaultNavigator
@@ -27,6 +29,7 @@ import just.somebody.templates.data.DefaultBoxArtFetcher
 import just.somebody.templates.appModule.storage.DefaultExternalStorageManager
 import just.somebody.templates.appModule.storage.ExternalStorageManager
 import just.somebody.templates.appModule.storage.SaveStateManager
+import just.somebody.templates.appModule.storage.ScreenshotManager
 import just.somebody.templates.domain.GameBoy
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -45,6 +48,9 @@ interface AppModuleInterface
 
   /** Domain access gateway controlling transactions for stored game metadata records. */
   val repo                   : GameRepository
+
+  /** Domain access gateway for managing game collections. */
+  val collectionRepo         : CollectionRepository
 
   /** Screen coordinator piping navigation directives across feature boundaries asynchronously. */
   val navigator              : Navigator
@@ -88,6 +94,12 @@ interface AppModuleInterface
   /** Workspace supervisor serializing ongoing running emulator states onto local storage files. */
   val saveStateManager       : SaveStateManager
 
+  /** Controller managing the capturing and viewing of game screenshots. */
+  val screenshotManager      : ScreenshotManager
+
+  /** Global scope for background operations. */
+  val mainScope              : CoroutineScope
+
   /** Evaluates if the running device display is in a landscape orientation. */
   @Composable fun isLandscape() : Boolean
 }
@@ -102,6 +114,7 @@ class AppModule(private val APP_CONTEXT : Context) : AppModuleInterface
   override val context                : Context                 by lazy { APP_CONTEXT }
   override val api                    : Api                     by lazy { ApiImpl(); }
   override val repo                   : GameRepository          by lazy { DefaultGameRepository(database.gameDAO());}
+  override val collectionRepo         : CollectionRepository    by lazy { DefaultCollectionRepository(database.collectionDAO()) }
   override val navigator              : Navigator               by lazy { DefaultNavigator(startDestination = Destination.Home) }
   override val hardwareManager        : HardwareManager         by lazy { DefaultHardwareManager(APP_CONTEXT) }
   override val permissionManager      : PermissionManager       by lazy { DefaultPermissionManager() }
@@ -117,6 +130,8 @@ class AppModule(private val APP_CONTEXT : Context) : AppModuleInterface
   override val gameBoy                : GameBoy                 by lazy { GameBoy() }
   override val gameControllerManager  : GameControllerManager   by lazy { DefaultGameControllerManager(APP_CONTEXT) }
   override val saveStateManager       : SaveStateManager        by lazy { SaveStateManager(APP_CONTEXT, database.saveStateDAO()) }
+  override val screenshotManager      : ScreenshotManager       by lazy { ScreenshotManager(APP_CONTEXT) }
+  override val mainScope              : CoroutineScope          by lazy { CoroutineScope(Dispatchers.Main + SupervisorJob()) }
 
   /**
    * Private DataStore instance managing raw persistent mutations of [AppSettings].

@@ -33,12 +33,6 @@ import just.somebody.templates.appModule.GameControllerState
 
 /**
  * Root state wrapper composable for the application configuration panel.
- *
- * It collects reactive event feeds from both the active external gamepad hardware manager and persistent local data
- * files, piping the decoupled state directly into an un-hoisted content rendering terminal.
- *
- * @param VIEW_MODEL State supervisor tracking global preference parameters and controller assignment mutations.
- * @param MODIFIFER [Modifier] used to establish positional layout bounds or boundary dimensions.
  */
 @Composable
 fun SettingsScreen(
@@ -76,23 +70,6 @@ fun SettingsScreen(
 
 /**
  * Main layout content panel for the application settings screen.
- *
- * Assembles standalone, pixel-styled layout modules divided explicitly into gamepad input assignments,
- * retro visual color spaces, individual sound channel tracking systems, and destructive factory initialization helpers.
- *
- * @param CONTROLLER_STATE Live telemetry structure tracking active controller identifiers and hardware clicks.
- * @param SETTINGS Persistent global profile configuration preferences.
- * @param ON_REFRESH Dispatch lambda to trigger a manual connection check for external gamepad inputs.
- * @param ON_DEADZONE_CHANGE State mutator processing updated thumbstick coordinate filter limits.
- * @param ON_SET_PALETTE Selector callback updating the console's default color lookup index map.
- * @param ON_SET_SHADER Selector callback changing the active post-processing visualization layer.
- * @param ON_RESCAN Utility intent dispatch executing a storage directory scan for new ROM structures.
- * @param ON_FACTORY_RESET Safety prompt callback designed to wipe clean all local configurations and storage paths.
- * @param ON_MAP_BUTTON Input pipeline matching a hardware key code directly onto an emulation key entry.
- * @param ON_MAP_AXIS Input pipeline matching specific analog directional sweeps onto an emulation key entry.
- * @param ON_TOGGLE_IMMERSIVE Display mode override function that handles window status bar flags.
- * @param ON_SET_VOLUME Mixer function assigning amplification scales directly across independent audio channels.
- * @param MODIFIER [Modifier] used to arrange outer container boundaries.
  */
 @Composable
 fun SettingsContent(
@@ -120,12 +97,13 @@ fun SettingsContent(
     LazyColumn(
       modifier            = Modifier.fillMaxSize(),
       verticalArrangement = Arrangement.spacedBy(16.dp),
-      horizontalAlignment = Alignment.CenterHorizontally)
+      horizontalAlignment = Alignment.CenterHorizontally,
+      contentPadding      = PaddingValues(bottom = 80.dp))
     {
       // - - - Section: Controller
       item()
       {
-        SettingsSection(TITLE = stringResource(R.string.controller))
+        SettingsSection(TITLE = stringResource(R.string.controller), ICON = R.drawable.controller)
         {
           Column(verticalArrangement = Arrangement.spacedBy(8.dp))
           {
@@ -203,7 +181,7 @@ fun SettingsContent(
       // - - - Section: Visual
       item()
       {
-        SettingsSection(TITLE = stringResource(R.string.visual))
+        SettingsSection(TITLE = stringResource(R.string.visual), ICON = R.drawable.paint_blob)
         {
           Column(verticalArrangement = Arrangement.spacedBy(12.dp))
           {
@@ -255,7 +233,7 @@ fun SettingsContent(
       // - - - Section: Audio
       item()
       {
-        SettingsSection(TITLE = stringResource(R.string.audio))
+        SettingsSection(TITLE = stringResource(R.string.audio), ICON = R.drawable.speaker)
         {
           val labels = listOf(
             stringResource(R.string.pulse1),
@@ -282,21 +260,74 @@ fun SettingsContent(
       // -  -- Section: Misc
       item()
       {
-        SettingsSection(TITLE = stringResource(R.string.misc)) {
+        SettingsSection(TITLE = stringResource(R.string.misc), ICON = R.drawable.settings) {
           Column(verticalArrangement = Arrangement.spacedBy(8.dp))
           {
             CustomButton(ON_CLICK = {}, MODIFIER = Modifier.fillMaxWidth())
-            { CustomText(stringResource(R.string.CHANGE)) }
+            { 
+              Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start) 
+              {
+                Icon(painterResource(R.drawable.redo), null, tint = GameBoyColors.DarkGreen, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(12.dp))
+                CustomText(stringResource(R.string.CHANGE), FONT_SIZE = 14, MODIFIER = Modifier) 
+              }
+            }
             CustomButton(ON_CLICK = ON_TOGGLE_IMMERSIVE, MODIFIER = Modifier.fillMaxWidth())
             {
-              CustomText(
-                if (SETTINGS.isImmersiveModeEnabled)  stringResource(R.string.immersive_on)
-                else                                  stringResource(R.string.immersive_off))
+              Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start) 
+              {
+                Icon(painterResource(R.drawable.gameboy), null, tint = GameBoyColors.DarkGreen, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(12.dp))
+                CustomText(
+                  if (SETTINGS.isImmersiveModeEnabled)  stringResource(R.string.immersive_on)
+                  else                                  stringResource(R.string.immersive_off),
+                  FONT_SIZE = 14, MODIFIER = Modifier)
+              }
             }
             CustomButton(ON_CLICK = ON_RESCAN, MODIFIER = Modifier.fillMaxWidth())
-            { CustomText(stringResource(R.string.RESCAN)) }
+            { 
+              Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start) 
+              {
+                Icon(painterResource(R.drawable.redo), null, tint = GameBoyColors.DarkGreen, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(12.dp))
+                CustomText(stringResource(R.string.RESCAN), FONT_SIZE = 14, MODIFIER = Modifier) 
+              }
+            }
+            CustomButton(
+              ON_CLICK = { App.appModule.screenshotManager.openAllScreenshots() },
+              MODIFIER = Modifier.fillMaxWidth())
+            { 
+              Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start) 
+              {
+                Icon(painterResource(R.drawable.camera), null, tint = GameBoyColors.DarkGreen, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(12.dp))
+                CustomText(stringResource(R.string.VIEW_SCREENSHOTS), FONT_SIZE = 14, MODIFIER = Modifier) 
+              }
+            }
             CustomButton(ON_CLICK = ON_FACTORY_RESET, MODIFIER = Modifier.fillMaxWidth(), COLOR = GameBoyColors.Error)
-            { CustomText(stringResource(R.string.FACTORY)) }
+            { 
+              Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start) 
+              {
+                Icon(painterResource(R.drawable.trash), null, tint = GameBoyColors.DarkGreen, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(12.dp))
+                CustomText(stringResource(R.string.FACTORY), FONT_SIZE = 14, MODIFIER = Modifier) 
+              }
+            }
           }
         }
       }
@@ -323,7 +354,7 @@ fun SettingsContent(
  * Standard utility card panel used to group preference blocks with uniform borders.
  */
 @Composable
-private fun SettingsSection(TITLE: String, CONTENT: @Composable () -> Unit)
+private fun SettingsSection(TITLE: String, ICON: Int, CONTENT: @Composable () -> Unit)
 {
   Column(
     modifier = Modifier
@@ -332,11 +363,19 @@ private fun SettingsSection(TITLE: String, CONTENT: @Composable () -> Unit)
       .padding(16.dp),
     horizontalAlignment = Alignment.Start)
   {
-    CustomText(
-      TITLE,
-      FONT_SIZE = 18,
-      COLOR     = GameBoyColors.LightGreen,
-      MODIFIER  = Modifier.padding(bottom = 4.dp))
+    Row(verticalAlignment = Alignment.CenterVertically) {
+      Icon(
+        painter = painterResource(ICON),
+        contentDescription = null,
+        tint = GameBoyColors.LightGreen,
+        modifier = Modifier.size(24.dp).padding(end = 8.dp)
+      )
+      CustomText(
+        TITLE,
+        FONT_SIZE = 18,
+        COLOR     = GameBoyColors.LightGreen,
+        MODIFIER  = Modifier.padding(bottom = 4.dp))
+    }
     HorizontalDivider(
       thickness = 1.dp,
       color     = GameBoyColors.MediumGreen,
