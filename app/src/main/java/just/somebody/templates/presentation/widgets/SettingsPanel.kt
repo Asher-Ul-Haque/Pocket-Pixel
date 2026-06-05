@@ -467,7 +467,7 @@ private fun MiscSettingsSection(EMULATOR: EmulatorViewModel)
       MODIFIER = Modifier.fillMaxWidth())
     {
       Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Start) {
         Icon(painterResource(R.drawable.gameboy), null, tint = GameBoyColors.DarkGreen, modifier = Modifier.size(18.dp))
@@ -475,6 +475,23 @@ private fun MiscSettingsSection(EMULATOR: EmulatorViewModel)
         CustomText(
           if (settings.isImmersiveModeEnabled)  stringResource(R.string.immersive_on)
           else                                  stringResource(R.string.immersive_off),
+          FONT_SIZE = 14, MODIFIER = Modifier)
+      }
+    }
+
+    CustomButton(
+      ON_CLICK = { EMULATOR.toggleDeferredSaving() },
+      MODIFIER = Modifier.fillMaxWidth())
+    {
+      Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Start) {
+        Icon(painterResource(R.drawable.redo), null, tint = GameBoyColors.DarkGreen, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(12.dp))
+        CustomText(
+          if (settings.isDeferredSavingEnabled) stringResource(R.string.DEFERRED_SAVING_ON)
+          else                                  stringResource(R.string.DEFERRED_SAVING_OFF),
           FONT_SIZE = 14, MODIFIER = Modifier)
       }
     }

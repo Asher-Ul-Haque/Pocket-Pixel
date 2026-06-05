@@ -14,6 +14,7 @@ import just.somebody.templates.presentation.effects.SoundEffect
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
@@ -91,7 +92,15 @@ class CollectionsViewModel(
 
   fun getBoxArtFlow(game: Game): Flow<String?>
   {
-    return App.appModule.boxArtFetcher.fetchBoxArt(game.title)
+    if (game.boxArtUrl != null) return flowOf(game.boxArtUrl)
+    return App.appModule.boxArtFetcher.fetchBoxArt(game.title).map { url ->
+      if (url != null && game.boxArtUrl == null) {
+        viewModelScope.launch {
+          gameRepo.updateGame(game.copy(boxArtUrl = url))
+        }
+      }
+      url
+    }
   }
 
   fun markAsPlayed(game: Game)

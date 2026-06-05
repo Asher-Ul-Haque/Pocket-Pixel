@@ -60,6 +60,7 @@ fun SettingsScreen(
         VIEW_MODEL.setGamepadAxisMapping(axis, dir, button)
       },
     ON_TOGGLE_IMMERSIVE = { VIEW_MODEL.toggleImmersiveMode() },
+    ON_TOGGLE_DEFERRED  = { VIEW_MODEL.toggleDeferredSaving() },
     ON_SET_VOLUME       =
       {
         vol, ch ->
@@ -84,6 +85,7 @@ fun SettingsContent(
   ON_MAP_BUTTON       : (Int, Buttons?) -> Unit,
   ON_MAP_AXIS         : (Int, Int, Buttons?) -> Unit,
   ON_TOGGLE_IMMERSIVE : () -> Unit,
+  ON_TOGGLE_DEFERRED  : () -> Unit,
   ON_SET_VOLUME       : (Float, Int) -> Unit,
   MODIFIER            : Modifier = Modifier)
 {
@@ -287,6 +289,21 @@ fun SettingsContent(
                 CustomText(
                   if (SETTINGS.isImmersiveModeEnabled)  stringResource(R.string.immersive_on)
                   else                                  stringResource(R.string.immersive_off),
+                  FONT_SIZE = 14, MODIFIER = Modifier)
+              }
+            }
+            CustomButton(ON_CLICK = ON_TOGGLE_DEFERRED, MODIFIER = Modifier.fillMaxWidth())
+            {
+              Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start) 
+              {
+                Icon(painterResource(R.drawable.redo), null, tint = GameBoyColors.DarkGreen, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(12.dp))
+                CustomText(
+                  if (SETTINGS.isDeferredSavingEnabled) stringResource(R.string.DEFERRED_SAVING_ON)
+                  else                                  stringResource(R.string.DEFERRED_SAVING_OFF),
                   FONT_SIZE = 14, MODIFIER = Modifier)
               }
             }
@@ -497,5 +514,6 @@ private fun SettingsPreview()
     ON_MAP_BUTTON       = { _, _ -> },
     ON_MAP_AXIS         = { _, _, _ -> },
     ON_TOGGLE_IMMERSIVE = {},
+    ON_TOGGLE_DEFERRED  = {},
     ON_SET_VOLUME       = { _, _ -> })
 }

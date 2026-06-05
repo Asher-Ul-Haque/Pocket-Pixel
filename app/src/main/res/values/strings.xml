@@ -131,4 +131,6 @@
     <string name="SCREENSHOT">Screenshot</string>
     <string name="VIEW_SCREENSHOTS">View Screenshots</string>
     <string name="SCREENSHOT_SAVED">Screenshot saved</string>
+    <string name="DEFERRED_SAVING_ON">Deferred Saving: ON</string>
+    <string name="DEFERRED_SAVING_OFF">Deferred Saving: OFF</string>
 </resources>

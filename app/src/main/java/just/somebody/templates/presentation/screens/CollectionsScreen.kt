@@ -146,35 +146,42 @@ fun CreateCollectionDialog(
     onDismissRequest = ON_DISMISS,
     title  = { CustomText(stringResource(R.string.CREATE_COLLECTION)) },
     text   = {
-      OutlinedTextField(
-        value         = name,
-        onValueChange = { name = it },
-        placeholder   = { Text(stringResource(R.string.COLLECTION_NAME), fontFamily = MinecraftFontFamily, color = GameBoyColors.DarkGreen) },
-        modifier      = Modifier.fillMaxWidth().background(color = GameBoyColors.LightGreen),
-        textStyle     = TextStyle(fontFamily = MinecraftFontFamily, fontSize = 14.sp, color = GameBoyColors.DarkGreen),
-        colors        = OutlinedTextFieldDefaults.colors(
-          focusedTextColor     = GameBoyColors.DarkGreen,
-          unfocusedTextColor   = GameBoyColors.DarkGreen,
-          focusedBorderColor   = GameBoyColors.LightGreen,
-          unfocusedBorderColor = GameBoyColors.LightGreen,
-          focusedLabelColor    = GameBoyColors.Green,
-          unfocusedLabelColor  = GameBoyColors.Green,
-          cursorColor          = GameBoyColors.DarkGreen),
-        shape         = RectangleShape)
+      Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        OutlinedTextField(
+          value         = name,
+          onValueChange = { name = it },
+          placeholder   = { Text(stringResource(R.string.COLLECTION_NAME), fontFamily = MinecraftFontFamily, color = GameBoyColors.DarkGreen) },
+          modifier      = Modifier.fillMaxWidth().background(color = GameBoyColors.LightGreen),
+          textStyle     = TextStyle(fontFamily = MinecraftFontFamily, fontSize = 14.sp, color = GameBoyColors.DarkGreen),
+          colors        = OutlinedTextFieldDefaults.colors(
+            focusedTextColor     = GameBoyColors.DarkGreen,
+            unfocusedTextColor   = GameBoyColors.DarkGreen,
+            focusedBorderColor   = GameBoyColors.LightGreen,
+            unfocusedBorderColor = GameBoyColors.LightGreen,
+            focusedLabelColor    = GameBoyColors.Green,
+            unfocusedLabelColor  = GameBoyColors.Green,
+            cursorColor          = GameBoyColors.DarkGreen),
+          shape         = RectangleShape)
+
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+          CustomButton(
+            ON_CLICK = ON_DISMISS,
+            MODIFIER = Modifier.weight(1f),
+            COLOR    = GameBoyColors.DarkGreen)
+          { CustomText(stringResource(R.string.cancel)) }
+
+          CustomButton(
+            ON_CLICK = { if (name.isNotBlank()) ON_CREATE(name) },
+            MODIFIER = Modifier.weight(1f))
+          { CustomText("OK", COLOR = GameBoyColors.DarkGreen) }
+        }
+      }
     },
-    confirmButton = {
-      CustomButton(
-        ON_CLICK = { if (name.isNotBlank()) ON_CREATE(name) },
-        MODIFIER = Modifier.width(80.dp))
-      { CustomText("OK") }
-    },
-    dismissButton = {
-      CustomButton(
-        ON_CLICK = ON_DISMISS,
-        MODIFIER = Modifier.width(100.dp),
-        COLOR    = GameBoyColors.DarkGreen)
-      { CustomText(stringResource(R.string.cancel)) }
-    },
+    confirmButton = {},
+    dismissButton = null,
     containerColor = GameBoyColors.MediumGreen,
     shape = RectangleShape)
 }
