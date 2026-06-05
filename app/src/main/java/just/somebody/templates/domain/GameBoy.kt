@@ -45,6 +45,10 @@ class GameBoy
   private var currentRomUri: String? = null
   private val pauseTriggers = Collections.newSetFromMap(ConcurrentHashMap<PauseTrigger, Boolean>())
 
+  // - - - Deferred RAM saving state
+  private var deferredRamData : ByteArray? = null
+  private var isRamDirty       : Boolean    = false
+
   fun pauseEmulator(trigger: PauseTrigger) {
     if (pauseTriggers.isEmpty()) {
       nativePauseEmulator()
@@ -73,10 +77,13 @@ class GameBoy
 
   fun startEmulator()   {
     pauseTriggers.clear()
+    isRamDirty      = false
+    deferredRamData = null
     nativeStartEmulator()
   }
   fun stopEmulator()    {
     pauseTriggers.clear()
+    flushRam()
     nativeStopEmulator()
   }
   fun resumeEmulator()  { nativeResumeEmulator() }
@@ -342,10 +349,18 @@ class GameBoy
         return false
       }
 
-      ForgeLogger.info("Kotlin: Attempting to save RAM (size: $RAM_SIZE)")
+      val gb = App.appModule.gameBoy
+      val isDeferred = runBlocking { App.appModule.dataStoreManager.getSettings().isDeferredSavingEnabled }
 
-      // We are on the native thread here.
-      // We block it entirely until the write is done.
+      if (isDeferred)
+      {
+        ForgeLogger.info("Kotlin: Deferring RAM save (size: $RAM_SIZE)")
+        gb.deferredRamData = RAM_DATA.copyOf()
+        gb.isRamDirty      = true
+        return true
+      }
+
+      ForgeLogger.info("Kotlin: Immediate RAM save (size: $RAM_SIZE)")
       return runBlocking(Dispatchers.IO)
       {
         val saveFileUri = getGameSaveFileUri()
@@ -370,6 +385,45 @@ class GameBoy
           ForgeLogger.error("Kotlin: Could not resolve save file URI. Save failed.")
           SnackbarController.sendEvent(SnackbarEvent("Failed to save game : couldn't resolve save file"))
           false
+        }
+      }
+    }
+
+    /**
+     * Executes a final commit of any pending RAM mutations onto background storage.
+     */
+    @JvmStatic
+    fun flushRam()
+    {
+      val gb = App.appModule.gameBoy
+      if (!gb.isRamDirty || gb.deferredRamData == null) return
+
+      val data = gb.deferredRamData!!
+      gb.isRamDirty = false
+      gb.deferredRamData = null
+
+      ForgeLogger.info("Kotlin: Flushing deferred RAM save (size: ${data.size})")
+
+      runBlocking(Dispatchers.IO)
+      {
+        val saveFileUri = getGameSaveFileUri()
+        if (saveFileUri != null)
+        {
+          val success = App.appModule.externalStorageManager.saveFileFromUri(saveFileUri, data)
+          if (success)
+          {
+            ForgeLogger.info("Kotlin: Successfully flushed RAM to $saveFileUri.")
+            SnackbarController.sendEvent(SnackbarEvent("Game progression saved"))
+          }
+          else
+          {
+            ForgeLogger.error("Kotlin: Failed to flush RAM to $saveFileUri.")
+            SnackbarController.sendEvent(SnackbarEvent("Failed to save game : write error"))
+          }
+        }
+        else
+        {
+          ForgeLogger.error("Kotlin: Could not resolve save file URI during flush. Save failed.")
         }
       }
     }

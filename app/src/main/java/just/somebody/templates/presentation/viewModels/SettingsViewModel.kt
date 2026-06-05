@@ -155,6 +155,19 @@ class SettingsViewModel(
     }
   }
 
+  /** Toggles between immediate and deferred RAM saving modes. */
+  fun toggleDeferredSaving()
+  {
+    viewModelScope.launch()
+    {
+      val current = DATASTORE.getSettings()
+      val updated = current.copy(isDeferredSavingEnabled = !current.isDeferredSavingEnabled)
+      DATASTORE.updateSettings(updated)
+      _settings.value = updated
+      SoundController.playSound(SoundEffect.Ping2)
+    }
+  }
+
   /** Drops database tables, resets serialized preferences files, and flushes image lookup indices completely. */
   fun factoryReset()
   {

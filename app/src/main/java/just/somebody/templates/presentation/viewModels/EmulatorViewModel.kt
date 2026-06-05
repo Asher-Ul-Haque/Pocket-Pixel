@@ -345,11 +345,25 @@ class EmulatorViewModel : ViewModel()
     }
   }
 
+  /** Toggles between immediate and deferred RAM saving modes. */
+  fun toggleDeferredSaving()
+  {
+    viewModelScope.launch()
+    {
+      val dataStore : DataStoreManager  = App.appModule.dataStoreManager
+      val current   : AppSettings       = dataStore.getSettings()
+      val updated   : AppSettings       = current.copy(isDeferredSavingEnabled = !current.isDeferredSavingEnabled)
+      dataStore.updateSettings(updated)
+      _settings.value = updated
+    }
+  }
+
   override fun onCleared()
   {
     if (emulatorStarted)
     {
       updatePlayTime()
+      gameBoy.stopEmulator()
     }
     super.onCleared()
   }
