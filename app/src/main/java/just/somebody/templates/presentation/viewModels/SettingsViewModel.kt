@@ -168,6 +168,20 @@ class SettingsViewModel(
     }
   }
 
+  /** Toggles RetroAchievements Hardcore Mode. */
+  fun toggleRaHardcoreMode()
+  {
+    viewModelScope.launch()
+    {
+      val current = DATASTORE.getSettings()
+      val updated = current.copy(isRaHardcoreEnabled = !current.isRaHardcoreEnabled)
+      DATASTORE.updateSettings(updated)
+      _settings.value = updated
+      App.appModule.gameBoy.raSetHardcoreMode(updated.isRaHardcoreEnabled)
+      SoundController.playSound(SoundEffect.Ping2)
+    }
+  }
+
   /** Drops database tables, resets serialized preferences files, and flushes image lookup indices completely. */
   fun factoryReset()
   {

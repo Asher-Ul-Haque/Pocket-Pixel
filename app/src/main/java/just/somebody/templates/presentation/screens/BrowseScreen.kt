@@ -51,6 +51,7 @@ import just.somebody.templates.App
 import just.somebody.templates.R
 import just.somebody.templates.appModule.navigation.NavigationAction
 import just.somebody.templates.presentation.effects.ObserveAsEvents
+import just.somebody.templates.presentation.viewModels.AchievementViewModel
 import just.somebody.templates.presentation.viewModels.BrowseViewModel
 import just.somebody.templates.presentation.viewModels.CollectionsViewModel
 import just.somebody.templates.presentation.viewModels.EmulatorViewModel
@@ -143,6 +144,8 @@ fun BrowseScreen(
           REPO            = App.appModule.repo,
           DATASTORE       = App.appModule.dataStoreManager)
       })
+  val achievementViewModel =
+    viewModel<AchievementViewModel>(factory = viewModelFactory() { AchievementViewModel() })
   val emulatorViewModel =
     viewModel<EmulatorViewModel>(factory = viewModelFactory()
     { EmulatorViewModel() })
@@ -250,13 +253,6 @@ fun BrowseScreen(
             VIEW_MODEL = gamesViewModel,
             MODIFIFER  = Modifier.fillMaxSize())
         }
-        composable<Destination.Favorites>
-        {
-          LaunchedEffect(Unit) { VIEW_MODEL.showBars(true) }
-          FavoriteScreen(
-            VIEW_MODEL = gamesViewModel,
-            MODIFIFER  = Modifier.fillMaxSize())
-        }
         composable<Destination.Collections>
         {
           LaunchedEffect(Unit) { VIEW_MODEL.showBars(true) }
@@ -277,6 +273,12 @@ fun BrowseScreen(
           SettingsScreen(
             VIEW_MODEL = settingsViewModel,
             MODIFIFER  = Modifier.fillMaxSize())
+        }
+        composable<Destination.Achievements>
+        {
+          LaunchedEffect(Unit) { VIEW_MODEL.showBars(true) }
+          AchievementScreen(
+            VIEW_MODEL = achievementViewModel)
         }
         composable<Destination.Emulator>
         {

@@ -63,8 +63,8 @@ class BrowseViewModel : ViewModel()
       val destination =
         when (NEW_INDEX)
         {
-          1    -> Destination.Favorites
-          2    -> Destination.Collections
+          1    -> Destination.Collections
+          2    -> Destination.Achievements
           3    -> Destination.Search
           4    -> Destination.Settings
           else -> Destination.Home
@@ -110,8 +110,8 @@ class BrowseViewModel : ViewModel()
   {
     return when (_browseState.value.selectedIndex)
     {
-      1    -> R.string.FAV
-      2    -> R.string.COLLECTIONS
+      1    -> R.string.COLLECTIONS
+      2    -> R.string.ACHIEVEMENTS
       3    -> R.string.SEARCH
       4    -> R.string.SETTINGS
       else -> R.string.HOME

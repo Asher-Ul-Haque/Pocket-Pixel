@@ -90,12 +90,17 @@ fun SettingsPanel(
           }
             )
       {
-        val tabs = listOf(
+        val tabs = mutableListOf(
           R.string.audio  to R.drawable.speaker,
           R.string.visual to R.drawable.paint_blob,
           R.string.states to R.drawable.gameboy,
           R.string.misc   to R.drawable.settings
         )
+        
+        if (settings.isRaHardcoreEnabled) {
+          tabs.removeIf { it.first == R.string.states }
+        }
+
         tabs.forEachIndexed { index, (titleRes, iconRes) ->
           Tab(
             selected = settingsPage == index,
@@ -133,7 +138,14 @@ fun SettingsPanel(
         {
           item()
           {
-            when (settingsPage)
+            val currentTab = if (settings.isRaHardcoreEnabled && settingsPage >= 2) {
+              // Map indices if states tab is missing
+              if (settingsPage == 2) 3 else settingsPage
+            } else {
+              settingsPage
+            }
+
+            when (currentTab)
             {
               0 -> AudioSettingsSection(settings.channelVolume) { vol, ch -> EMULATOR.setVolume(vol, ch) }
               1 -> VisualSettingsSection(

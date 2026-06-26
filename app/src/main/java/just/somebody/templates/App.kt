@@ -17,6 +17,15 @@ class App() : Application()
   {
     super.onCreate()
     appModule = AppModule(this)
+
+    appModule.notificationManager.createChannel(
+      this,
+      "ACHIEVEMENTS",
+      "Achievements",
+      "Notifications for unlocked achievements",
+      NotificationManager.IMPORTANCE_DEFAULT
+    )
+
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
     {
       val notificationChannel = NotificationChannel(

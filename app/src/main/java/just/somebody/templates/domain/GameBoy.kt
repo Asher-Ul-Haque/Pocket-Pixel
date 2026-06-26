@@ -6,6 +6,7 @@ import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
 import just.somebody.templates.App
+import just.somebody.templates.R
 import just.somebody.templates.appModule.ForgeLogger
 import just.somebody.templates.presentation.widgets.GameBoySpeaker
 import kotlinx.coroutines.CoroutineScope
@@ -15,6 +16,7 @@ import kotlinx.coroutines.runBlocking // For synchronous file loading
 import kotlinx.coroutines.withContext
 import androidx.documentfile.provider.DocumentFile // Needed for DocumentFile operations
 import just.somebody.templates.appModule.storage.ExternalStorageManager
+import just.somebody.templates.data.entities.AchievementEntity
 import just.somebody.templates.domain.models.Palette
 import just.somebody.templates.presentation.effects.SnackbarController
 import just.somebody.templates.presentation.effects.SnackbarEvent
@@ -105,6 +107,12 @@ class GameBoy
   fun setShader(INDEX : Int)  { nativeChangeShader(INDEX) }
   fun setFastForward(ENABLED : Boolean) { nativeSetFastForward(ENABLED) }
 
+  // - - - RetroAchievements - - -
+  fun raLoginWithPassword(USERNAME: String, PASSWORD: String) { nativeRaLoginWithPassword(USERNAME, PASSWORD) }
+  fun raLoginWithToken(USERNAME: String, TOKEN: String) { nativeRaLoginWithToken(USERNAME, TOKEN) }
+  fun raLogout() { nativeRaLogout() }
+  fun raSetHardcoreMode(ENABLED: Boolean) { nativeRaSetHardcoreMode(ENABLED) }
+
   // - - - Input
   fun sendButton(
     BUTTON: Buttons,
@@ -125,6 +133,44 @@ class GameBoy
   private external fun nativeChangePalette(COLORS : IntArray)
   private external fun nativeChangeShader(INDEX: Int)
   private external fun nativeSetFastForward(ENABLED : Boolean)
+
+  private external fun nativeRaLoginWithPassword(USERNAME: String, PASSWORD: String)
+  private external fun nativeRaLoginWithToken(USERNAME: String, TOKEN: String)
+  private external fun nativeRaLogout()
+  private external fun nativeRaSetHardcoreMode(ENABLED: Boolean)
+
+  external fun nativeNotifyHttpResponse(BODY: String, STATUS: Int, CALLBACK_PTR: Long)
+
+  // - - - JNI Callbacks - - -
+  fun onAchievementUnlocked(ID: Int, TITLE: String, DESCRIPTION: String, POINTS: Int, BADGE_URL: String, IS_HARDCORE: Boolean) {
+    App.appModule.mainScope.launch {
+      val game = App.appModule.repo.getGameByUri(staticCurrentRomUri ?: "")
+      if (game != null) {
+        val achievement = AchievementEntity(
+          raId = ID,
+          gameId = game.id,
+          title = TITLE,
+          description = DESCRIPTION,
+          points = POINTS,
+          badgeUrl = BADGE_URL,
+          unlockDate = System.currentTimeMillis(),
+          isHardcore = IS_HARDCORE
+        )
+        App.appModule.database.achievementDAO().insertAchievement(achievement)
+      }
+
+      // Show Toast and Notification
+      SnackbarController.sendEvent(SnackbarEvent("Achievement Unlocked: $TITLE"))
+      App.appModule.notificationManager.showNotification(
+        CONTEXT = App.appModule.context,
+        CHANNEL_ID = "ACHIEVEMENTS",
+        NOTIFICATION_ID = ID,
+        TITLE = "Achievement Unlocked!",
+        MESSAGE = "$TITLE ($POINTS pts)",
+        ICON_RES = R.drawable.trophy
+      )
+    }
+  }
 
   external fun nativeCaptureFrame(): IntArray?
 
@@ -217,6 +263,19 @@ class GameBoy
         onFirstActivity?.invoke()
       }
       glSurfaceViewInstance?.requestRender()
+    }
+
+    @JvmStatic
+    fun onAchievementUnlockedCallback(ID: Int, TITLE: String, DESCRIPTION: String, POINTS: Int, BADGE_URL: String, IS_HARDCORE: Boolean) {
+      App.appModule.gameBoy.onAchievementUnlocked(ID, TITLE, DESCRIPTION, POINTS, BADGE_URL, IS_HARDCORE)
+    }
+
+    @JvmStatic
+    fun onRaLoginSuccess(USERNAME: String, TOKEN: String) {
+      App.appModule.mainScope.launch {
+        val current = App.appModule.dataStoreManager.getSettings()
+        App.appModule.dataStoreManager.updateSettings(current.copy(raUsername = USERNAME, raToken = TOKEN))
+      }
     }
 
     // - - - Kotlin Native Audio API - - -

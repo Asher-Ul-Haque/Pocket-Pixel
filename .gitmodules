@@ -1,0 +1,6 @@
+[submodule "app/src/main/cpp/external/rcheevos"]
+	path = app/src/main/cpp/external/rcheevos
+	url = https://github.com/RetroAchievements/rcheevos.git
+[submodule "app/src/main/cpp/external/lua"]
+	path = app/src/main/cpp/external/lua
+	url = https://github.com/marovira/lua.git

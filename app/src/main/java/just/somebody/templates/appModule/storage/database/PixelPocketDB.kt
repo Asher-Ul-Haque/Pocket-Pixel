@@ -2,9 +2,11 @@ package just.somebody.templates.appModule.storage.database
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import just.somebody.templates.data.daos.AchievementDao
 import just.somebody.templates.data.daos.CollectionDao
 import just.somebody.templates.data.daos.GameDao
 import just.somebody.templates.data.daos.SaveStateDao
+import just.somebody.templates.data.entities.AchievementEntity
 import just.somebody.templates.data.entities.CollectionEntity
 import just.somebody.templates.data.entities.CollectionGameCrossRef
 import just.somebody.templates.data.entities.GameEntity
@@ -17,8 +19,8 @@ import just.somebody.templates.data.entities.SaveStateEntity
  * and volatile visual save configurations.
  */
 @Database(
-  entities = [ GameEntity::class, SaveStateEntity::class, CollectionEntity::class, CollectionGameCrossRef::class ],
-  version  = 7)
+  entities = [ GameEntity::class, SaveStateEntity::class, CollectionEntity::class, CollectionGameCrossRef::class, AchievementEntity::class ],
+  version  = 9)
 abstract class PixelPocketDB : RoomDatabase()
 {
   /**
@@ -41,6 +43,13 @@ abstract class PixelPocketDB : RoomDatabase()
    * @return Implementation layer mapping data access methods for collections.
    */
   abstract fun collectionDAO() : CollectionDao
+
+  /**
+   * Exposes operational access capabilities targeting transaction steps for achievements.
+   *
+   * @return Implementation layer mapping data access methods for achievements.
+   */
+  abstract fun achievementDAO() : AchievementDao
 
   companion object
   { /** Name tag defining the tracking workspace file instance allocated inside the OS path. */

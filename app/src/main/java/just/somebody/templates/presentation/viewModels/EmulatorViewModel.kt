@@ -232,6 +232,12 @@ class EmulatorViewModel : ViewModel()
 
       gameBoy.loadROM(currentROM!!, URI)
       gameBoy.startEmulator()
+
+      if (currentSettings.raUsername.isNotEmpty() && currentSettings.raToken.isNotEmpty()) {
+        gameBoy.raLoginWithToken(currentSettings.raUsername, currentSettings.raToken)
+        gameBoy.raSetHardcoreMode(currentSettings.isRaHardcoreEnabled)
+      }
+
       applyCurrentSettings(currentSettings)
 
       emulatorStarted = true

@@ -33,6 +33,13 @@ class CollectionsViewModel(
       state
     }
 
+  val favorites : StateFlow<List<Game>> =
+    gameRepo.getFavoriteGames().let { flow ->
+      val state = MutableStateFlow<List<Game>>(emptyList())
+      viewModelScope.launch { flow.collect { state.value = it } }
+      state
+    }
+
   private val _selectedCollection = MutableStateFlow<GameCollection?>(null)
   val selectedCollection: StateFlow<GameCollection?> = _selectedCollection
 

@@ -30,6 +30,7 @@ fun CollectionsScreen(
   MODIFIFER  : Modifier = Modifier)
 {
   val collections  by VIEW_MODEL.collections.collectAsState()
+  val favorites    by VIEW_MODEL.favorites.collectAsState()
   val selectedGame by VIEW_MODEL.selectedGame.collectAsState()
   var showCreateDialog by remember { mutableStateOf(false) }
   val scope = rememberCoroutineScope()
@@ -58,6 +59,31 @@ fun CollectionsScreen(
           Spacer(Modifier.width(8.dp))
           CustomText(stringResource(R.string.CREATE_COLLECTION), FONT_SIZE = 14) 
         }
+      }
+
+      if (favorites.isNotEmpty()) {
+        Row(
+          modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.Start)
+        {
+          Icon(painterResource(R.drawable.heart), null, tint = GameBoyColors.Green, modifier = Modifier.size(24.dp).padding(end = 8.dp))
+          CustomText(stringResource(R.string.FAV), FONT_SIZE = 18)
+        }
+
+        GameList(
+          GAMES         = favorites,
+          TITLE         = "",
+          SHOW_TITLE    = false,
+          USE_ROW       = true,
+          BIG           = true,
+          ON_CLICK      = { VIEW_MODEL.markAsPlayed(it) },
+          ON_LONG_PRESS = { VIEW_MODEL.selectGame(it) },
+          GET_URL       = { game -> VIEW_MODEL.getBoxArtFlow(game) })
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        HorizontalDivider(color = GameBoyColors.MediumGreen, modifier = Modifier.padding(horizontal = 16.dp))
+        Spacer(modifier = Modifier.height(16.dp))
       }
 
       collections.filter { !it.isSystem }.forEach { collection ->

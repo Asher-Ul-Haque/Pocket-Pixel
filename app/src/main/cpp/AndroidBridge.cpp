@@ -9,6 +9,9 @@
 #include <GLES2/gl2.h>
 #include <chrono>
 
+// RetroAchievements
+#include <rc_client.h>
+
 extern "C" {
 #include <platform.h>
 #include <joypad.h>
@@ -18,6 +21,7 @@ extern "C" {
 #include <timer.h>
 #include <state.h>
 #include <cartridge/cartridge.h>
+#include <bus.h>
 }
 
 #define LOG_TAG "PocketPixel_Native"
@@ -30,16 +34,20 @@ extern "C" {
 // - - - Globals for JNI Callbacks - - -
 static JavaVM* g_jvm = nullptr;
 static jclass g_gameBoyClass = nullptr;
+static jobject g_networkServiceObj = nullptr;
 
 static jmethodID g_requestRenderID = nullptr;
 static jmethodID g_saveRamID = nullptr;
 static jmethodID g_loadRamID = nullptr;
 static jmethodID g_getExpectedSaveSizeID = nullptr;
+static jmethodID g_makeRaRequestID = nullptr;
 
 // - - - Audio JNI Globals - - -
 static jmethodID g_initAudioID = nullptr;
 static jmethodID g_playAudioID = nullptr;
 static jmethodID g_stopAudioID = nullptr;
+static jmethodID g_onAchievementUnlockedID = nullptr;
+static jmethodID g_onRaLoginSuccessID = nullptr;
 static jfloatArray g_audioArray = nullptr;
 static u32 g_audioArraySize = 0;
 
@@ -52,6 +60,10 @@ static std::mutex g_stateMutex;
 static std::condition_variable g_pauseCv;
 
 static std::atomic<bool> g_fastForward{false};
+
+// - - - RetroAchievements Globals - - -
+static rc_client_t* g_rc_client = nullptr;
+static std::mutex g_raMutex;
 
 // - - - Buffers - - -
 static u8* g_romData = nullptr;
@@ -90,6 +102,87 @@ bool android_loadRam(u8* RAM_DATA, u32 RAM_SIZE);
 u32  android_getExpectedSaveSize(void);
 u32* androidGetFrameBuffer(void);
 void androidSetPaletteByIndex(u8 index);
+
+// RetroAchievements Memory Read
+uint32_t android_ra_read_memory(uint32_t address, uint8_t* buffer, uint32_t num_bytes, rc_client_t* client) {
+    for (uint32_t i = 0; i < num_bytes; ++i) {
+        buffer[i] = busRead((u16)(address + i));
+    }
+    return num_bytes;
+}
+
+void android_ra_login_callback(int result, const char* error_message, rc_client_t* client, void* userdata) {
+    if (result == RC_OK) {
+        const rc_client_user_t* user = rc_client_get_user_info(client);
+        if (user) {
+            JNIEnv* env;
+            if (g_jvm->GetEnv((void**)&env, JNI_VERSION_1_6) == JNI_OK || g_jvm->AttachCurrentThread(&env, nullptr) == JNI_OK) {
+                jstring juser = env->NewStringUTF(user->username);
+                jstring jtoken = env->NewStringUTF(user->token);
+                env->CallStaticVoidMethod(g_gameBoyClass, g_onRaLoginSuccessID, juser, jtoken);
+                env->DeleteLocalRef(juser);
+                env->DeleteLocalRef(jtoken);
+            }
+        }
+    } else {
+        LOGE("RetroAchievements Login failed: %s", error_message);
+    }
+}
+
+typedef struct {
+    rc_client_server_callback_t callback;
+    void* callback_data;
+} android_ra_callback_context_t;
+
+void android_ra_http_handler(const rc_api_request_t* request, rc_client_server_callback_t callback, void* callback_data, rc_client_t* client);
+void android_ra_event_handler(const rc_client_event_t* event, rc_client_t* client);
+void android_ra_login_callback(int result, const char* error_message, rc_client_t* client, void* userdata);
+
+// RA HTTP Handler
+void android_ra_http_handler(const rc_api_request_t* request, rc_client_server_callback_t callback, void* callback_data, rc_client_t* client) {
+    JNIEnv* env;
+    if (g_jvm->GetEnv((void**)&env, JNI_VERSION_1_6) != JNI_OK) {
+        if (g_jvm->AttachCurrentThread(&env, nullptr) != JNI_OK) return;
+    }
+
+    jstring jurl = env->NewStringUTF(request->url);
+    jstring jpost = request->post_data ? env->NewStringUTF(request->post_data) : nullptr;
+
+    if (g_networkServiceObj && g_makeRaRequestID) {
+        android_ra_callback_context_t* context = (android_ra_callback_context_t*)malloc(sizeof(android_ra_callback_context_t));
+        context->callback = callback;
+        context->callback_data = callback_data;
+        env->CallVoidMethod(g_networkServiceObj, g_makeRaRequestID, jurl, jpost, (jlong)context);
+    }
+
+    env->DeleteLocalRef(jurl);
+    if (jpost) env->DeleteLocalRef(jpost);
+}
+
+// RA Event Handler
+void android_ra_event_handler(const rc_client_event_t* event, rc_client_t* client) {
+    JNIEnv* env;
+    if (g_jvm->GetEnv((void**)&env, JNI_VERSION_1_6) != JNI_OK) {
+        if (g_jvm->AttachCurrentThread(&env, nullptr) != JNI_OK) return;
+    }
+
+    switch (event->type) {
+        case RC_CLIENT_EVENT_ACHIEVEMENT_TRIGGERED: {
+            jstring title = env->NewStringUTF(event->achievement->title);
+            jstring desc = env->NewStringUTF(event->achievement->description);
+            jstring badge = env->NewStringUTF(event->achievement->badge_name);
+            env->CallStaticVoidMethod(g_gameBoyClass, g_onAchievementUnlockedID,
+                (jint)event->achievement->id, title, desc, (jint)event->achievement->points, badge,
+                (jboolean)rc_client_get_hardcore_enabled(client));
+            env->DeleteLocalRef(title);
+            env->DeleteLocalRef(desc);
+            env->DeleteLocalRef(badge);
+            break;
+        }
+        default:
+            break;
+    }
+}
 }
 
 void audioLoop() {
@@ -197,6 +290,12 @@ void emulatorLoop() {
 
             // Request render on GL thread
             env->CallStaticVoidMethod(g_gameBoyClass, g_requestRenderID);
+
+            // --- RETROACHIEVEMENTS FRAME UPDATE ---
+            {
+                std::lock_guard<std::mutex> lock(g_raMutex);
+                if (g_rc_client) rc_client_do_frame(g_rc_client);
+            }
 
             // --- AUTO-SAVE HEARTBEAT ---
             autoSaveFrameCounter++;
@@ -353,13 +452,48 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
     g_loadRamID = env->GetStaticMethodID(g_gameBoyClass, "loadRamFromFile", "([BI)Z");
     g_getExpectedSaveSizeID = env->GetStaticMethodID(g_gameBoyClass, "getExpectedSaveSize", "()I");
 
+    jclass networkServiceClass = env->FindClass("just/somebody/templates/appModule/network/NetworkService");
+    if (networkServiceClass != nullptr) {
+        g_makeRaRequestID = env->GetMethodID(networkServiceClass, "makeRaRequest", "(Ljava/lang/String;Ljava/lang/String;J)V");
+    }
+
+    // Get NetworkService instance from App.appModule
+    jclass appClass = env->FindClass("just/somebody/templates/App");
+    if (appClass != nullptr) {
+        jfieldID appModuleField = env->GetStaticFieldID(appClass, "appModule", "Ljust/somebody/templates/appModule/AppModuleInterface;");
+        if (appModuleField != nullptr) {
+            jobject appModuleObj = env->GetStaticObjectField(appClass, appModuleField);
+            if (appModuleObj != nullptr) {
+                jclass appModuleInterfaceClass = env->FindClass("just/somebody/templates/appModule/AppModuleInterface");
+                jmethodID getNetworkServiceID = env->GetMethodID(appModuleInterfaceClass, "getNetworkService", "()Ljust/somebody/templates/appModule/network/NetworkService;");
+                if (getNetworkServiceID != nullptr) {
+                    jobject networkServiceObj = env->CallObjectMethod(appModuleObj, getNetworkServiceID);
+                    if (networkServiceObj != nullptr) {
+                        g_networkServiceObj = env->NewGlobalRef(networkServiceObj);
+                    }
+                }
+            }
+        }
+    }
+
     g_initAudioID = env->GetStaticMethodID(g_gameBoyClass, "nativeInitAudio", "()V");
     g_playAudioID = env->GetStaticMethodID(g_gameBoyClass, "nativePlayAudio", "([F)V");
     g_stopAudioID = env->GetStaticMethodID(g_gameBoyClass, "nativeStopAudio", "()V");
+    g_onAchievementUnlockedID = env->GetStaticMethodID(g_gameBoyClass, "onAchievementUnlockedCallback", "(ILjava/lang/String;Ljava/lang/String;ILjava/lang/String;Z)V");
+    g_onRaLoginSuccessID = env->GetStaticMethodID(g_gameBoyClass, "onRaLoginSuccess", "(Ljava/lang/String;Ljava/lang/String;)V");
 
-    if (!g_requestRenderID || !g_saveRamID || !g_loadRamID || !g_getExpectedSaveSizeID || !g_initAudioID || !g_playAudioID || !g_stopAudioID) {
+    if (!g_requestRenderID || !g_saveRamID || !g_loadRamID || !g_getExpectedSaveSizeID || !g_initAudioID || !g_playAudioID || !g_stopAudioID || !g_onAchievementUnlockedID || !g_onRaLoginSuccessID) {
         LOGE("Could not find all JNI method IDs");
         return JNI_ERR;
+    }
+
+    // Initialize Global RA Client for Login
+    {
+        std::lock_guard<std::mutex> lock(g_raMutex);
+        if (g_rc_client == nullptr) {
+            g_rc_client = rc_client_create(android_ra_read_memory, android_ra_http_handler);
+            rc_client_set_event_handler(g_rc_client, android_ra_event_handler);
+        }
     }
 
     return JNI_VERSION_1_6;
@@ -384,6 +518,14 @@ Java_just_somebody_templates_domain_GameBoy_nativeLoadROM(JNIEnv *env, jobject t
     if (!cartridgeInit(&fileIO, g_romData, g_romSize)) {
         LOGE("Failed to initialize cartridge");
         return;
+    }
+
+    // Identify Game (using console ID 4 for GameBoy)
+    {
+        std::lock_guard<std::mutex> lock(g_raMutex);
+        if (g_rc_client) {
+            rc_client_begin_identify_and_load_game(g_rc_client, 4, nullptr, g_romData, g_romSize, nullptr, nullptr);
+        }
     }
 
     platformInit();
@@ -426,6 +568,13 @@ Java_just_somebody_templates_domain_GameBoy_nativeStopEmulator(JNIEnv *env, jobj
     g_audioRunning = false;
     g_audioWaitCv.notify_all();
     if (g_audioThread.joinable()) g_audioThread.join();
+
+    {
+        std::lock_guard<std::mutex> lock(g_raMutex);
+        if (g_rc_client) {
+            rc_client_unload_game(g_rc_client);
+        }
+    }
 
     PlatformContext* platform = platformGetContext();
     if (platform && platform->audio.cleanup) platform->audio.cleanup();
@@ -490,6 +639,83 @@ JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeSetFastForward(JNIEnv *env, jobject thiz, jboolean enabled) {
     g_fastForward = enabled;
     apuSetSpeed(enabled ? 2.0f : 1.0f);
+}
+
+JNIEXPORT void JNICALL
+Java_just_somebody_templates_domain_GameBoy_nativeRaLoginWithPassword(JNIEnv *env, jobject thiz, jstring username, jstring password) {
+    const char* user = env->GetStringUTFChars(username, nullptr);
+    const char* pass = env->GetStringUTFChars(password, nullptr);
+
+    LOGI("RetroAchievements Password Login requested for user: %s", user);
+
+    {
+        std::lock_guard<std::mutex> lock(g_raMutex);
+        if (g_rc_client) {
+            rc_client_begin_login_with_password(g_rc_client, user, pass, android_ra_login_callback, nullptr);
+        }
+    }
+
+    env->ReleaseStringUTFChars(username, user);
+    env->ReleaseStringUTFChars(password, pass);
+}
+
+JNIEXPORT void JNICALL
+Java_just_somebody_templates_domain_GameBoy_nativeRaLoginWithToken(JNIEnv *env, jobject thiz, jstring username, jstring token) {
+    const char* user = env->GetStringUTFChars(username, nullptr);
+    const char* tkn = env->GetStringUTFChars(token, nullptr);
+
+    LOGI("RetroAchievements Token Login requested for user: %s", user);
+
+    {
+        std::lock_guard<std::mutex> lock(g_raMutex);
+        if (g_rc_client) {
+            rc_client_begin_login_with_token(g_rc_client, user, tkn, nullptr, nullptr);
+        }
+    }
+
+    env->ReleaseStringUTFChars(username, user);
+    env->ReleaseStringUTFChars(token, tkn);
+}
+
+JNIEXPORT void JNICALL
+Java_just_somebody_templates_domain_GameBoy_nativeRaLogout(JNIEnv *env, jobject thiz) {
+    LOGI("RetroAchievements Logout requested");
+    std::lock_guard<std::mutex> lock(g_raMutex);
+    if (g_rc_client) {
+        rc_client_logout(g_rc_client);
+    }
+}
+
+JNIEXPORT void JNICALL
+Java_just_somebody_templates_domain_GameBoy_nativeRaSetHardcoreMode(JNIEnv *env, jobject thiz, jboolean enabled) {
+    LOGI("RetroAchievements Hardcore Mode: %s", enabled ? "Enabled" : "Disabled");
+    std::lock_guard<std::mutex> lock(g_raMutex);
+    if (g_rc_client) {
+        rc_client_set_hardcore_enabled(g_rc_client, enabled ? 1 : 0);
+    }
+}
+
+JNIEXPORT void JNICALL
+Java_just_somebody_templates_domain_GameBoy_nativeNotifyHttpResponse(JNIEnv *env, jobject thiz, jstring body, jint status, jlong callback_ptr) {
+    LOGI("RetroAchievements HTTP response received: %d", (int)status);
+
+    const char* response_body = env->GetStringUTFChars(body, nullptr);
+
+    rc_api_server_response_t response;
+    memset(&response, 0, sizeof(response));
+    response.body = response_body;
+    response.body_length = strlen(response_body);
+    response.http_status_code = status;
+
+    android_ra_callback_context_t* context = (android_ra_callback_context_t*)callback_ptr;
+    if (context && context->callback) {
+        std::lock_guard<std::mutex> lock(g_raMutex);
+        if (g_rc_client) context->callback(&response, context->callback_data);
+    }
+
+    if (context) free(context);
+
+    env->ReleaseStringUTFChars(body, response_body);
 }
 
 JNIEXPORT jintArray JNICALL
