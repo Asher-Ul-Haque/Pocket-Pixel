@@ -48,6 +48,7 @@ static jmethodID g_playAudioID = nullptr;
 static jmethodID g_stopAudioID = nullptr;
 static jmethodID g_onAchievementUnlockedID = nullptr;
 static jmethodID g_onRaLoginSuccessID = nullptr;
+static jmethodID g_onRaLoginErrorID = nullptr;
 static jfloatArray g_audioArray = nullptr;
 static u32 g_audioArraySize = 0;
 
@@ -126,6 +127,12 @@ void android_ra_login_callback(int result, const char* error_message, rc_client_
         }
     } else {
         LOGE("RetroAchievements Login failed: %s", error_message);
+        JNIEnv* env;
+        if (g_jvm->GetEnv((void**)&env, JNI_VERSION_1_6) == JNI_OK || g_jvm->AttachCurrentThread(&env, nullptr) == JNI_OK) {
+            jstring jmsg = env->NewStringUTF(error_message);
+            env->CallStaticVoidMethod(g_gameBoyClass, g_onRaLoginErrorID, jmsg);
+            env->DeleteLocalRef(jmsg);
+        }
     }
 }
 
@@ -137,6 +144,7 @@ typedef struct {
 void android_ra_http_handler(const rc_api_request_t* request, rc_client_server_callback_t callback, void* callback_data, rc_client_t* client);
 void android_ra_event_handler(const rc_client_event_t* event, rc_client_t* client);
 void android_ra_login_callback(int result, const char* error_message, rc_client_t* client, void* userdata);
+void android_ra_game_loaded_callback(int result, const char* error_message, rc_client_t* client, void* userdata);
 
 // RA HTTP Handler
 void android_ra_http_handler(const rc_api_request_t* request, rc_client_server_callback_t callback, void* callback_data, rc_client_t* client) {
@@ -170,10 +178,10 @@ void android_ra_event_handler(const rc_client_event_t* event, rc_client_t* clien
         case RC_CLIENT_EVENT_ACHIEVEMENT_TRIGGERED: {
             jstring title = env->NewStringUTF(event->achievement->title);
             jstring desc = env->NewStringUTF(event->achievement->description);
-            jstring badge = env->NewStringUTF(event->achievement->badge_name);
+            jstring badge = env->NewStringUTF(event->achievement->badge_url);
             env->CallStaticVoidMethod(g_gameBoyClass, g_onAchievementUnlockedID,
                 (jint)event->achievement->id, title, desc, (jint)event->achievement->points, badge,
-                (jboolean)rc_client_get_hardcore_enabled(client));
+                (jboolean)rc_client_get_hardcore_enabled(client), (jlong)0, (jboolean)false);
             env->DeleteLocalRef(title);
             env->DeleteLocalRef(desc);
             env->DeleteLocalRef(badge);
@@ -181,6 +189,43 @@ void android_ra_event_handler(const rc_client_event_t* event, rc_client_t* clien
         }
         default:
             break;
+    }
+}
+
+void android_ra_game_loaded_callback(int result, const char* error_message, rc_client_t* client, void* userdata) {
+    if (result == RC_OK) {
+        LOGI("RetroAchievements Game identified and loaded successfully");
+
+        rc_client_achievement_list_t* list = rc_client_create_achievement_list(client, RC_CLIENT_ACHIEVEMENT_CATEGORY_CORE, RC_CLIENT_ACHIEVEMENT_LIST_GROUPING_LOCK_STATE);
+        if (list) {
+            JNIEnv* env;
+            if (g_jvm->GetEnv((void**)&env, JNI_VERSION_1_6) == JNI_OK || g_jvm->AttachCurrentThread(&env, nullptr) == JNI_OK) {
+                for (uint32_t i = 0; i < list->num_buckets; ++i) {
+                    for (uint32_t j = 0; j < list->buckets[i].num_achievements; ++j) {
+                        const rc_client_achievement_t* ach = list->buckets[i].achievements[j];
+
+                        if (ach->unlocked != RC_CLIENT_ACHIEVEMENT_UNLOCKED_NONE) {
+                            jstring title = env->NewStringUTF(ach->title);
+                            jstring desc = env->NewStringUTF(ach->description);
+                            jstring badge = env->NewStringUTF(ach->badge_url);
+
+                            bool isHC = (ach->unlocked & RC_CLIENT_ACHIEVEMENT_UNLOCKED_HARDCORE) != 0;
+
+                            env->CallStaticVoidMethod(g_gameBoyClass, g_onAchievementUnlockedID,
+                                (jint)ach->id, title, desc, (jint)ach->points, badge,
+                                (jboolean)isHC, (jlong)((uint64_t)ach->unlock_time * 1000), (jboolean)true);
+
+                            env->DeleteLocalRef(title);
+                            env->DeleteLocalRef(desc);
+                            env->DeleteLocalRef(badge);
+                        }
+                    }
+                }
+            }
+            rc_client_destroy_achievement_list(list);
+        }
+    } else {
+        LOGE("RetroAchievements Game identification failed: %s", error_message);
     }
 }
 }
@@ -479,10 +524,11 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
     g_initAudioID = env->GetStaticMethodID(g_gameBoyClass, "nativeInitAudio", "()V");
     g_playAudioID = env->GetStaticMethodID(g_gameBoyClass, "nativePlayAudio", "([F)V");
     g_stopAudioID = env->GetStaticMethodID(g_gameBoyClass, "nativeStopAudio", "()V");
-    g_onAchievementUnlockedID = env->GetStaticMethodID(g_gameBoyClass, "onAchievementUnlockedCallback", "(ILjava/lang/String;Ljava/lang/String;ILjava/lang/String;Z)V");
+    g_onAchievementUnlockedID = env->GetStaticMethodID(g_gameBoyClass, "onAchievementUnlockedCallback", "(ILjava/lang/String;Ljava/lang/String;ILjava/lang/String;ZJZ)V");
     g_onRaLoginSuccessID = env->GetStaticMethodID(g_gameBoyClass, "onRaLoginSuccess", "(Ljava/lang/String;Ljava/lang/String;)V");
+    g_onRaLoginErrorID = env->GetStaticMethodID(g_gameBoyClass, "onRaLoginError", "(Ljava/lang/String;)V");
 
-    if (!g_requestRenderID || !g_saveRamID || !g_loadRamID || !g_getExpectedSaveSizeID || !g_initAudioID || !g_playAudioID || !g_stopAudioID || !g_onAchievementUnlockedID || !g_onRaLoginSuccessID) {
+    if (!g_requestRenderID || !g_saveRamID || !g_loadRamID || !g_getExpectedSaveSizeID || !g_initAudioID || !g_playAudioID || !g_stopAudioID || !g_onAchievementUnlockedID || !g_onRaLoginSuccessID || !g_onRaLoginErrorID) {
         LOGE("Could not find all JNI method IDs");
         return JNI_ERR;
     }
@@ -524,7 +570,7 @@ Java_just_somebody_templates_domain_GameBoy_nativeLoadROM(JNIEnv *env, jobject t
     {
         std::lock_guard<std::mutex> lock(g_raMutex);
         if (g_rc_client) {
-            rc_client_begin_identify_and_load_game(g_rc_client, 4, nullptr, g_romData, g_romSize, nullptr, nullptr);
+            rc_client_begin_identify_and_load_game(g_rc_client, 4, nullptr, g_romData, g_romSize, android_ra_game_loaded_callback, nullptr);
         }
     }
 

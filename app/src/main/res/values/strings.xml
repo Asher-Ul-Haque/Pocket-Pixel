@@ -133,5 +133,5 @@
     <string name="SCREENSHOT_SAVED">Screenshot saved</string>
     <string name="DEFERRED_SAVING_ON">Deferred Saving: ON</string>
     <string name="DEFERRED_SAVING_OFF">Deferred Saving: OFF</string>
-    <string name="ACHIEVEMENTS">Achievements</string>
+    <string name="ACHIEVEMENTS">Badges</string>
 </resources>

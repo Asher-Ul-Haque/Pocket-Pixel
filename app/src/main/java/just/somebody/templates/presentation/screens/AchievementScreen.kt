@@ -11,13 +11,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import just.somebody.templates.App
 import just.somebody.templates.R
+import just.somebody.templates.appModule.NetworkStatus
 import just.somebody.templates.data.entities.AchievementEntity
 import just.somebody.templates.presentation.viewModels.AchievementViewModel
+import just.somebody.templates.presentation.viewModels.GroupedAchievements
 import just.somebody.templates.presentation.widgets.CustomButton
 import just.somebody.templates.presentation.widgets.CustomText
 import just.somebody.templates.ui.theme.GameBoyColors
@@ -28,7 +33,9 @@ import java.util.*
 @Composable
 fun AchievementScreen(VIEW_MODEL: AchievementViewModel) {
     val settings by VIEW_MODEL.settings.collectAsState()
-    val achievements by VIEW_MODEL.achievements.collectAsState()
+    val groupedAchievements by VIEW_MODEL.groupedAchievements.collectAsState()
+    val loginError by VIEW_MODEL.loginError.collectAsState()
+    val isConnected by App.appModule.hardwareManager.isConnectedToInternet.collectAsState(initial = NetworkStatus.Lost)
 
     Box(
         modifier = Modifier
@@ -36,12 +43,17 @@ fun AchievementScreen(VIEW_MODEL: AchievementViewModel) {
             .background(GameBoyColors.DarkGreen)
             .padding(16.dp)
     ) {
-        if (settings.raToken.isEmpty()) {
-            LoginContent(ON_LOGIN = { user, token -> VIEW_MODEL.login(user, token) })
+        if (isConnected != NetworkStatus.Available && settings.raToken.isEmpty()) {
+            NoInternetContent()
+        } else if (settings.raToken.isEmpty()) {
+            LoginContent(
+                LOGIN_ERROR = loginError,
+                ON_LOGIN = { user, token -> VIEW_MODEL.login(user, token) }
+            )
         } else {
             ProfileContent(
                 USERNAME = settings.raUsername,
-                ACHIEVEMENTS = achievements,
+                GROUPED_ACHIEVEMENTS = groupedAchievements,
                 ON_LOGOUT = { VIEW_MODEL.logout() }
             )
         }
@@ -49,51 +61,89 @@ fun AchievementScreen(VIEW_MODEL: AchievementViewModel) {
 }
 
 @Composable
-fun LoginContent(ON_LOGIN: (String, String) -> Unit) {
-    var username by remember { mutableStateOf("") }
-    var token by remember { mutableStateOf("") }
-
+fun NoInternetContent() {
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Icon(
-            painter = painterResource(R.drawable.trophy),
+            painter = painterResource(R.drawable.no_internet),
             contentDescription = null,
             tint = GameBoyColors.LightGreen,
-            modifier = Modifier.size(64.dp)
+            modifier = Modifier.size(80.dp)
         )
-        Spacer(Modifier.height(16.dp))
-        CustomText("RetroAchievements", FONT_SIZE = 24, COLOR = GameBoyColors.LightGreen)
-        Spacer(Modifier.height(32.dp))
-
-        RAInput(LABEL = "Username", VALUE = username, ON_VALUE_CHANGE = { username = it })
-        Spacer(Modifier.height(16.dp))
-        RAInput(LABEL = "Password", VALUE = token, ON_VALUE_CHANGE = { token = it }, IS_PASSWORD = true)
-        
-        Spacer(Modifier.height(32.dp))
-        CustomButton(
-            ON_CLICK = { if (username.isNotEmpty() && token.isNotEmpty()) ON_LOGIN(username, token) },
-            MODIFIER = Modifier.fillMaxWidth()
-        ) {
-            CustomText("Login", FONT_SIZE = 18)
-        }
-        
         Spacer(Modifier.height(16.dp))
         CustomText(
-            "Logging in will generate a secure session token",
-            FONT_SIZE = 12,
-            COLOR = GameBoyColors.MediumGreen,
-            MODIFIER = Modifier.padding(horizontal = 16.dp)
+            "Connect to the internet for Achievements",
+            FONT_SIZE = 14,
+            COLOR = GameBoyColors.LightGreen,
+            TEXT_ALIGN = TextAlign.Center,
+            MODIFIER = Modifier.padding(horizontal = 32.dp)
         )
+    }
+}
+
+@Composable
+fun LoginContent(LOGIN_ERROR: String?, ON_LOGIN: (String, String) -> Unit) {
+    var username by remember { mutableStateOf("") }
+    var token by remember { mutableStateOf("") }
+    val uriHandler = LocalUriHandler.current
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        item {
+            Icon(
+                painter = painterResource(R.drawable.winner),
+                contentDescription = null,
+                tint = GameBoyColors.LightGreen,
+                modifier = Modifier.size(64.dp)
+            )
+            Spacer(Modifier.height(16.dp))
+            CustomText("RetroAchievements", FONT_SIZE = 24, COLOR = GameBoyColors.LightGreen)
+            Spacer(Modifier.height(32.dp))
+
+            RAInput(LABEL = "Username", VALUE = username, ON_VALUE_CHANGE = { username = it })
+            Spacer(Modifier.height(16.dp))
+            RAInput(LABEL = "Password", VALUE = token, ON_VALUE_CHANGE = { token = it }, IS_PASSWORD = true)
+
+            if (LOGIN_ERROR != null) {
+                Spacer(Modifier.height(8.dp))
+                CustomText(
+                    "Login error : $LOGIN_ERROR",
+                    FONT_SIZE = 12,
+                    COLOR = GameBoyColors.Error
+                )
+            }
+
+            Spacer(Modifier.height(32.dp))
+            CustomButton(
+                ON_CLICK = { if (username.isNotEmpty() && token.isNotEmpty()) ON_LOGIN(username, token) },
+                MODIFIER = Modifier.fillMaxWidth()
+            ) {
+                CustomText("Login", FONT_SIZE = 18)
+            }
+
+            Spacer(Modifier.height(16.dp))
+            TextButton(onClick = { uriHandler.openUri("https://retroachievements.org/") }) {
+                CustomText(
+                    "Don't Have an Account? register on retroachievements.org",
+                    FONT_SIZE = 10,
+                    COLOR = GameBoyColors.MediumGreen,
+                    TEXT_ALIGN = TextAlign.Center
+                )
+            }
+        }
     }
 }
 
 @Composable
 fun ProfileContent(
     USERNAME: String,
-    ACHIEVEMENTS: List<AchievementEntity>,
+    GROUPED_ACHIEVEMENTS: List<GroupedAchievements>,
     ON_LOGOUT: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
@@ -104,7 +154,8 @@ fun ProfileContent(
         ) {
             Column {
                 CustomText("User: $USERNAME", FONT_SIZE = 18, COLOR = GameBoyColors.LightGreen)
-                CustomText("${ACHIEVEMENTS.size} Achievements", FONT_SIZE = 14, COLOR = GameBoyColors.MediumGreen)
+                val totalCount = GROUPED_ACHIEVEMENTS.sumOf { it.achievements.size }
+                CustomText("$totalCount Achievements", FONT_SIZE = 14, COLOR = GameBoyColors.MediumGreen)
             }
         }
 
@@ -115,10 +166,17 @@ fun ProfileContent(
         Box(modifier = Modifier.weight(1f)) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(ACHIEVEMENTS) { achievement ->
-                    AchievementItem(achievement)
+                GROUPED_ACHIEVEMENTS.forEach { grouped ->
+                    item {
+                        CustomText(grouped.gameTitle, FONT_SIZE = 16, COLOR = GameBoyColors.LightGreen)
+                        Spacer(Modifier.height(8.dp))
+                    }
+                    items(grouped.achievements) { achievement ->
+                        AchievementItem(achievement)
+                        Spacer(Modifier.height(8.dp))
+                    }
                 }
             }
         }
@@ -149,30 +207,30 @@ fun AchievementItem(ACHIEVEMENT: AchievementEntity) {
             .fillMaxWidth()
             .border(2.dp, GameBoyColors.Green)
             .background(GameBoyColors.MediumGreen.copy(alpha = 0.2f))
-            .padding(8.dp),
+            .padding(4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         AsyncImage(
             model = ACHIEVEMENT.badgeUrl,
             contentDescription = null,
             modifier = Modifier
-                .size(48.dp)
+                .size(96.dp)
                 .background(GameBoyColors.DarkGreen)
                 .border(1.dp, GameBoyColors.Green),
-            placeholder = painterResource(R.drawable.trophy)
+            placeholder = painterResource(R.drawable.winner)
         )
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
-            CustomText(ACHIEVEMENT.title, FONT_SIZE = 14, COLOR = GameBoyColors.LightGreen)
-            CustomText(ACHIEVEMENT.description, FONT_SIZE = 10, COLOR = GameBoyColors.Green)
+            CustomText(ACHIEVEMENT.title, FONT_SIZE = 14, COLOR = GameBoyColors.LightGreen, MODIFIER = Modifier.padding(0.dp))
+            CustomText(ACHIEVEMENT.description, FONT_SIZE = 10, COLOR = GameBoyColors.Green, MODIFIER = Modifier.padding(0.dp))
             
             val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(ACHIEVEMENT.unlockDate))
-            CustomText("Unlocked: $date", FONT_SIZE = 9, COLOR = GameBoyColors.MediumGreen)
+            CustomText("Unlocked: $date", FONT_SIZE = 9, COLOR = GameBoyColors.MediumGreen, MODIFIER = Modifier.padding(0.dp))
         }
-        Column(horizontalAlignment = Alignment.End) {
-            CustomText("${ACHIEVEMENT.points}", FONT_SIZE = 14, COLOR = GameBoyColors.LightGreen)
+        Column(horizontalAlignment = Alignment.End, modifier = Modifier.padding(end = 8.dp)) {
+            CustomText("${ACHIEVEMENT.points}", FONT_SIZE = 14, COLOR = GameBoyColors.LightGreen, MODIFIER = Modifier.padding(0.dp))
             if (ACHIEVEMENT.isHardcore) {
-                CustomText("HC", FONT_SIZE = 10, COLOR = Color.Red)
+                CustomText("HC", FONT_SIZE = 10, COLOR = Color.Red, MODIFIER = Modifier.padding(0.dp))
             }
         }
     }
@@ -218,10 +276,11 @@ fun AchievementScreenProfilePreview() {
         AchievementEntity(1, 1, "First Steps", "Started your first game", 5, "", System.currentTimeMillis(), false),
         AchievementEntity(2, 1, "Hardcore Master", "Beat the first boss in HC", 25, "", System.currentTimeMillis(), true)
     )
+    val mockGrouped = listOf(GroupedAchievements("Super Mario Land", mockAchievements))
     Box(modifier = Modifier.fillMaxSize().background(GameBoyColors.DarkGreen)) {
         ProfileContent(
             USERNAME = "Gamer123",
-            ACHIEVEMENTS = mockAchievements,
+            GROUPED_ACHIEVEMENTS = mockGrouped,
             ON_LOGOUT = {}
         )
     }
@@ -231,6 +290,6 @@ fun AchievementScreenProfilePreview() {
 @Composable
 fun AchievementScreenLoginPreview() {
     Box(modifier = Modifier.fillMaxSize().background(GameBoyColors.DarkGreen)) {
-        LoginContent(ON_LOGIN = { _, _ -> })
+        LoginContent(LOGIN_ERROR = null, ON_LOGIN = { _, _ -> })
     }
 }

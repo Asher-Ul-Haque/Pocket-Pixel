@@ -142,7 +142,7 @@ class GameBoy
   external fun nativeNotifyHttpResponse(BODY: String, STATUS: Int, CALLBACK_PTR: Long)
 
   // - - - JNI Callbacks - - -
-  fun onAchievementUnlocked(ID: Int, TITLE: String, DESCRIPTION: String, POINTS: Int, BADGE_URL: String, IS_HARDCORE: Boolean) {
+  fun onAchievementUnlocked(ID: Int, TITLE: String, DESCRIPTION: String, POINTS: Int, BADGE_URL: String, IS_HARDCORE: Boolean, TIMESTAMP: Long, IS_SILENT: Boolean) {
     App.appModule.mainScope.launch {
       val game = App.appModule.repo.getGameByUri(staticCurrentRomUri ?: "")
       if (game != null) {
@@ -153,22 +153,24 @@ class GameBoy
           description = DESCRIPTION,
           points = POINTS,
           badgeUrl = BADGE_URL,
-          unlockDate = System.currentTimeMillis(),
+          unlockDate = if (TIMESTAMP > 0) TIMESTAMP else System.currentTimeMillis(),
           isHardcore = IS_HARDCORE
         )
         App.appModule.database.achievementDAO().insertAchievement(achievement)
       }
 
-      // Show Toast and Notification
-      SnackbarController.sendEvent(SnackbarEvent("Achievement Unlocked: $TITLE"))
-      App.appModule.notificationManager.showNotification(
-        CONTEXT = App.appModule.context,
-        CHANNEL_ID = "ACHIEVEMENTS",
-        NOTIFICATION_ID = ID,
-        TITLE = "Achievement Unlocked!",
-        MESSAGE = "$TITLE ($POINTS pts)",
-        ICON_RES = R.drawable.trophy
-      )
+      if (!IS_SILENT) {
+        // Show Toast and Notification
+        SnackbarController.sendEvent(SnackbarEvent("Achievement Unlocked: $TITLE"))
+        App.appModule.notificationManager.showNotification(
+          CONTEXT = App.appModule.context,
+          CHANNEL_ID = "ACHIEVEMENTS",
+          NOTIFICATION_ID = ID,
+          TITLE = "Achievement Unlocked!",
+          MESSAGE = "$TITLE ($POINTS pts)",
+          ICON_RES = R.drawable.trophy
+        )
+      }
     }
   }
 
@@ -266,8 +268,8 @@ class GameBoy
     }
 
     @JvmStatic
-    fun onAchievementUnlockedCallback(ID: Int, TITLE: String, DESCRIPTION: String, POINTS: Int, BADGE_URL: String, IS_HARDCORE: Boolean) {
-      App.appModule.gameBoy.onAchievementUnlocked(ID, TITLE, DESCRIPTION, POINTS, BADGE_URL, IS_HARDCORE)
+    fun onAchievementUnlockedCallback(ID: Int, TITLE: String, DESCRIPTION: String, POINTS: Int, BADGE_URL: String, IS_HARDCORE: Boolean, TIMESTAMP: Long, IS_SILENT: Boolean) {
+      App.appModule.gameBoy.onAchievementUnlocked(ID, TITLE, DESCRIPTION, POINTS, BADGE_URL, IS_HARDCORE, TIMESTAMP, IS_SILENT)
     }
 
     @JvmStatic
@@ -276,6 +278,17 @@ class GameBoy
         val current = App.appModule.dataStoreManager.getSettings()
         App.appModule.dataStoreManager.updateSettings(current.copy(raUsername = USERNAME, raToken = TOKEN))
       }
+    }
+
+    @JvmStatic
+    fun onRaLoginError(MESSAGE: String) {
+        App.appModule.mainScope.launch {
+            // We need a way to propagate this to the AchievementViewModel.
+            // For now, let's use the snackbar as a fallback, but we should find the VM.
+            SnackbarController.sendEvent(SnackbarEvent("Login Error: $MESSAGE"))
+            // Actually, we can update the state in AchievementViewModel if we had a singleton or similar.
+            // Since we don't have a singleton VM, we might need an event flow.
+        }
     }
 
     // - - - Kotlin Native Audio API - - -

@@ -13,6 +13,11 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+data class GroupedAchievements(
+    val gameTitle: String,
+    val achievements: List<AchievementEntity>
+)
+
 class AchievementViewModel : ViewModel() {
     private val dataStore = App.appModule.dataStoreManager
     private val db = App.appModule.database
@@ -23,8 +28,9 @@ class AchievementViewModel : ViewModel() {
         initialValue = AppSettings()
     )
 
-    val achievements: StateFlow<List<AchievementEntity>> = db.achievementDAO().getAllAchievements().map { list ->
-        list.map { achievement ->
+    val groupedAchievements: StateFlow<List<GroupedAchievements>> = db.achievementDAO().getAllAchievements().map { list ->
+        // Download badges first (as before)
+        val listWithLocalBadges = list.map { achievement ->
             if (!achievement.badgeUrl.startsWith("content://")) {
                 val localUri = App.appModule.localAssetManager.getCachedAsset(
                     url = achievement.badgeUrl,
@@ -41,18 +47,33 @@ class AchievementViewModel : ViewModel() {
                 achievement
             }
         }
+
+        // Group by game
+        val allGames = db.gameDAO().getAllGamesOnce()
+        listWithLocalBadges.groupBy { it.gameId }.map { (gameId, achievements) ->
+            val gameTitle = allGames.find { it.id == gameId }?.title ?: "Unknown Game"
+            GroupedAchievements(gameTitle, achievements)
+        }
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
 
+    private val _loginError = MutableStateFlow<String?>(null)
+    val loginError: StateFlow<String?> = _loginError
+
     fun login(username: String, password: String) {
         viewModelScope.launch {
+            _loginError.value = null
             // Note: We don't store the password in DataStore.
             // We initiate login and wait for the token callback.
             App.appModule.gameBoy.raLoginWithPassword(username, password)
         }
+    }
+
+    fun setLoginError(error: String?) {
+        _loginError.value = error
     }
 
     fun logout() {
