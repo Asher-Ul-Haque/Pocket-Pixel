@@ -23,19 +23,7 @@ class App() : Application()
       "ACHIEVEMENTS",
       "Achievements",
       "Notifications for unlocked achievements",
-      NotificationManager.IMPORTANCE_DEFAULT
+      NotificationManager.IMPORTANCE_HIGH
     )
-
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-    {
-      val notificationChannel = NotificationChannel(
-        "channel_id",
-        "Notifications",
-        NotificationManager.IMPORTANCE_DEFAULT
-      )
-      notificationChannel.description = "Notifications for this app"
-      val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-      notificationManager.createNotificationChannel(notificationChannel)
-    }
   }
 }

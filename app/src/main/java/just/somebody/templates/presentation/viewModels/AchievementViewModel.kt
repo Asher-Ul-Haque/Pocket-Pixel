@@ -50,10 +50,17 @@ class AchievementViewModel : ViewModel() {
 
         // Group by game
         val allGames = db.gameDAO().getAllGamesOnce()
-        listWithLocalBadges.groupBy { it.gameId }.map { (gameId, achievements) ->
-            val gameTitle = allGames.find { it.id == gameId }?.title ?: "Unknown Game"
-            GroupedAchievements(gameTitle, achievements)
-        }
+        listWithLocalBadges
+            .filter { achievement ->
+                val isEmulatorWarning = achievement.title.contains("Warning", ignoreCase = true) &&
+                        achievement.title.contains("Emulator", ignoreCase = true) &&
+                        achievement.description.contains("Hardcore", ignoreCase = true)
+                !isEmulatorWarning
+            }
+            .groupBy { it.gameId }.map { (gameId, achievements) ->
+                val gameTitle = allGames.find { it.id == gameId }?.title ?: "Unknown Game"
+                GroupedAchievements(gameTitle, achievements)
+            }
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),

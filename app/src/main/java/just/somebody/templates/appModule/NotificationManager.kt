@@ -97,17 +97,15 @@ class DefaultNotificationManager : NotificationManager
 			.setSmallIcon(ICON_RES)
 			.setContentTitle(TITLE)
 			.setContentText(MESSAGE)
-			.setPriority(NotificationCompat.PRIORITY_DEFAULT)
+			.setPriority(NotificationCompat.PRIORITY_HIGH)
 			.setAutoCancel(true)
 
 		val notificationManager = NotificationManagerCompat.from(CONTEXT)
 
 		try
-		{
-			notificationManager.notify(NOTIFICATION_ID, builder.build())
-		}
+		{ notificationManager.notify(NOTIFICATION_ID, builder.build()) }
 		catch (e: SecurityException)
-		{ }
+		{ ForgeLogger.error(e); }
 	}
 
 	override fun cancelNotification(

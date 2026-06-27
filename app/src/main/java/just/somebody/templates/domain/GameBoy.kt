@@ -143,6 +143,15 @@ class GameBoy
 
   // - - - JNI Callbacks - - -
   fun onAchievementUnlocked(ID: Int, TITLE: String, DESCRIPTION: String, POINTS: Int, BADGE_URL: String, IS_HARDCORE: Boolean, TIMESTAMP: Long, IS_SILENT: Boolean) {
+    // Filter out RetroAchievements emulator warnings that are misidentified as achievements
+    // Only filter if it contains BOTH 'Emulator' and 'Hardcore' AND specifically looks like the warning
+    if (TITLE.contains("Warning", ignoreCase = true) && 
+        TITLE.contains("Emulator", ignoreCase = true) && 
+        DESCRIPTION.contains("Hardcore", ignoreCase = true)) {
+        ForgeLogger.warn("RA: Ignored emulator warning: $TITLE - $DESCRIPTION")
+        return
+    }
+
     App.appModule.mainScope.launch {
       val game = App.appModule.repo.getGameByUri(staticCurrentRomUri ?: "")
       if (game != null) {
@@ -161,6 +170,7 @@ class GameBoy
 
       if (!IS_SILENT) {
         // Show Toast and Notification
+        ForgeLogger.info("RA: Showing notification for achievement: $TITLE")
         SnackbarController.sendEvent(SnackbarEvent("Achievement Unlocked: $TITLE"))
         App.appModule.notificationManager.showNotification(
           CONTEXT = App.appModule.context,
