@@ -62,10 +62,10 @@ bootScreen.addEventListener('click', initiateBootSequence);
 window.addEventListener('keydown', (e) => { if (e.code === 'Space' && !isBooting) initiateBootSequence(); });
 initializeLibrary();
 
-const sBtn = document.getElementById('settings-btn'), sModal = document.getElementById('settings-modal'), sClose = document.getElementById('close-settings');
-if (sBtn && sModal && sClose) {
-    sBtn.addEventListener('click', () => sModal.style.display = 'flex');
-    sClose.addEventListener('click', () => sModal.style.display = 'none');
+const sBtn = document.getElementById('settings-btn'), sModalSet = document.getElementById('settings-modal'), sClose = document.getElementById('close-settings');
+if (sBtn && sModalSet && sClose) {
+    sBtn.addEventListener('click', () => sModalSet.style.display = 'flex');
+    sClose.addEventListener('click', () => sModalSet.style.display = 'none');
 }
 let volumes = JSON.parse(localStorage.getItem('pocketVols')) || { ch1: 1.0, ch2: 1.0, ch3: 1.0, ch4: 1.0 };
 function updateAudioMixer() {
@@ -98,9 +98,12 @@ if (themeList) {
         themeList.appendChild(btn);
     });
 }
-for (let i = 0; i < 4; i++) document.getElementById(`custom-c${i}`)?.value = customColors[i];
+for (let i = 0; i < 4; i++) {
+    const customInput = document.getElementById(`custom-c${i}`);
+    if (customInput) customInput.value = customColors[i];
+}
 document.getElementById('btn-apply-custom')?.addEventListener('click', () => {
-    customColors = [0, 1, 2, 3].map(i => document.getElementById(`custom-c${i}`).value);
+    customColors = [0, 1, 2, 3].map(i => document.getElementById(`custom-c${i}`)?.value || "#000000");
     localStorage.setItem('pocketCustomColors', JSON.stringify(customColors));
     applyColorsToEngine(customColors, 'CUSTOM');
 });
@@ -110,33 +113,36 @@ window.applySavedSettingsToEngine = function() {
     else if (themes[currentTheme]) applyColorsToEngine(themes[currentTheme], currentTheme);
 };
 
-function markSocialInteracted() { localStorage.setItem('pocketNagInteracted', 'true'); document.getElementById('nag-modal').style.display = 'none'; }
+function markSocialInteracted() { localStorage.setItem('pocketNagInteracted', 'true'); document.getElementById('nag-modal') ? document.getElementById('nag-modal').style.display = 'none' : null; }
 ['github-btn', 'playstore-btn', 'nag-github-btn', 'nag-playstore-btn'].forEach(id => document.getElementById(id)?.addEventListener('click', () => { window.open(id.includes('github') ? "https://github.com/Asher-Ul-Haque/Pocket-Pixel" : "https://play.google.com/store/apps/details?id=just.somebody.templates", '_blank'); markSocialInteracted(); }));
 document.getElementById('nag-later-btn')?.addEventListener('click', () => document.getElementById('nag-modal').style.display = 'none');
 window.checkNagModal = function() {
     if (localStorage.getItem('pocketNagInteracted') === 'true') return;
     let count = (parseInt(localStorage.getItem('pocketPlayCount')) || 0) + 1;
     localStorage.setItem('pocketPlayCount', count);
-    if ([6, 11, 51, 101, 501, 1001].includes(count) || count % 1000 === 0) setTimeout(() => document.getElementById('nag-modal').style.display = 'flex', 1500);
+    if ([6, 11, 51, 101, 501, 1001].includes(count) || count % 1000 === 0) setTimeout(() => { const nag = document.getElementById('nag-modal'); if(nag) nag.style.display = 'flex'; }, 1500);
 };
 
-const sModal = document.getElementById('savestate-modal'), sClose = document.getElementById('close-savestate'), sGrid = document.getElementById('state-grid');
-sClose?.addEventListener('click', () => sModal.style.display = 'none');
+const ssModal = document.getElementById('savestate-modal'), ssClose = document.getElementById('close-savestate'), ssGrid = document.getElementById('state-grid');
+ssClose?.addEventListener('click', () => ssModal.style.display = 'none');
 window.openSaveStateModal = async function(mode, preImg = null) {
-    document.getElementById('savestate-title').innerText = mode === 'SAVE' ? "SAVE STATE" : "LOAD STATE";
-    sGrid.innerHTML = '';
-    const cart = await window.PocketDB.getCartridge(), states = cart?.states || Array(5).fill(null);
-    states.forEach((s, i) => {
-        const btn = document.createElement('div');
-        btn.className = 'state-slot';
-        btn.innerHTML = `<div class="state-image-box">${s?.screenshot ? `<img src="${s.screenshot}">` : '<span>EMPTY</span>'}</div><div class="state-info">SLOT ${i+1}<span class="state-timestamp">${s ? new Date(s.timestamp).toLocaleString() : 'No Data'}</span></div>`;
-        btn.addEventListener('click', async () => {
-            if (mode === 'SAVE') {
-                const b = window.PocketEngine.saveState();
-                if (b) { await window.PocketDB.saveSlot(i, b, preImg); sModal.style.display = 'none'; }
-            } else if (mode === 'LOAD' && s?.buffer) { window.PocketEngine.loadState(s.buffer); sModal.style.display = 'none'; }
+    const title = document.getElementById('savestate-title');
+    if(title) title.innerText = mode === 'SAVE' ? "SAVE STATE" : "LOAD STATE";
+    if(ssGrid) {
+        ssGrid.innerHTML = '';
+        const cart = await window.PocketDB.getCartridge(), states = cart?.states || Array(5).fill(null);
+        states.forEach((s, i) => {
+            const btn = document.createElement('div');
+            btn.className = 'state-slot';
+            btn.innerHTML = `<div class="state-image-box">${s?.screenshot ? `<img src="${s.screenshot}">` : '<span>EMPTY</span>'}</div><div class="state-info">SLOT ${i+1}<span class="state-timestamp">${s ? new Date(s.timestamp).toLocaleString() : 'No Data'}</span></div>`;
+            btn.addEventListener('click', async () => {
+                if (mode === 'SAVE') {
+                    const b = window.PocketEngine.saveState();
+                    if (b) { await window.PocketDB.saveSlot(i, b, preImg); ssModal.style.display = 'none'; }
+                } else if (mode === 'LOAD' && s?.buffer) { window.PocketEngine.loadState(s.buffer); ssModal.style.display = 'none'; }
+            });
+            ssGrid.appendChild(btn);
         });
-        sGrid.appendChild(btn);
-    });
-    sModal.style.display = 'flex';
+        if(ssModal) ssModal.style.display = 'flex';
+    }
 };
