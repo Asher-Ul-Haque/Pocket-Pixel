@@ -1,5 +1,6 @@
 package just.somebody.templates.appModule.network
 
+import androidx.annotation.Keep
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.plugins.HttpTimeout
@@ -19,6 +20,7 @@ import kotlinx.serialization.json.Json
  * Wrapper client facilitating platform data transfers via Ktor asynchronous engines.
  * Includes standardized logging, timeouts, structure marshalling, and automated safe exception mappings.
  */
+@Keep
 class NetworkService
 {
   /** Internal pipeline executor client, configured with system feature plugins. */

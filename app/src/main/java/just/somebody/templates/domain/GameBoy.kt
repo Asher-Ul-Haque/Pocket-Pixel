@@ -2,6 +2,7 @@ package just.somebody.templates.domain
 
 import android.annotation.SuppressLint
 import android.net.Uri
+import androidx.annotation.Keep
 import just.somebody.templates.App
 import just.somebody.templates.R
 import just.somebody.templates.appModule.ForgeLogger
@@ -49,6 +50,7 @@ enum class Buttons
  * @property deferredRamData (ByteArray?) : the binary ram data to be saved
  * @property isRamDirty (Boolean) : dirty ram flag to save (deferred saving)
  */
+@Keep
 class GameBoy
 {
   // - - - State - - -

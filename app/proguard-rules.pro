@@ -3,7 +3,24 @@
 
 # Keep your application class (if you have one)
 -keep class just.somebody.templates.**Application { *; }
+# Keep the specific class accessed by FindClass in JNI
+-keep class just.somebody.templates.appModule.network.NetworkService { *; }
 
+# Keep the GameBoy class (which JNI_OnLoad uses to find methods)
+-keep class just.somebody.templates.domain.GameBoy { *; }
+
+# Keep the AppModule interface and any implementers
+-keep class just.somebody.templates.appModule.AppModuleInterface { *; }
+
+# Keep all native methods
+-keepclasseswithmembernames class * {
+    native <methods>;
+}
+
+# Keep members accessed via JNI
+-keepclassmembers class just.somebody.templates.domain.GameBoy {
+    static <methods>;
+}
 # Keep Kotlin metadata
 -keep class kotlin.Metadata { *; }
 
