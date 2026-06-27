@@ -21,4 +21,8 @@ data class AppSettings
 	val launchCount             : Int                     = 0,
 	val hasRated                : Boolean                 = false,
 	val isImmersiveModeEnabled  : Boolean                 = true,
-	val isDeferredSavingEnabled : Boolean                 = false)
+	val isDeferredSavingEnabled : Boolean                 = false,
+	val raUsername              : String                  = "",
+	val raToken                 : String                  = "",
+	val isRaHardcoreEnabled     : Boolean                 = false,
+	val assetUrlMapping         : Map<String, String>     = emptyMap())

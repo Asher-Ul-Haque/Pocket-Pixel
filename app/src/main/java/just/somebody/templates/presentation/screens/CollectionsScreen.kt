@@ -29,15 +29,16 @@ fun CollectionsScreen(
   VIEW_MODEL : CollectionsViewModel,
   MODIFIFER  : Modifier = Modifier)
 {
-  val collections  by VIEW_MODEL.collections.collectAsState()
-  val selectedGame by VIEW_MODEL.selectedGame.collectAsState()
-  var showCreateDialog by remember { mutableStateOf(false) }
+  val collections       by VIEW_MODEL.collections.collectAsState()
+  val favorites         by VIEW_MODEL.favorites.collectAsState()
+  val selectedGame      by VIEW_MODEL.selectedGame.collectAsState()
+  var showCreateDialog  by remember { mutableStateOf(false) }
   val scope = rememberCoroutineScope()
 
-  LaunchedEffect(selectedGame) {
-    if (selectedGame != null) {
-      SoundController.playSound(SoundEffect.Menu)
-    }
+  LaunchedEffect(selectedGame)
+  {
+    if (selectedGame != null)
+    { SoundController.playSound(SoundEffect.Menu) }
   }
 
   Box(modifier = MODIFIFER
@@ -53,17 +54,62 @@ fun CollectionsScreen(
         ON_CLICK = { showCreateDialog = true },
         MODIFIER = Modifier.fillMaxWidth().padding(16.dp))
       { 
-        Row(verticalAlignment = Alignment.CenterVertically) {
-          Icon(painterResource(R.drawable.list), null, tint = GameBoyColors.DarkGreen, modifier = Modifier.size(20.dp))
+        Row(verticalAlignment = Alignment.CenterVertically)
+        {
+          Icon(
+            painterResource(R.drawable.list),
+            null,
+            tint      = GameBoyColors.DarkGreen,
+            modifier  = Modifier.size(20.dp))
           Spacer(Modifier.width(8.dp))
-          CustomText(stringResource(R.string.CREATE_COLLECTION), FONT_SIZE = 14) 
+          CustomText(
+            stringResource(R.string.CREATE_COLLECTION),
+            FONT_SIZE = 14)
         }
+      }
+
+      if (favorites.isNotEmpty())
+      {
+        Row(
+          modifier              = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+          verticalAlignment     = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.Start)
+        {
+          Icon(
+            painterResource(R.drawable.heart),
+            null,
+            tint      = GameBoyColors.Green,
+            modifier  = Modifier
+              .size(24.dp)
+              .padding(end = 8.dp))
+          CustomText(
+            stringResource(R.string.FAV),
+            FONT_SIZE = 18)
+        }
+
+        GameList(
+          GAMES         = favorites,
+          TITLE         = "",
+          SHOW_TITLE    = false,
+          USE_ROW       = true,
+          BIG           = true,
+          ON_CLICK      = { VIEW_MODEL.markAsPlayed(it) },
+          ON_LONG_PRESS = { VIEW_MODEL.selectGame(it) },
+          GET_URL       = { game -> VIEW_MODEL.getBoxArtFlow(game) })
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        HorizontalDivider(
+          color     = GameBoyColors.MediumGreen,
+          modifier  = Modifier.padding(horizontal = 16.dp))
+        Spacer(modifier = Modifier.height(16.dp))
       }
 
       collections.filter { !it.isSystem }.forEach { collection ->
         Row(
-          modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-          verticalAlignment = Alignment.CenterVertically,
+          modifier              = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+          verticalAlignment     = Alignment.CenterVertically,
           horizontalArrangement = Arrangement.SpaceBetween)
         {
           CustomText(collection.name, FONT_SIZE = 18)
@@ -71,8 +117,8 @@ fun CollectionsScreen(
           IconButton(onClick = { VIEW_MODEL.deleteCollection(collection) })
           {
             Icon(
-              painter            = painterResource(R.drawable.trash),
-              contentDescription = stringResource(R.string.DELETE_COLLECTION),
+              painter             = painterResource(R.drawable.trash),
+              contentDescription  = stringResource(R.string.DELETE_COLLECTION),
               tint                = GameBoyColors.Green,
               modifier            = Modifier.size(32.dp))
           }
@@ -98,37 +144,39 @@ fun CollectionsScreen(
     {
       CreateCollectionDialog(
         ON_DISMISS = { showCreateDialog = false },
-        ON_CREATE  = { name ->
-          VIEW_MODEL.createCollection(name)
-          showCreateDialog = false
-        })
+        ON_CREATE  =
+          { name ->
+            VIEW_MODEL.createCollection(name)
+            showCreateDialog = false
+          })
     }
 
     selectedGame?.let()
     { game ->
-      // Find which collection this game belongs to (for removal)
+      // - - - Find which collection this game belongs to (for removal)
       val inCollection = collections.find { coll -> coll.games.any { it.id == game.id } }
       
       GameActionBottomSheet(
         GAME       = game,
         ON_DISMISS = { VIEW_MODEL.selectGame(null) },
-        ON_PLAY    = {
-          VIEW_MODEL.markAsPlayed(game)
-          VIEW_MODEL.selectGame(null)
-        },
-        ON_FAVORITE = {
-          VIEW_MODEL.selectGame(null)
-        },
-        ON_UPDATE_BOXART = { /* Implement if needed */ },
-        COLLECTIONS = collections.filter { !it.isSystem },
-        ON_ADD_TO_COLLECTION = { collectionId -> 
-          VIEW_MODEL.addGameToCollection(collectionId, game.id)
-          VIEW_MODEL.selectGame(null)
-        },
-        ON_REMOVE_FROM_COLLECTION = { collectionId ->
-          VIEW_MODEL.removeGameFromCollection(collectionId, game.id)
-          VIEW_MODEL.selectGame(null)
-        },
+        ON_PLAY    =
+          {
+            VIEW_MODEL.markAsPlayed(game)
+            VIEW_MODEL.selectGame(null)
+          },
+        ON_FAVORITE           = { VIEW_MODEL.selectGame(null) },
+        ON_UPDATE_BOXART      = { /* Implement if needed */ },
+        COLLECTIONS           = collections.filter { !it.isSystem },
+        ON_ADD_TO_COLLECTION  =
+          { collectionId ->
+            VIEW_MODEL.addGameToCollection(collectionId, game.id)
+            VIEW_MODEL.selectGame(null)
+          },
+        ON_REMOVE_FROM_COLLECTION =
+          { collectionId ->
+            VIEW_MODEL.removeGameFromCollection(collectionId, game.id)
+            VIEW_MODEL.selectGame(null)
+          },
         IN_COLLECTION_ID = inCollection?.id
       )
     }
@@ -150,9 +198,19 @@ fun CreateCollectionDialog(
         OutlinedTextField(
           value         = name,
           onValueChange = { name = it },
-          placeholder   = { Text(stringResource(R.string.COLLECTION_NAME), fontFamily = MinecraftFontFamily, color = GameBoyColors.DarkGreen) },
-          modifier      = Modifier.fillMaxWidth().background(color = GameBoyColors.LightGreen),
-          textStyle     = TextStyle(fontFamily = MinecraftFontFamily, fontSize = 14.sp, color = GameBoyColors.DarkGreen),
+          placeholder   =
+            {
+              Text(
+                stringResource(R.string.COLLECTION_NAME),
+                fontFamily  = MinecraftFontFamily,
+                color       = GameBoyColors.DarkGreen) },
+          modifier      = Modifier
+            .fillMaxWidth()
+            .background(color = GameBoyColors.LightGreen),
+          textStyle     = TextStyle(
+            fontFamily  = MinecraftFontFamily,
+            fontSize    = 14.sp,
+            color       = GameBoyColors.DarkGreen),
           colors        = OutlinedTextFieldDefaults.colors(
             focusedTextColor     = GameBoyColors.DarkGreen,
             unfocusedTextColor   = GameBoyColors.DarkGreen,
@@ -180,8 +238,8 @@ fun CreateCollectionDialog(
         }
       }
     },
-    confirmButton = {},
-    dismissButton = null,
-    containerColor = GameBoyColors.MediumGreen,
-    shape = RectangleShape)
+    confirmButton   = {},
+    dismissButton   = null,
+    containerColor  = GameBoyColors.MediumGreen,
+    shape           = RectangleShape)
 }

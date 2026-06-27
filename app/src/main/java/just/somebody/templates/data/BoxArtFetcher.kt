@@ -6,6 +6,7 @@ import just.somebody.templates.appModule.NetworkStatus
 import just.somebody.templates.appModule.network.NetworkResult
 import just.somebody.templates.appModule.network.NetworkService
 import just.somebody.templates.appModule.storage.InternalStorageManager
+import just.somebody.templates.appModule.storage.LocalAssetManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -116,8 +117,7 @@ class DefaultBoxArtFetcher(
     {
       val json = Json.encodeToString(
         MapSerializer(String.serializer(), String.serializer().nullable),
-        DATA_CACHE
-                                    )
+        DATA_CACHE)
       CACHE.cacheFile(mappingCacheFile, json.encodeToByteArray())
     }
 
@@ -255,9 +255,16 @@ class DefaultBoxArtFetcher(
           val foundFileName = boxArtFiles[index]
           val foundUrl      = baseUrl + foundFileName
           ForgeLogger.info("Exact match found via binary search: $foundUrl")
-          cacheJson[GAME_NAME] = foundUrl
+          
+          val localUri = App.appModule.localAssetManager.getCachedAsset(
+            URL = foundUrl,
+            FILE_NAME = "${normalize(GAME_NAME)}.png",
+            CATEGORY = LocalAssetManager.CATEGORY_BOXARTS
+          )
+          
+          cacheJson[GAME_NAME] = localUri
           saveCache(cacheJson)
-          emit(foundUrl)
+          emit(localUri)
           return@flow
         }
 
@@ -273,9 +280,15 @@ class DefaultBoxArtFetcher(
           {
             val foundUrl = baseUrl + closestFileName
             ForgeLogger.info("Fuzzy match found: $foundUrl")
-            cacheJson[GAME_NAME] = foundUrl
+            
+            val localUri = App.appModule.localAssetManager.getCachedAsset(
+              URL       = foundUrl,
+              FILE_NAME = "${normalize(GAME_NAME)}.png",
+              CATEGORY  = LocalAssetManager.CATEGORY_BOXARTS)
+
+            cacheJson[GAME_NAME] = localUri
             saveCache(cacheJson)
-            emit(foundUrl)
+            emit(localUri)
             return@flow
           }
         }

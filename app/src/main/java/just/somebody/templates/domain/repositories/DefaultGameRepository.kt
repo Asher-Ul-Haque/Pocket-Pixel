@@ -114,7 +114,12 @@ class DefaultGameRepository(private val DAO : GameDao) : GameRepository
     DAO.searchGames(QUERY).map { it.map { it.toDomain() } }
 
   override suspend fun factoryReset()
-  { DAO.deleteEverything() }
+  {
+    DAO.deleteEverything()
+    App.appModule.database.saveStateDAO().deleteAllSaveStates()
+    App.appModule.database.achievementDAO().deleteAllAchievements()
+    App.appModule.boxArtFetcher.deleteCache()
+  }
 
   override suspend fun syncGamesWithStorage(KEY : String)
   {

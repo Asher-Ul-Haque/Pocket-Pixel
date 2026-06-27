@@ -10,7 +10,9 @@ import io.ktor.client.plugins.logging.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
+import just.somebody.templates.App
 import just.somebody.templates.appModule.ForgeLogger
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
 /**
@@ -40,7 +42,7 @@ class NetworkService
       }
       level = LogLevel.ALL
     }
-    defaultRequest() { contentType(ContentType.Application.Json) }
+    expectSuccess = true
   }
 
   /**
@@ -57,10 +59,16 @@ class NetworkService
     HEADERS : Map<String, String> = emptyMap(),
     PARAMS  : Map<String, Any?>   = emptyMap()): NetworkResult<T>
   {
+    ForgeLogger.info("GET -> ", URL)
+
+    if (HEADERS.isNotEmpty()) ForgeLogger.debug("Headers: ", HEADERS)
+    if (PARAMS.isNotEmpty())  ForgeLogger.debug("Params: ", PARAMS)
+
     return safeRequest()
     {
       client.get(URL)
       {
+        contentType(ContentType.Application.Json)
         HEADERS.forEach()
         { (key, value) -> header(key, value) }
         url ()
@@ -86,10 +94,16 @@ class NetworkService
     BODY    : Any?                = null,
     HEADERS : Map<String, String> = emptyMap()): NetworkResult<T>
   {
+    ForgeLogger.info("POST -> ", URL)
+
+    if (HEADERS.isNotEmpty()) ForgeLogger.debug("Headers: ", HEADERS)
+    ForgeLogger.debug("Body: ", BODY)
+
     return safeRequest ()
     {
       client.post(URL)
       {
+        contentType(ContentType.Application.Json)
         HEADERS.forEach { (key, value) -> header(key, value) }
         setBody(BODY ?: "")
       }.body()
@@ -107,6 +121,7 @@ class NetworkService
     URL     : String,
     HEADERS : Map<String, String> = emptyMap()): NetworkResult<Boolean>
   {
+    ForgeLogger.info("HEAD -> ", URL)
     return safeRequest ()
     {
       val response = client.request(URL)
@@ -115,6 +130,66 @@ class NetworkService
         HEADERS.forEach { (key, value) -> header(key, value) }
       }
       response.status.isSuccess()
+    }
+  }
+
+  fun makeRaRequest(URL: String, POST_DATA: String?, CALLBACK_PTR: Long)
+  {
+    ForgeLogger.info(
+      "RA request: url=", URL,
+      ", post=",          POST_DATA != null,
+      ", callback=",      CALLBACK_PTR)
+    
+    // Ensure version parameter is present for login
+    var finalPostData = POST_DATA
+    if (finalPostData != null && finalPostData.contains("r=login2") && !finalPostData.contains("&v="))
+    {
+      finalPostData += "&v=1.0"
+    }
+
+    App.appModule.mainScope.launch()
+    {
+      val result: NetworkResult<String> = if (finalPostData == null)
+      { get(URL) }
+      else
+      {
+        // - - - RA requires x-www-form-urlencoded for POST requests
+        safeRequest()
+        {
+          client.post(URL)
+          {
+            header(HttpHeaders.ContentType, ContentType.Application.FormUrlEncoded.toString())
+            setBody(finalPostData)
+          }.body()
+        }
+      }
+
+      when (result)
+      {
+        is NetworkResult.Success ->
+          {
+            ForgeLogger.info(
+              "RA success: callback=",
+              CALLBACK_PTR,
+              ", responseLength=",
+              result.data.length)
+
+            App.appModule.gameBoy.nativeNotifyHttpResponse(result.data, 200, CALLBACK_PTR)
+          }
+        is NetworkResult.Error ->
+          {
+            ForgeLogger.error(
+              "RA failed: callback=",
+              CALLBACK_PTR,
+              ", type=",
+              result.type,
+              ", code=",
+              result.code,
+              ", message=",
+              result.message)
+            App.appModule.gameBoy.nativeNotifyHttpResponse("", result.code ?: 500, CALLBACK_PTR)
+          }
+      }
     }
   }
 
@@ -130,10 +205,20 @@ class NetworkService
   {
     return try
     {
+      ForgeLogger.trace("Executing network request...")
       val result = BLOCK()
+      ForgeLogger.info("Request completed successfully.")
       NetworkResult.Success(result)
-    } catch (e: ResponseException)
+    }
+    catch (e: ResponseException)
     {
+      ForgeLogger.error(
+        "HTTP error: code=",
+        e.response.status.value,
+        ", message=",
+        e.message,
+        ", cause=",
+        e)
       val code    = e.response.status.value
       val message = e.message ?: "Unknown error"
 
@@ -141,13 +226,26 @@ class NetworkService
       {
         401 -> NetworkErrorType.Unauthorized
         404 -> NetworkErrorType.NotFound
+        422 -> NetworkErrorType.ClientError
         in 500..599 -> NetworkErrorType.ServerError
         else -> NetworkErrorType.Unexpected
       }
       NetworkResult.Error(type, message, code)
     }
-    catch (e: java.net.SocketTimeoutException) { NetworkResult.Error(NetworkErrorType.Timeout, e.message) }
-    catch (e: java.net.UnknownHostException)   { NetworkResult.Error(NetworkErrorType.NoInternet, e.message) }
-    catch (e: Exception)                       { NetworkResult.Error(NetworkErrorType.Unexpected, e.message) }
+    catch (e: java.net.SocketTimeoutException)
+    {
+      ForgeLogger.error("Request timed out.", e)
+      NetworkResult.Error(NetworkErrorType.Timeout, e.message)
+    }
+    catch (e: java.net.UnknownHostException)
+    {
+      ForgeLogger.error("Host lookup failed.", e)
+      NetworkResult.Error(NetworkErrorType.NoInternet, e.message)
+    }
+    catch (e: Exception)
+    {
+      ForgeLogger.fatal("Unhandled network exception.", e)
+      NetworkResult.Error(NetworkErrorType.Unexpected, e.message)
+    }
   }
 }

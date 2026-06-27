@@ -28,6 +28,7 @@ import just.somebody.templates.data.BoxArtFetcher
 import just.somebody.templates.data.DefaultBoxArtFetcher
 import just.somebody.templates.appModule.storage.DefaultExternalStorageManager
 import just.somebody.templates.appModule.storage.ExternalStorageManager
+import just.somebody.templates.appModule.storage.LocalAssetManager
 import just.somebody.templates.appModule.storage.SaveStateManager
 import just.somebody.templates.appModule.storage.ScreenshotManager
 import just.somebody.templates.domain.GameBoy
@@ -57,6 +58,9 @@ interface AppModuleInterface
 
   /** Platform checker executing status logic checks for security permissions. */
   val permissionManager      : PermissionManager
+
+  /** Interface for notification managing */
+  val notificationManager    : NotificationManager
 
   /** Broker processing internal hardware states like battery, thermal levels, or vibrations. */
   val hardwareManager        : HardwareManager
@@ -97,6 +101,9 @@ interface AppModuleInterface
   /** Controller managing the capturing and viewing of game screenshots. */
   val screenshotManager      : ScreenshotManager
 
+  /** Manager handling persistent asset caching (boxarts, badges). */
+  val localAssetManager      : LocalAssetManager
+
   /** Global scope for background operations. */
   val mainScope              : CoroutineScope
 
@@ -118,6 +125,7 @@ class AppModule(private val APP_CONTEXT : Context) : AppModuleInterface
   override val navigator              : Navigator               by lazy { DefaultNavigator(startDestination = Destination.Home) }
   override val hardwareManager        : HardwareManager         by lazy { DefaultHardwareManager(APP_CONTEXT) }
   override val permissionManager      : PermissionManager       by lazy { DefaultPermissionManager() }
+  override val notificationManager    : NotificationManager     by lazy { DefaultNotificationManager() }
   override val dataStoreManager       : DataStoreManager        by lazy { DataStoreManager(appSettingsDataStore) }
   override val internalStorageManager : InternalStorageManager  by lazy { DefaultInternalStorageManager(APP_CONTEXT) }
   override val externalStorageManager : ExternalStorageManager  by lazy { DefaultExternalStorageManager(APP_CONTEXT, dataStoreManager) }
@@ -131,6 +139,7 @@ class AppModule(private val APP_CONTEXT : Context) : AppModuleInterface
   override val gameControllerManager  : GameControllerManager   by lazy { DefaultGameControllerManager(APP_CONTEXT) }
   override val saveStateManager       : SaveStateManager        by lazy { SaveStateManager(APP_CONTEXT, database.saveStateDAO()) }
   override val screenshotManager      : ScreenshotManager       by lazy { ScreenshotManager(APP_CONTEXT) }
+  override val localAssetManager      : LocalAssetManager      by lazy { LocalAssetManager(APP_CONTEXT) }
   override val mainScope              : CoroutineScope          by lazy { CoroutineScope(Dispatchers.Main + SupervisorJob()) }
 
   /**

@@ -15,11 +15,11 @@ sealed interface Destination
   /** Represents the default catalog screen displaying the local game compilation library. */
   @Serializable data object Home                        : Destination
 
-  /** Represents the filtered bookmarked layout collection view. */
-  @Serializable data object Favorites                   : Destination
-
   /** Represents the user-defined custom game list management screen. */
   @Serializable data object Collections                 : Destination
+
+  /** Represents the user-defined achievements and profile view. */
+  @Serializable data object Achievements                : Destination
 
   /** Represents the dedicated searchable query input and matching result grid panel. */
   @Serializable data object Search                      : Destination

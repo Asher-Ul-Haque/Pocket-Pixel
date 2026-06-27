@@ -50,14 +50,12 @@ fun SearchScreen(
     modifier = MODIFIFER
       .fillMaxSize()
       .background(GameBoyColors.DarkGreen),
-    contentAlignment = Alignment.Center
-     )
+    contentAlignment = Alignment.Center)
   {
     Column(
       modifier            = Modifier.fillMaxSize(),
       verticalArrangement = Arrangement.Top,
-      horizontalAlignment = Alignment.Start
-          )
+      horizontalAlignment = Alignment.Start)
     {
       SearchBar(
         SEARCH_QUERY           = searchQuery.value,
@@ -79,8 +77,7 @@ fun SearchScreen(
               painter = painterResource(R.drawable.search),
               contentDescription = null,
               tint = GameBoyColors.MediumGreen,
-              modifier = Modifier.size(64.dp).padding(bottom = 16.dp)
-            )
+              modifier = Modifier.size(64.dp).padding(bottom = 16.dp))
             CustomText(
               TEXT      = stringResource(R.string.NO_RES),
               FONT_SIZE = 16)
@@ -92,8 +89,7 @@ fun SearchScreen(
         Column (
           modifier            = Modifier.fillMaxSize(),
           verticalArrangement = Arrangement.Top,
-          horizontalAlignment = Alignment.Start
-               )
+          horizontalAlignment = Alignment.Start)
         {
           GameList(
             GAMES         = results.value,
@@ -108,7 +104,7 @@ fun SearchScreen(
       }
     }
 
-    selectedGame.value?.let ()
+    selectedGame.value?.let()
     { game ->
       GameActionBottomSheet(
         GAME             = game,
@@ -123,12 +119,13 @@ fun SearchScreen(
             VIEW_MODEL.toggleFavorite(game)
             VIEW_MODEL.selectGame(null)
           },
-        ON_UPDATE_BOXART = { url -> VIEW_MODEL.updateBoxArtUrl(game, url) },
-        COLLECTIONS      = collections.value,
-        ON_ADD_TO_COLLECTION = { collectionId ->
-          VIEW_MODEL.addToCollection(collectionId, game.id)
-          VIEW_MODEL.selectGame(null)
-        })
+        ON_UPDATE_BOXART      = { url -> VIEW_MODEL.updateBoxArtUrl(game, url) },
+        COLLECTIONS           = collections.value,
+        ON_ADD_TO_COLLECTION  =
+          { collectionId ->
+            VIEW_MODEL.addToCollection(collectionId, game.id)
+            VIEW_MODEL.selectGame(null)
+          })
     }
   }
 }

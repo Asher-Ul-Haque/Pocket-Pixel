@@ -111,11 +111,12 @@ fun EmulatorScreen(
   // - - - Handle Settings Modal Pause
   LaunchedEffect(showSettings.value)
   {
-    if (showSettings.value) {
+    if (showSettings.value)
+    {
       SoundController.playSound(SoundEffect.Menu)
       VIEW_MODEL.pause(PauseTrigger.SETTINGS)
     }
-    else                    VIEW_MODEL.resume(PauseTrigger.SETTINGS)
+    else VIEW_MODEL.resume(PauseTrigger.SETTINGS)
   }
 
   // - - - Map Gamepad Buttons to GameBoy Buttons based on custom mapping
@@ -170,18 +171,19 @@ fun EmulatorScreen(
   val gameBoyAspectRatio  = 160f / 144f
 
   EmulatorContent(
-    IS_LANDSCAPE       = isLandscape,
-    CONTROLS_VISIBLE   = controlsVisible,
-    CONTROL_ALPHA      = controlAlpha,
-    SHOW_SETTINGS      = showSettings.value,
-    ON_INTERACTION     = onInteraction,
+    IS_LANDSCAPE        = isLandscape,
+    CONTROLS_VISIBLE    = controlsVisible,
+    CONTROL_ALPHA       = controlAlpha,
+    SHOW_SETTINGS       = showSettings.value,
+    ON_INTERACTION      = onInteraction,
     ON_TOGGLE_SETTINGS  = { showSettings.value = !showSettings.value },
-    VIEWPORT          = { modifier ->
-      AndroidView(
-        modifier  = modifier,
-        factory   = { context -> GameBoyFrame(context) },
-        update    = { })
-    },
+    VIEWPORT            =
+      { modifier ->
+        AndroidView(
+          modifier  = modifier,
+          factory   = { context -> GameBoyFrame(context) },
+          update    = { })
+      },
     CONTROLS =
       {
         GameBoyControls(gameBoy, VIEW_MODEL, onInteraction)

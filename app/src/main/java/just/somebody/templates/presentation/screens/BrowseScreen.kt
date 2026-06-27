@@ -51,6 +51,7 @@ import just.somebody.templates.App
 import just.somebody.templates.R
 import just.somebody.templates.appModule.navigation.NavigationAction
 import just.somebody.templates.presentation.effects.ObserveAsEvents
+import just.somebody.templates.presentation.viewModels.AchievementViewModel
 import just.somebody.templates.presentation.viewModels.BrowseViewModel
 import just.somebody.templates.presentation.viewModels.CollectionsViewModel
 import just.somebody.templates.presentation.viewModels.EmulatorViewModel
@@ -63,16 +64,30 @@ import just.somebody.templates.presentation.widgets.NavBar
 import just.somebody.templates.ui.theme.GameBoyColors
 
 @Composable
-private fun FAQItemView(QUESTION: String, ANSWER: String, IS_EXPANDED: Boolean, ON_TOGGLE: () -> Unit) {
-  Column(modifier = Modifier.fillMaxWidth()) {
+private fun FAQItemView(
+  QUESTION    : String,
+  ANSWER      : String,
+  IS_EXPANDED : Boolean,
+  ON_TOGGLE   : () -> Unit)
+{
+  Column(modifier = Modifier.fillMaxWidth())
+  {
     CustomButton(
       ON_CLICK = ON_TOGGLE,
       MODIFIER = Modifier.fillMaxWidth(),
-      COLOR = if (IS_EXPANDED) GameBoyColors.MediumGreen else GameBoyColors.DarkGreen
-    ) {
-      CustomText(QUESTION, FONT_SIZE = 14, MODIFIER = Modifier.fillMaxWidth().padding(8.dp))
+      COLOR    =
+        if (IS_EXPANDED) GameBoyColors.MediumGreen
+        else             GameBoyColors.DarkGreen)
+    {
+      CustomText(
+        QUESTION,
+        FONT_SIZE = 14,
+        MODIFIER  = Modifier
+          .fillMaxWidth()
+          .padding(8.dp))
     }
-    if (IS_EXPANDED) {
+    if (IS_EXPANDED)
+    {
       Box(
         modifier = Modifier
           .fillMaxWidth()
@@ -80,8 +95,13 @@ private fun FAQItemView(QUESTION: String, ANSWER: String, IS_EXPANDED: Boolean, 
           .background(GameBoyColors.MediumGreen.copy(alpha = 0.3f))
           .border(1.dp, GameBoyColors.MediumGreen, RectangleShape)
           .padding(12.dp)
-      ) {
-        CustomText(ANSWER, FONT_SIZE = 12, COLOR = GameBoyColors.LightGreen, MODIFIER = Modifier)
+      )
+      {
+        CustomText(
+          ANSWER,
+          FONT_SIZE = 12,
+          COLOR     = GameBoyColors.LightGreen,
+          MODIFIER  = Modifier)
       }
     }
   }
@@ -143,6 +163,8 @@ fun BrowseScreen(
           REPO            = App.appModule.repo,
           DATASTORE       = App.appModule.dataStoreManager)
       })
+  val achievementViewModel =
+    viewModel<AchievementViewModel>(factory = viewModelFactory() { AchievementViewModel() })
   val emulatorViewModel =
     viewModel<EmulatorViewModel>(factory = viewModelFactory()
     { EmulatorViewModel() })
@@ -250,13 +272,6 @@ fun BrowseScreen(
             VIEW_MODEL = gamesViewModel,
             MODIFIFER  = Modifier.fillMaxSize())
         }
-        composable<Destination.Favorites>
-        {
-          LaunchedEffect(Unit) { VIEW_MODEL.showBars(true) }
-          FavoriteScreen(
-            VIEW_MODEL = gamesViewModel,
-            MODIFIFER  = Modifier.fillMaxSize())
-        }
         composable<Destination.Collections>
         {
           LaunchedEffect(Unit) { VIEW_MODEL.showBars(true) }
@@ -278,6 +293,12 @@ fun BrowseScreen(
             VIEW_MODEL = settingsViewModel,
             MODIFIFER  = Modifier.fillMaxSize())
         }
+        composable<Destination.Achievements>
+        {
+          LaunchedEffect(Unit) { VIEW_MODEL.showBars(true) }
+          AchievementScreen(
+            VIEW_MODEL = achievementViewModel)
+        }
         composable<Destination.Emulator>
         {
           LaunchedEffect(Unit) { VIEW_MODEL.showBars(false) }
@@ -293,19 +314,22 @@ fun BrowseScreen(
       {
         var expandedIndex by remember { mutableIntStateOf(-1) }
         val faqs = listOf(
-          "How do I add a game?" to "1. Copy your .gb or .gbc files into a folder on your device.\n2. Ensure they are NOT in a zip file.\n3. Go to Settings in this app.\n4. Tap 'Select Directory' and choose your ROMs folder.\n5. Wait for the scan to finish and your games will appear on the Home screen.",
-          "Is this app open source?" to "Yes! Pocket Pixel is completely open source. You can view, audit, or contribute to the source code on GitHub using the link below.",
-          "Are there any ads?" to "Never. Pocket Pixel is and will always be 100% ad-free. No interruptions, no tracking, just pure retro gaming.",
-          "What about my data privacy?" to "Your privacy is paramount. No data ever leaves your device. Everything—including your game saves, screenshots, and settings—is stored locally on your phone.",
-          "Audio is a bit glitchy, how do I fix?" to "Go to settings -> Audio and turn the sliders down (especially Noise) and use your device's audio buttons to increase volume. ",
-          "How do I use a game controller?" to "1. Connect your controller via Bluetooth or USB.\n2. Go to Settings.\n3. Tap on any detected button or axis under 'Current Bindings'.\n4. Press the physical button on your controller to map it.",
-          "Does this support piracy?" to "No. You are responsible for acquiring your games fairly. We recommend scanning physical cartridges you own or playing homebrew games from sites like itch.io.",
-          "How do I take a screenshot?" to "While playing, open the In-game Settings and select 'Screenshot' under the Misc tab. You can view them by tapping 'View Screenshots' in the main Settings menu.",
-          "What is Deferred Saving?" to "Deferred saving is a performance feature. Instead of pausing the game to save data immediately, it waits until you exit the emulator. This prevents minor stutters during gameplay.",
-          "How do I use Save States?" to "Open the In-game Settings while playing. Under the 'States' tab, you can select one of 5 slots to Save or Load your exact progress at any moment.",
-          "Can I change the colors?" to "Yes! Go to Settings and look for the 'Visual' section. You can choose from classic Game Boy palettes or apply shaders like 'CRT' or 'LCD' for a more authentic feel.",
-          "How do I delete a save file?" to "Long-press any game card on the Home screen to open the action menu. From there, you can select 'Delete Save File' to clear the battery RAM (SRAM) for that game.",
-          "How do I stop the controls from disappearing" to "Turn off Immersive Mode in settings."
+          stringResource(R.string.FAQ_1) to stringResource(R.string.ANS_1),
+          stringResource(R.string.FAQ_2) to stringResource(R.string.ANS_2),
+          stringResource(R.string.FAQ_3) to stringResource(R.string.ANS_3),
+          stringResource(R.string.FAQ_4) to stringResource(R.string.ANS_4),
+          stringResource(R.string.FAQ_5)  to stringResource(R.string.ANS_5),
+          stringResource(R.string.FAQ_6)  to stringResource(R.string.ANS_6),
+          stringResource(R.string.FAQ_7)  to stringResource(R.string.ANS_7),
+          stringResource(R.string.FAQ_8)  to stringResource(R.string.ANS_8),
+          stringResource(R.string.FAQ_9)  to stringResource(R.string.ANS_9),
+          stringResource(R.string.FAQ_10) to stringResource(R.string.ANS_10),
+          stringResource(R.string.FAQ_11) to stringResource(R.string.ANS_11),
+          stringResource(R.string.FAQ_12) to stringResource(R.string.ANS_12),
+          stringResource(R.string.FAQ_13) to stringResource(R.string.ANS_13),
+          stringResource(R.string.FAQ_14) to stringResource(R.string.ANS_14),
+          stringResource(R.string.FAQ_15) to stringResource(R.string.ANS_15),
+          stringResource(R.string.FAQ_16) to stringResource(R.string.ANS_16)
         )
 
         BasicAlertDialog(
@@ -318,36 +342,52 @@ fun BrowseScreen(
             {
               Column(modifier = Modifier.padding(16.dp)) {
                 Row(
-                  modifier = Modifier.fillMaxWidth(),
+                  modifier              = Modifier.fillMaxWidth(),
                   horizontalArrangement = Arrangement.SpaceBetween,
-                  verticalAlignment = Alignment.CenterVertically
-                ) {
-                  CustomText("FAQ", FONT_SIZE = 20, MODIFIER = Modifier.padding(8.dp))
+                  verticalAlignment     = Alignment.CenterVertically)
+                {
+                  CustomText(
+                    stringResource(R.string.FAQ),
+                    FONT_SIZE = 20,
+                    MODIFIER  = Modifier.padding(8.dp))
                   CustomButton(
                     ON_CLICK = { VIEW_MODEL.toggleSeeInfo() },
                     MODIFIER = Modifier.width(60.dp),
-                    COLOR = GameBoyColors.MediumGreen
-                  ) {
-                    CustomText("X", FONT_SIZE = 18, MODIFIER = Modifier.padding(4.dp))
+                    COLOR    = GameBoyColors.MediumGreen)
+                  {
+                    CustomText(
+                      "X",
+                      FONT_SIZE = 18,
+                      MODIFIER  = Modifier.padding(4.dp))
                   }
                 }
 
-                HorizontalDivider(color = GameBoyColors.MediumGreen, thickness = 1.dp, modifier = Modifier.padding(vertical = 8.dp))
+                HorizontalDivider(
+                  color     = GameBoyColors.MediumGreen,
+                  thickness = 1.dp,
+                  modifier  = Modifier.padding(vertical = 8.dp))
 
                 LazyColumn(
-                  modifier = Modifier.heightIn(max = 450.dp),
-                  verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                  items(faqs.size) { index ->
+                  modifier            = Modifier.heightIn(max = 450.dp),
+                  verticalArrangement = Arrangement.spacedBy(8.dp))
+                {
+                  items(faqs.size)
+                  { index ->
                     FAQItemView(
-                      QUESTION = faqs[index].first,
-                      ANSWER = faqs[index].second,
+                      QUESTION    = faqs[index].first,
+                      ANSWER      = faqs[index].second,
                       IS_EXPANDED = expandedIndex == index,
-                      ON_TOGGLE = { expandedIndex = if (expandedIndex == index) -1 else index }
+                      ON_TOGGLE   =
+                        {
+                          expandedIndex =
+                            if (expandedIndex == index) -1
+                            else                        index
+                        }
                     )
                   }
                   
-                  item {
+                  item()
+                  {
                     Spacer(Modifier.height(8.dp))
                     CustomButton(
                       ON_CLICK = {
@@ -355,12 +395,22 @@ fun BrowseScreen(
                         val intent    = Intent(Intent.ACTION_VIEW, Uri.parse(githubUrl)).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
                         context.startActivity(intent)
                       },
-                      MODIFIER = Modifier.fillMaxWidth().padding(top = 12.dp)
-                    ) {
-                      Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(8.dp)) {
-                        Icon(painterResource(R.drawable.github), null, tint = GameBoyColors.DarkGreen, modifier = Modifier.size(20.dp))
+                      MODIFIER = Modifier.fillMaxWidth().padding(top = 12.dp))
+                    {
+                      Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier          = Modifier.padding(8.dp))
+                      {
+                        Icon(
+                          painterResource(R.drawable.github),
+                          null,
+                          tint      = GameBoyColors.DarkGreen,
+                          modifier  = Modifier.size(20.dp))
                         Spacer(Modifier.width(8.dp))
-                        CustomText(stringResource(R.string.GITHUB), COLOR = GameBoyColors.DarkGreen, MODIFIER = Modifier.padding(0.dp))
+                        CustomText(
+                          stringResource(R.string.GITHUB),
+                          COLOR     = GameBoyColors.DarkGreen,
+                          MODIFIER  = Modifier.padding(0.dp))
                       }
                     }
                   }

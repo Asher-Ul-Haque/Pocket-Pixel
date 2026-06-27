@@ -5,6 +5,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -23,14 +24,16 @@ import just.somebody.templates.ui.theme.MinecraftFontFamily
  * @param COLOR The color style applied to the text glyphs. Defaults to [GameBoyColors.LightGreen].
  * @param FONT_SIZE The scale dimension unit tracking text height and scale parameters. Defaults to `16`.
  * @param MAX_LINES Hard rendering threshold limit capping how many vertical lines the text block may occupy before clipping. Defaults to `100`.
+ * @param TEXT_ALIGN Alignment configuration for character flows within the line box. Defaults to [TextAlign.Start].
  */
 @Composable
 fun CustomText(
-  TEXT      : String,
-  MODIFIER  : Modifier = Modifier,
-  COLOR     : Color    = GameBoyColors.LightGreen,
-  FONT_SIZE : Int      = 16,
-  MAX_LINES : Int      = 100)
+  TEXT       : String,
+  MODIFIER   : Modifier  = Modifier,
+  COLOR      : Color     = GameBoyColors.LightGreen,
+  FONT_SIZE  : Int       = 16,
+  MAX_LINES  : Int       = 100,
+  TEXT_ALIGN : TextAlign = TextAlign.Start)
 {
   Text(
     modifier   = if (MODIFIER == Modifier) MODIFIER.padding(16.dp)
@@ -40,5 +43,6 @@ fun CustomText(
     fontSize   = FONT_SIZE.sp,
     fontFamily = MinecraftFontFamily,
     overflow   = TextOverflow.Ellipsis,
-    maxLines   = MAX_LINES)
+    maxLines   = MAX_LINES,
+    textAlign  = TEXT_ALIGN)
 }

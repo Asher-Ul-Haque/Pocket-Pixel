@@ -43,13 +43,13 @@ fun SettingsScreen(
   val settings        by VIEW_MODEL.settings.collectAsState()
 
   SettingsContent(
-    CONTROLLER_STATE   = controllerState,
-    SETTINGS          = settings,
-    ON_REFRESH         = { VIEW_MODEL.updateControllerConnection() },
+    CONTROLLER_STATE    = controllerState,
+    SETTINGS            = settings,
+    ON_REFRESH          = { VIEW_MODEL.updateControllerConnection() },
     ON_DEADZONE_CHANGE  = { VIEW_MODEL.setDeadzone(it) },
     ON_SET_PALETTE      = { VIEW_MODEL.setPalette(it) },
     ON_SET_SHADER       = { VIEW_MODEL.setShader(it) },
-    ON_RESCAN          = { VIEW_MODEL.rescan() },
+    ON_RESCAN           = { VIEW_MODEL.rescan() },
     ON_FACTORY_RESET    = { VIEW_MODEL.factoryReset() },
     ON_MAP_BUTTON       =
       { keyCode, button ->
@@ -59,9 +59,10 @@ fun SettingsScreen(
       { axis, dir, button ->
         VIEW_MODEL.setGamepadAxisMapping(axis, dir, button)
       },
-    ON_TOGGLE_IMMERSIVE = { VIEW_MODEL.toggleImmersiveMode() },
-    ON_TOGGLE_DEFERRED  = { VIEW_MODEL.toggleDeferredSaving() },
-    ON_SET_VOLUME       =
+    ON_TOGGLE_IMMERSIVE   = { VIEW_MODEL.toggleImmersiveMode() },
+    ON_TOGGLE_DEFERRED    = { VIEW_MODEL.toggleDeferredSaving() },
+    ON_TOGGLE_RA_HARDCORE = { VIEW_MODEL.toggleRaHardcoreMode() },
+    ON_SET_VOLUME         =
       {
         vol, ch ->
         VIEW_MODEL.setVolume(vol, ch)
@@ -86,6 +87,7 @@ fun SettingsContent(
   ON_MAP_AXIS         : (Int, Int, Buttons?) -> Unit,
   ON_TOGGLE_IMMERSIVE : () -> Unit,
   ON_TOGGLE_DEFERRED  : () -> Unit,
+  ON_TOGGLE_RA_HARDCORE : () -> Unit,
   ON_SET_VOLUME       : (Float, Int) -> Unit,
   MODIFIER            : Modifier = Modifier)
 {
@@ -140,9 +142,9 @@ fun SettingsContent(
             pressedButtons.forEach()
             { keyCode ->
               MappingItem(
-                LABEL   = KeyEvent.keyCodeToString(keyCode),
-                MAPPED  = SETTINGS.gamepadMapping.buttonToGameBoy[keyCode],
-                ON_CLICK = { showMappingDialog = 0 to keyCode })
+                LABEL     = KeyEvent.keyCodeToString(keyCode),
+                MAPPED    = SETTINGS.gamepadMapping.buttonToGameBoy[keyCode],
+                ON_CLICK  = { showMappingDialog = 0 to keyCode })
             }
 
             val activeAxes = CONTROLLER_STATE.axes.filter()
@@ -304,6 +306,21 @@ fun SettingsContent(
                 CustomText(
                   if (SETTINGS.isDeferredSavingEnabled) stringResource(R.string.DEFERRED_SAVING_ON)
                   else                                  stringResource(R.string.DEFERRED_SAVING_OFF),
+                  FONT_SIZE = 14, MODIFIER = Modifier)
+              }
+            }
+            CustomButton(ON_CLICK = ON_TOGGLE_RA_HARDCORE, MODIFIER = Modifier.fillMaxWidth())
+            {
+              Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start)
+              {
+                Icon(painterResource(R.drawable.trophy), null, tint = GameBoyColors.DarkGreen, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(12.dp))
+                CustomText(
+                  if (SETTINGS.isRaHardcoreEnabled)  "RA Hardcore: ON"
+                  else                               "RA Hardcore: OFF",
                   FONT_SIZE = 14, MODIFIER = Modifier)
               }
             }
@@ -515,5 +532,6 @@ private fun SettingsPreview()
     ON_MAP_AXIS         = { _, _, _ -> },
     ON_TOGGLE_IMMERSIVE = {},
     ON_TOGGLE_DEFERRED  = {},
+    ON_TOGGLE_RA_HARDCORE = {},
     ON_SET_VOLUME       = { _, _ -> })
 }

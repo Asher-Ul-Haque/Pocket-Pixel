@@ -4,25 +4,55 @@ import android.content.Context
 import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
+import androidx.compose.ui.res.stringResource
+import just.somebody.templates.R
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
+/**
+ * The state of the connected game controller
+ * @property isConnected (Boolean) : whether the controller is connected
+ * @property deviceName (String) : the name of the controller
+ * @property buttons (Map) : a map of which buttons are pressed
+ * @property axes (Map) : the axes of the controller and how much is their value
+ */
 data class GameControllerState(
   val isConnected : Boolean           = false,
   val deviceName  : String            = "No Controller",
   val buttons     : Map<Int, Boolean> = emptyMap(),
   val axes        : Map<Int, Float>   = emptyMap())
 
+/**
+ * The manager for game controller, which handles state and responds to hardware changes
+ * @param controllerState : the current state of the controller
+ */
 interface GameControllerManager
 {
   val controllerState: StateFlow<GameControllerState>
+
+  /**
+   * Handler for key presses on controller
+   * @param EVENT (KeyEvent) : key press hardware event
+   * @return (boolean) : whether the given key was pressed or not
+   */
   fun handleKeyEvent(EVENT: KeyEvent): Boolean
+
+  /**
+   * Handler for controller axes changes
+   * @param EVENT (MotionEvent) : axis change hardware event
+   * @return (Boolean) : whether the axis changed
+   */
   fun handleMotionEvent(EVENT: MotionEvent): Boolean
+
+  /** Updates state */
   fun updateConnectionState()
 }
 
+/**
+ * Standard Controller Manager implementation
+ */
 class DefaultGameControllerManager(private val CONTEXT: Context) : GameControllerManager
 {
   private val _controllerState = MutableStateFlow(GameControllerState())

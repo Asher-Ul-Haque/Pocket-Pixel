@@ -16,20 +16,23 @@ import java.util.Locale
 
 /**
  * Controller hub managing the capturing, persistence, and viewing of game screenshots in external storage.
+ * @param screenshotDir (String) : the screenshot subdirectory
  */
 class ScreenshotManager(private val context: Context)
 {
+  private val screenshotDir : String = "screenshots";
+
   /**
    * Saves a raw pixel buffer as a PNG screenshot for a specific game in the external ROMs directory.
    */
-  suspend fun saveScreenshot(gameTitle: String, pixels: IntArray) = withContext(Dispatchers.IO)
+  suspend fun saveScreenshot(GAME_TITLE: String, PIXELS: IntArray) = withContext(Dispatchers.IO)
   {
     try
     {
-      val correctedPixels = IntArray(pixels.size)
-      for (i in pixels.indices)
+      val correctedPixels = IntArray(PIXELS.size)
+      for (i in PIXELS.indices)
       {
-        val color = pixels[i]
+        val color = PIXELS[i]
         val alpha = (color ushr 24) and 0xFF
         val red   = color and 0xFF
         val green = (color ushr 8) and 0xFF
@@ -43,13 +46,13 @@ class ScreenshotManager(private val context: Context)
       val content = stream.toByteArray()
 
       val storage = App.appModule.externalStorageManager
-      val root    = storage.getDirectory("GAME_BOY_ROMS") ?: return@withContext false
+      val root    = storage.getDirectory(App.appModule.gameRomsKey) ?: return@withContext false
       
-      val screenshotsDir = storage.getOrCreateDirectory(root, "screenshots") ?: return@withContext false
-      val gameDir        = storage.getOrCreateDirectory(screenshotsDir, gameTitle.filter { it.isLetterOrDigit() || it.isWhitespace() }) ?: return@withContext false
+      val screenshotsDir = storage.getOrCreateDirectory(root, screenshotDir) ?: return@withContext false
+      val gameDir        = storage.getOrCreateDirectory(screenshotsDir, GAME_TITLE.filter { it.isLetterOrDigit() || it.isWhitespace() }) ?: return@withContext false
 
       val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-      val fileName  = "${gameTitle.filter { it.isLetterOrDigit() }}_$timestamp.png"
+      val fileName  = "${GAME_TITLE.filter { it.isLetterOrDigit() }}_$timestamp.png"
       
       val file = gameDir.createFile("image/png", fileName) ?: return@withContext false
       context.contentResolver.openOutputStream(file.uri)?.use { it.write(content) }
@@ -67,14 +70,15 @@ class ScreenshotManager(private val context: Context)
   /**
    * Opens the directory containing screenshots for a specific game.
    */
-  fun openScreenshotsForGame(gameTitle: String)
+  fun openScreenshotsForGame(GAME_TITLE: String)
   {
     App.appModule.mainScope.launch(Dispatchers.IO)
     {
-      val storage = App.appModule.externalStorageManager
-      val root    = storage.getDirectory("GAME_BOY_ROMS") ?: return@launch
-      val screenshotsDir = storage.getOrCreateDirectory(root, "screenshots") ?: return@launch
-      val gameDir        = storage.getOrCreateDirectory(screenshotsDir, gameTitle.filter { it.isLetterOrDigit() || it.isWhitespace() }) ?: return@launch
+      val storage         = App.appModule.externalStorageManager
+      val root            = storage.getDirectory(App.appModule.gameRomsKey) ?: return@launch
+      val screenshotsDir  = storage.getOrCreateDirectory(root, screenshotDir) ?: return@launch
+      val gameDir         = storage.getOrCreateDirectory(screenshotsDir, GAME_TITLE.filter()
+        { it.isLetterOrDigit() || it.isWhitespace() }) ?: return@launch
       
       openDirectory(gameDir.uri)
     }
@@ -87,20 +91,23 @@ class ScreenshotManager(private val context: Context)
   {
     App.appModule.mainScope.launch(Dispatchers.IO)
     {
-      val storage = App.appModule.externalStorageManager
-      val root    = storage.getDirectory("GAME_BOY_ROMS") ?: return@launch
-      val screenshotsDir = storage.getOrCreateDirectory(root, "screenshots") ?: return@launch
+      val storage         = App.appModule.externalStorageManager
+      val root            = storage.getDirectory(App.appModule.gameRomsKey) ?: return@launch
+      val screenshotsDir  = storage.getOrCreateDirectory(root, screenshotDir) ?: return@launch
       
       openDirectory(screenshotsDir.uri)
     }
   }
 
-  private fun openDirectory(uri: Uri)
+  /**
+   * Opens a directory
+   */
+  private fun openDirectory(URI: Uri)
   {
     try
     {
       val intent = Intent(Intent.ACTION_VIEW)
-      intent.setDataAndType(uri, "vnd.android.document/directory")
+      intent.setDataAndType(URI, "vnd.android.document/directory")
       intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
       intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
       
@@ -109,15 +116,15 @@ class ScreenshotManager(private val context: Context)
     catch (e: Exception)
     {
       ForgeLogger.error("Could not open directory via SAF: $e")
-      // Fallback: try to just open the URI
-      try {
-          val fallbackIntent = Intent(Intent.ACTION_VIEW, uri)
-          fallbackIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-          fallbackIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-          context.startActivity(fallbackIntent)
-      } catch (e2: Exception) {
-          ForgeLogger.error("Fallback open directory failed: $e2")
+      // - - - Fallback: try to just open the URI
+      try
+      {
+        val fallbackIntent = Intent(Intent.ACTION_VIEW, URI)
+        fallbackIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        fallbackIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(fallbackIntent)
       }
+      catch (e2: Exception) { ForgeLogger.error("Fallback open directory failed: $e2") }
     }
   }
 }

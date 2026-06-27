@@ -20,5 +20,4 @@ data class Game(
 	val lastPlayed      : Long?,
 	val playTime        : Long = 0,
 	val isFavorite      : Boolean,
-	val boxArtUrl       : String? = null
-							 )
+	val boxArtUrl       : String? = null)

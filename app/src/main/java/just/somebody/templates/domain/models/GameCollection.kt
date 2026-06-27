@@ -7,5 +7,4 @@ data class GameCollection(
   val id       : Long = 0,
   val name     : String,
   val isSystem : Boolean = false,
-  val games    : List<Game> = emptyList()
-)
+  val games    : List<Game> = emptyList())

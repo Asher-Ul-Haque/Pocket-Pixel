@@ -12,15 +12,16 @@ import kotlinx.coroutines.flow.map
 /**
  * Concrete implementation of [CollectionRepository] using Room DAOs.
  */
-class DefaultCollectionRepository(private val dao: CollectionDao) : CollectionRepository
+class DefaultCollectionRepository(private val DAO: CollectionDao) : CollectionRepository
 {
-  private fun CollectionEntity.toDomain(games: List<Game> = emptyList()) = GameCollection(
+  /** converts CollectionEntity to a Game Collection*/
+  private fun CollectionEntity.toDomain(GAMES: List<Game> = emptyList()) = GameCollection(
     id       = id,
     name     = name,
     isSystem = isSystem,
-    games    = games
-  )
+    games    = GAMES)
 
+  /** converts a GameEntity to a Game */
   private fun GameEntity.toDomain() = Game(
     id         = id,
     title      = title,
@@ -28,40 +29,73 @@ class DefaultCollectionRepository(private val dao: CollectionDao) : CollectionRe
     lastPlayed = lastPlayed,
     playTime   = playTime,
     isFavorite = isFavorite,
-    boxArtUrl  = boxArtUrl
-  )
+    boxArtUrl  = boxArtUrl)
 
+  /** Returns a list of all the GameCollections */
   override fun getAllCollections(): Flow<List<GameCollection>> =
-    dao.getCollectionsWithGames().map { list ->
-      list.map { it.collection.toDomain(it.games.map { g -> g.toDomain() }) }
+    DAO.getCollectionsWithGames().map()
+    { list ->
+      list.map()
+      { it.collection.toDomain(it.games.map { g -> g.toDomain() }) }
     }
 
-  override suspend fun createCollection(name: String, isSystem: Boolean): Long =
-    dao.insertCollection(CollectionEntity(name = name, isSystem = isSystem))
+  /**
+   * Creates a collection
+   * @param NAME (String) : the name of the collection
+   * @param IS_SYSTEM (Boolean) : whether the collection is created by the app or by the user
+   * @return (Long) : the id of the new collection
+   */
+  override suspend fun createCollection(NAME: String, IS_SYSTEM: Boolean): Long =
+    DAO.insertCollection(CollectionEntity(name = NAME, isSystem = IS_SYSTEM))
 
-  override suspend fun updateCollection(collection: GameCollection) =
-    dao.updateCollection(CollectionEntity(id = collection.id, name = collection.name, isSystem = collection.isSystem))
+  /**
+   * Updates collection
+   * @param COLLECTION (GameCollection) : the collection to be updated
+   */
+  override suspend fun updateCollection(COLLECTION: GameCollection) =
+    DAO.updateCollection(CollectionEntity(id = COLLECTION.id, name = COLLECTION.name, isSystem = COLLECTION.isSystem))
 
-  override suspend fun deleteCollection(collection: GameCollection) =
-    dao.deleteCollection(CollectionEntity(id = collection.id, name = collection.name, isSystem = collection.isSystem))
+  /**
+   * Deletes collection
+   * @param COLLECTION (GameCollection) : the collection to be deleted
+   */
+  override suspend fun deleteCollection(COLLECTION: GameCollection) =
+    DAO.deleteCollection(CollectionEntity(id = COLLECTION.id, name = COLLECTION.name, isSystem = COLLECTION.isSystem))
 
-  override suspend fun addGameToCollection(collectionId: Long, gameId: Long) =
-    dao.addGameToCollection(CollectionGameCrossRef(collectionId, gameId))
+  /**
+   * Adds a game to the collection
+   * @param COLLECTION_ID (Long) : the id of the collection
+   * @param GAME_ID (Long) : the id of the game to be added
+   */
+  override suspend fun addGameToCollection(COLLECTION_ID: Long, GAME_ID: Long) =
+    DAO.addGameToCollection(CollectionGameCrossRef(COLLECTION_ID, GAME_ID))
 
-  override suspend fun removeGameFromCollection(collectionId: Long, gameId: Long) =
-    dao.removeGameFromCollection(CollectionGameCrossRef(collectionId, gameId))
+  /**
+   * Removes a game from a collection
+   * @param COLLECTION_ID (Long) : the id of the collection
+   * @param GAME_ID (Long) : the id of the game to be added
+   */
+  override suspend fun removeGameFromCollection(COLLECTION_ID: Long, GAME_ID: Long) =
+    DAO.removeGameFromCollection(CollectionGameCrossRef(COLLECTION_ID, GAME_ID))
 
-  override fun getCollectionWithGames(collectionId: Long): Flow<GameCollection?> =
-    dao.getCollectionWithGames(collectionId).map { rel ->
+  /**
+   * Returns a collection with any games
+   * @param COLLECTION_ID (Long) : the collection id
+   * return GameCollection? : the collection if it has any games
+   */
+  override fun getCollectionWithGames(COLLECTION_ID: Long): Flow<GameCollection?> =
+    DAO.getCollectionWithGames(COLLECTION_ID).map()
+    { rel ->
       rel?.let { it.collection.toDomain(it.games.map { g -> g.toDomain() }) }
     }
 
+  /** Makes sure that the system collections are created and updated */
   override suspend fun ensureSystemCollections()
   {
-    val collections = dao.getCollectionById(1) // Assuming 1 is Favorites
+    val collections = DAO.getCollectionById(1) // - - - Assuming 1 is Favorites
     if (collections == null)
     {
-      dao.insertCollection(CollectionEntity(id = 1, name = "Favorites", isSystem = true))
+      DAO.insertCollection(CollectionEntity(id = 1, name = "Favorites", isSystem = true))
     }
   }
 }
