@@ -52,6 +52,7 @@
     <string name="rate_now">Rate Now</string>
     <string name="maybe_later">Maybe Later</string>
 
+    <string name="no_controller">No Controller</string>
     <string name="controller">Controller</string>
     <string name="device">Device: %s</string>
     <string name="refresh">Refresh</string>
@@ -134,4 +135,62 @@
     <string name="DEFERRED_SAVING_ON">Deferred Saving: ON</string>
     <string name="DEFERRED_SAVING_OFF">Deferred Saving: OFF</string>
     <string name="ACHIEVEMENTS">Badges</string>
+    <string name="NO_INTERNET">Connect to the internet for Achievements</string>
+    <string name="RA">RetroAchievements</string>
+    <string name="USERNAME">Username</string>
+    <string name="PASSWORD">Password</string>
+    <string name="LOGIN_ERROR">Login error : </string>
+    <string name="LOGIN">Login</string>
+    <string name="HELP_TEXT">"Don't Have an Account? register on retroachievements.org"</string>
+    <string name="USER">User : </string>
+    <string name="Achievements">Achievements: </string>
+    <string name="LOGOUT">Logout</string>
+    <string name="Unlocked">Unlocked:</string>
+    <string name="HARDCORE">HC</string>
+
+    <string name="FAQ">FAQ</string>
+    <string name="FAQ_1">How do I add a game?</string>
+    <string name="FAQ_2">Is this app open source?</string>
+    <string name="FAQ_3">Are there any ads?</string>
+    <string name="FAQ_4">What about my data privacy?</string>
+    <string name="FAQ_5">What about achievements?</string>
+    <string name="FAQ_6">Why cant I get Hardcore Achievements?</string>
+    <string name="FAQ_7">Will factory reset delete my achievements?</string>
+    <string name="FAQ_8">Audio is a bit glitchy, how do I fix?</string>
+    <string name="FAQ_9">How do I use a game controller?</string>
+    <string name="FAQ_10">Does this support piracy?</string>
+    <string name="FAQ_11">How do I take a screenshot?</string>
+    <string name="FAQ_12">What is Deferred Saving?</string>
+    <string name="FAQ_13">How do I use Save States?</string>
+    <string name="FAQ_14">Can I change the colors?</string>
+    <string name="FAQ_15">How do I delete a save file?</string>
+    <string name="FAQ_16">How do I stop the controls from disappearing?</string>
+
+    <string name="ANS_1">1. Copy your .gb or .gbc files into a folder on your device.
+2. Ensure they are NOT in a zip file.
+3. Go to Settings in this app.
+4. Tap Select Directory and choose your ROMs folder.
+5. Wait for the scan to finish and your games will appear on the Home screen.</string>
+    <string name="ANS_2">Yes! Pocket Pixel is completely open source. You can view, audit, or contribute to the source code on GitHub using the link below.</string>
+    <string name="ANS_3">Never. Pocket Pixel is and will always be 100% ad-free. No interruptions, no tracking, just pure retro gaming.</string>
+    <string name="ANS_4">Your privacy is paramount. No data ever leaves your device. Everything—including your game saves, screenshots, and settings—is stored locally on your phone.</string>
+    <string name="ANS_5">This app uses RetroAchievements, you need to create an account on the Retro Achievements website, login here and then play.</string>
+    <string name="ANS_6">Hardcore achievements require that save states be disabled. Go to settings, you will find hardcore toggle under miscellaneous.</string>
+    <string name="ANS_7">No, your achievements are stored on Retro Achievements, so deleting Pocket Pixel or factory reset wont delete your achievements.</string>
+    <string name="ANS_8">Go to settings -> Audio and turn the sliders down (especially Noise) and use your devices audio buttons to increase volume.</string>
+    <string name="ANS_9">1. Connect your controller via Bluetooth or USB.
+2. Go to Settings.
+3. Tap on any detected button or axis under Current Bindings.
+4. Press the physical button on your controller to map it.</string>
+    <string name="ANS_10">No. You are responsible for acquiring your games fairly. We recommend scanning physical cartridges you own or playing homebrew games from sites like itch.io.</string>
+    <string name="ANS_11">While playing, open the In-game Settings and select Screenshot under the Misc tab. You can view them by tapping View Screenshots in the main Settings menu.</string>
+    <string name="ANS_12">Deferred saving is a performance feature. Instead of pausing the game to save data immediately, it waits until you exit the emulator. This prevents minor stutters during gameplay.</string>
+    <string name="ANS_13">Open the In-game Settings while playing. Under the States tab, you can select one of 5 slots to Save or Load your exact progress at any moment. If you cant see the States tab, stop the game, go to Settings, under Miscellaneous, toggle off Hardcore Mode</string>
+    <string name="ANS_14">Yes! Go to Settings and look for the Visual section. You can choose from classic Game Boy palettes or apply shaders like CRT or Chromatic Aberration for a more authentic feel.</string>
+    <string name="ANS_15">Long-press any game card on the Home screen to open the action menu. From there, you can select Delete Save File to clear the battery RAM (SRAM) for that game.</string>
+    <string name="ANS_16">Turn off Immersive Mode in settings.</string>
+
+
+
+
 </resources>

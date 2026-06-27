@@ -6,21 +6,20 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 
 @Entity(
-  tableName = "achievements",
+  tableName   = "achievements",
   foreignKeys = [
     ForeignKey(
-      entity = GameEntity::class,
+      entity        = GameEntity::class,
       parentColumns = ["id"],
-      childColumns = ["gameId"],
-      onDelete = ForeignKey.CASCADE
-    )
+      childColumns  = ["gameId"],
+      onDelete      = ForeignKey.CASCADE)
   ],
   indices = [Index("gameId")]
 )
 data class AchievementEntity(
   @PrimaryKey
-  val raId        : Int, // RetroAchievements internal ID
-  val gameId      : Long, // Local Game ID
+  val raId        : Int,  // - - - RetroAchievements internal ID
+  val gameId      : Long, // - - - Local Game ID
   val title       : String,
   val description : String,
   val points      : Int,

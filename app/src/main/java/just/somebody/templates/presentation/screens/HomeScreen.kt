@@ -136,7 +136,10 @@ fun HomeScreen(
               modifier = Modifier.size(32.dp).padding(bottom = 8.dp)
             )
             CustomText(stringResource(R.string.enjoying_pixel_pocket), FONT_SIZE = 18)
-            CustomText(stringResource(R.string.rating_help), FONT_SIZE = 12, COLOR = GameBoyColors.Green)
+            CustomText(
+              stringResource(R.string.rating_help),
+              FONT_SIZE = 12,
+              COLOR     = GameBoyColors.Green)
             Spacer(modifier = Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp))
             {
@@ -173,11 +176,11 @@ fun HomeScreen(
         {
           val infiniteTransition = rememberInfiniteTransition(label = "floating")
           val floatOffset by infiniteTransition.animateFloat(
-            initialValue = -10f,
-            targetValue = 10f,
+            initialValue  = -10f,
+            targetValue   = 10f,
             animationSpec = infiniteRepeatable(
-              animation = tween(2000, easing = LinearOutSlowInEasing),
-              repeatMode = RepeatMode.Reverse
+              animation   = tween(2000, easing = LinearOutSlowInEasing),
+              repeatMode  = RepeatMode.Reverse
             ),
             label = "float_offset"
           )

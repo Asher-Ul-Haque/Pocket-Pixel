@@ -28,5 +28,4 @@ import androidx.room.Index
 )
 data class CollectionGameCrossRef(
   val collectionId : Long,
-  val gameId       : Long
-)
+  val gameId       : Long)

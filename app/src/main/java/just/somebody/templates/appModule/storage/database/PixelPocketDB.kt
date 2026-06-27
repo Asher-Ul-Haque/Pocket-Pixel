@@ -19,7 +19,12 @@ import just.somebody.templates.data.entities.SaveStateEntity
  * and volatile visual save configurations.
  */
 @Database(
-  entities = [ GameEntity::class, SaveStateEntity::class, CollectionEntity::class, CollectionGameCrossRef::class, AchievementEntity::class ],
+  entities = [
+    GameEntity::class,
+    SaveStateEntity::class,
+    CollectionEntity::class,
+    CollectionGameCrossRef::class,
+    AchievementEntity::class ],
   version  = 9)
 abstract class PixelPocketDB : RoomDatabase()
 {

@@ -142,7 +142,8 @@ class NetworkService
     
     // Ensure version parameter is present for login
     var finalPostData = POST_DATA
-    if (finalPostData != null && finalPostData.contains("r=login2") && !finalPostData.contains("&v=")) {
+    if (finalPostData != null && finalPostData.contains("r=login2") && !finalPostData.contains("&v="))
+    {
       finalPostData += "&v=1.0"
     }
 
@@ -150,10 +151,13 @@ class NetworkService
     {
       val result: NetworkResult<String> = if (finalPostData == null)
       { get(URL) }
-      else {
-        // RA requires x-www-form-urlencoded for POST requests
-        safeRequest {
-          client.post(URL) {
+      else
+      {
+        // - - - RA requires x-www-form-urlencoded for POST requests
+        safeRequest()
+        {
+          client.post(URL)
+          {
             header(HttpHeaders.ContentType, ContentType.Application.FormUrlEncoded.toString())
             setBody(finalPostData)
           }.body()

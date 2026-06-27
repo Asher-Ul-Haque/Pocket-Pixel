@@ -41,4 +41,7 @@ interface SaveStateDao
   /** Clears and purges every transactional snapshot mapped matching a parent structural identifier constraint. */
   @Query("DELETE FROM save_states WHERE gameId = :GAME_ID")
   suspend fun deleteAllSaveStatesForGame(GAME_ID: Long)
+
+  @Query("DELETE FROM save_states")
+  suspend fun deleteAllSaveStates()
 }

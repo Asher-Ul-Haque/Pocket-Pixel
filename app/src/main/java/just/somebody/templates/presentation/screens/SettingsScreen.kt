@@ -43,13 +43,13 @@ fun SettingsScreen(
   val settings        by VIEW_MODEL.settings.collectAsState()
 
   SettingsContent(
-    CONTROLLER_STATE   = controllerState,
-    SETTINGS          = settings,
-    ON_REFRESH         = { VIEW_MODEL.updateControllerConnection() },
+    CONTROLLER_STATE    = controllerState,
+    SETTINGS            = settings,
+    ON_REFRESH          = { VIEW_MODEL.updateControllerConnection() },
     ON_DEADZONE_CHANGE  = { VIEW_MODEL.setDeadzone(it) },
     ON_SET_PALETTE      = { VIEW_MODEL.setPalette(it) },
     ON_SET_SHADER       = { VIEW_MODEL.setShader(it) },
-    ON_RESCAN          = { VIEW_MODEL.rescan() },
+    ON_RESCAN           = { VIEW_MODEL.rescan() },
     ON_FACTORY_RESET    = { VIEW_MODEL.factoryReset() },
     ON_MAP_BUTTON       =
       { keyCode, button ->
@@ -59,10 +59,10 @@ fun SettingsScreen(
       { axis, dir, button ->
         VIEW_MODEL.setGamepadAxisMapping(axis, dir, button)
       },
-    ON_TOGGLE_IMMERSIVE = { VIEW_MODEL.toggleImmersiveMode() },
-    ON_TOGGLE_DEFERRED  = { VIEW_MODEL.toggleDeferredSaving() },
+    ON_TOGGLE_IMMERSIVE   = { VIEW_MODEL.toggleImmersiveMode() },
+    ON_TOGGLE_DEFERRED    = { VIEW_MODEL.toggleDeferredSaving() },
     ON_TOGGLE_RA_HARDCORE = { VIEW_MODEL.toggleRaHardcoreMode() },
-    ON_SET_VOLUME       =
+    ON_SET_VOLUME         =
       {
         vol, ch ->
         VIEW_MODEL.setVolume(vol, ch)
@@ -142,9 +142,9 @@ fun SettingsContent(
             pressedButtons.forEach()
             { keyCode ->
               MappingItem(
-                LABEL   = KeyEvent.keyCodeToString(keyCode),
-                MAPPED  = SETTINGS.gamepadMapping.buttonToGameBoy[keyCode],
-                ON_CLICK = { showMappingDialog = 0 to keyCode })
+                LABEL     = KeyEvent.keyCodeToString(keyCode),
+                MAPPED    = SETTINGS.gamepadMapping.buttonToGameBoy[keyCode],
+                ON_CLICK  = { showMappingDialog = 0 to keyCode })
             }
 
             val activeAxes = CONTROLLER_STATE.axes.filter()

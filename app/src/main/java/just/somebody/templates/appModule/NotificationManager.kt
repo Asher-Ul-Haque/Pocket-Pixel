@@ -62,6 +62,9 @@ interface NotificationManager
 		NOTIFICATION_ID : Int)
 }
 
+/**
+ * The standard notification manager
+ */
 class DefaultNotificationManager : NotificationManager
 {
 	override fun createChannel(

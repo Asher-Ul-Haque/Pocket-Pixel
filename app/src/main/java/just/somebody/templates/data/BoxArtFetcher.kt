@@ -117,8 +117,7 @@ class DefaultBoxArtFetcher(
     {
       val json = Json.encodeToString(
         MapSerializer(String.serializer(), String.serializer().nullable),
-        DATA_CACHE
-                                    )
+        DATA_CACHE)
       CACHE.cacheFile(mappingCacheFile, json.encodeToByteArray())
     }
 
@@ -258,9 +257,9 @@ class DefaultBoxArtFetcher(
           ForgeLogger.info("Exact match found via binary search: $foundUrl")
           
           val localUri = App.appModule.localAssetManager.getCachedAsset(
-              url = foundUrl,
-              fileName = "${normalize(GAME_NAME)}.png",
-              category = LocalAssetManager.CATEGORY_BOXARTS
+            URL = foundUrl,
+            FILE_NAME = "${normalize(GAME_NAME)}.png",
+            CATEGORY = LocalAssetManager.CATEGORY_BOXARTS
           )
           
           cacheJson[GAME_NAME] = localUri
@@ -283,10 +282,9 @@ class DefaultBoxArtFetcher(
             ForgeLogger.info("Fuzzy match found: $foundUrl")
             
             val localUri = App.appModule.localAssetManager.getCachedAsset(
-                url = foundUrl,
-                fileName = "${normalize(GAME_NAME)}.png",
-                category = LocalAssetManager.CATEGORY_BOXARTS
-            )
+              URL       = foundUrl,
+              FILE_NAME = "${normalize(GAME_NAME)}.png",
+              CATEGORY  = LocalAssetManager.CATEGORY_BOXARTS)
 
             cacheJson[GAME_NAME] = localUri
             saveCache(cacheJson)
