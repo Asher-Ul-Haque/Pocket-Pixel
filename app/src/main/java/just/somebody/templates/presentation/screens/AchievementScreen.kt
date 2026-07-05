@@ -3,20 +3,29 @@ package just.somebody.templates.presentation.screens
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorMatrix
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import just.somebody.templates.App
 import just.somebody.templates.R
@@ -28,6 +37,7 @@ import just.somebody.templates.presentation.widgets.CustomButton
 import just.somebody.templates.presentation.widgets.CustomText
 import just.somebody.templates.ui.theme.GameBoyColors
 import just.somebody.templates.ui.theme.DeviceSizePreviews
+import just.somebody.templates.ui.theme.MinecraftFontFamily
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -41,6 +51,8 @@ fun AchievementScreen(VIEW_MODEL: AchievementViewModel)
     .appModule.hardwareManager
     .isConnectedToInternet
     .collectAsState(initial = NetworkStatus.Lost)
+
+  var selectedAchievement by remember { mutableStateOf<AchievementEntity?>(null) }
 
     Box(
       modifier = Modifier
@@ -60,9 +72,119 @@ fun AchievementScreen(VIEW_MODEL: AchievementViewModel)
       {
         ProfileContent(
           USERNAME              = settings.raUsername,
+          AVATAR_URL            = settings.raAvatarUrl,
+          TOTAL_POINTS          = settings.raTotalPoints,
+          HARDCORE_POINTS       = settings.raTotalHardcorePoints,
           GROUPED_ACHIEVEMENTS  = groupedAchievements,
-          ON_LOGOUT             = { VIEW_MODEL.logout() })
+          ON_RESYNC             = { VIEW_MODEL.resync() },
+          ON_LOGOUT             = { VIEW_MODEL.logout() },
+          ON_ACHIEVEMENT_CLICK  = { selectedAchievement = it })
       }
+      
+      selectedAchievement?.let { achievement ->
+          BadgeDetailPanel(
+              ACHIEVEMENT = achievement,
+              ON_DISMISS = { selectedAchievement = null }
+          )
+      }
+    }
+}
+
+@Composable
+fun BadgeDetailPanel(ACHIEVEMENT: AchievementEntity, ON_DISMISS: () -> Unit) {
+    Dialog(
+        onDismissRequest = ON_DISMISS,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.7f))
+                .clickable { ON_DISMISS() },
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                modifier = Modifier
+                    .width(if (App.appModule.isLandscape()) 500.dp else 320.dp)
+                    .background(GameBoyColors.Green)
+                    .border(4.dp, GameBoyColors.DarkGreen)
+                    .padding(16.dp)
+                    .clickable(enabled = false) { }
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    val grayscale = ColorMatrix().apply { setToSaturation(0f) }
+                    AsyncImage(
+                        model = ACHIEVEMENT.badgeUrl,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(128.dp)
+                            .background(GameBoyColors.DarkGreen)
+                            .border(2.dp, GameBoyColors.DarkGreen),
+                        placeholder = painterResource(R.drawable.winner),
+                        colorFilter = if (!ACHIEVEMENT.isUnlocked) ColorFilter.colorMatrix(grayscale) else null,
+                        alpha = if (!ACHIEVEMENT.isUnlocked) 0.5f else 1.0f
+                    )
+                }
+
+                Spacer(Modifier.height(16.dp))
+                CustomText(
+                    ACHIEVEMENT.title,
+                    FONT_SIZE = 18,
+                    COLOR = GameBoyColors.DarkGreen,
+                    MODIFIER = Modifier.fillMaxWidth(),
+                    TEXT_ALIGN = TextAlign.Center
+                )
+                Spacer(Modifier.height(8.dp))
+                CustomText(
+                    ACHIEVEMENT.description,
+                    FONT_SIZE = 12,
+                    COLOR = GameBoyColors.DarkGreen,
+                    TEXT_ALIGN = TextAlign.Center,
+                    MODIFIER = Modifier.fillMaxWidth()
+                )
+
+                Spacer(Modifier.height(16.dp))
+                HorizontalDivider(color = GameBoyColors.DarkGreen, thickness = 2.dp)
+                Spacer(Modifier.height(16.dp))
+
+                DetailRow("Points", "${ACHIEVEMENT.points}")
+                DetailRow("Rarity", "${"%.1f".format(ACHIEVEMENT.rarity)}%")
+                
+                if (ACHIEVEMENT.isUnlocked) {
+                    val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(ACHIEVEMENT.unlockDate))
+                    DetailRow("Unlocked", date)
+                    DetailRow("Mode", if (ACHIEVEMENT.isHardcore) "Hardcore" else "Softcore")
+                } else {
+                    DetailRow("Status", "Locked")
+                    if (ACHIEVEMENT.measuredProgress.isNotEmpty()) {
+                        DetailRow("Progress", ACHIEVEMENT.measuredProgress)
+                    }
+                }
+
+                Spacer(Modifier.height(24.dp))
+                CustomButton(
+                    ON_CLICK = ON_DISMISS,
+                    MODIFIER = Modifier.fillMaxWidth(),
+                    COLOR = GameBoyColors.DarkGreen
+                ) {
+                    CustomText("Back", COLOR = GameBoyColors.LightGreen)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DetailRow(LABEL: String, VALUE: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        CustomText(LABEL, FONT_SIZE = 12, COLOR = GameBoyColors.DarkGreen, MODIFIER = Modifier.padding(0.dp))
+        CustomText(VALUE, FONT_SIZE = 12, COLOR = GameBoyColors.DarkGreen, MODIFIER = Modifier.padding(0.dp))
     }
 }
 
@@ -160,8 +282,13 @@ fun LoginContent(LOGIN_ERROR: String?, ON_LOGIN: (String, String) -> Unit)
 @Composable
 fun ProfileContent(
   USERNAME              : String,
+  AVATAR_URL            : String,
+  TOTAL_POINTS          : Int,
+  HARDCORE_POINTS       : Int,
   GROUPED_ACHIEVEMENTS  : List<GroupedAchievements>,
-  ON_LOGOUT             : () -> Unit)
+  ON_RESYNC             : () -> Unit,
+  ON_LOGOUT             : () -> Unit,
+  ON_ACHIEVEMENT_CLICK  : (AchievementEntity) -> Unit)
 {
   Column(modifier = Modifier.fillMaxSize())
   {
@@ -170,18 +297,37 @@ fun ProfileContent(
       horizontalArrangement = Arrangement.SpaceBetween,
       verticalAlignment     = Alignment.CenterVertically)
     {
-      Column()
-        {
-          CustomText(
-            "${stringResource(R.string.USER)} $USERNAME",
-            FONT_SIZE   = 18,
-            COLOR       = GameBoyColors.LightGreen)
-          val totalCount = GROUPED_ACHIEVEMENTS.sumOf { it.achievements.size }
-          CustomText(
-            "$totalCount ${stringResource(R.string.Achievements)}",
-            FONT_SIZE   = 14,
-            COLOR       = GameBoyColors.MediumGreen)
-        }
+      Row(verticalAlignment = Alignment.CenterVertically) {
+          AsyncImage(
+              model = AVATAR_URL,
+              contentDescription = null,
+              modifier = Modifier
+                  .size(48.dp)
+                  .background(GameBoyColors.DarkGreen)
+                  .border(2.dp, GameBoyColors.LightGreen),
+              placeholder = painterResource(R.drawable.winner)
+          )
+          Spacer(Modifier.width(12.dp))
+          Column()
+          {
+            CustomText(
+              USERNAME,
+              FONT_SIZE   = 18,
+              COLOR       = GameBoyColors.LightGreen,
+              MODIFIER = Modifier.padding(0.dp))
+            CustomText(
+              "Points: $TOTAL_POINTS ($HARDCORE_POINTS HC)",
+              FONT_SIZE   = 12,
+              COLOR       = GameBoyColors.MediumGreen,
+              MODIFIER = Modifier.padding(0.dp))
+          }
+      }
+      
+      val totalCount = GROUPED_ACHIEVEMENTS.sumOf { it.achievements.size }
+      CustomText(
+        "$totalCount ${stringResource(R.string.Achievements)}",
+        FONT_SIZE   = 14,
+        COLOR       = GameBoyColors.MediumGreen)
     }
 
     Spacer(Modifier.height(16.dp))
@@ -192,110 +338,103 @@ fun ProfileContent(
     {
       LazyColumn(
         modifier            = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(16.dp))
+        verticalArrangement = Arrangement.spacedBy(24.dp))
       {
         GROUPED_ACHIEVEMENTS.forEach()
         { grouped ->
           item()
           {
-            CustomText(
-              grouped.gameTitle,
-              FONT_SIZE = 16,
-              COLOR     = GameBoyColors.LightGreen)
+            val isMastered = grouped.achievements.all { it.isUnlocked }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (isMastered && grouped.achievements.isNotEmpty()) {
+                    Icon(
+                        painter = painterResource(R.drawable.winner),
+                        contentDescription = null,
+                        tint = GameBoyColors.LightGreen,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                }
+                CustomText(
+                  grouped.gameTitle,
+                  FONT_SIZE = 16,
+                  COLOR     = GameBoyColors.LightGreen)
+            }
             Spacer(Modifier.height(8.dp))
-          }
-          items(grouped.achievements)
-          { achievement ->
-            AchievementItem(achievement)
-            Spacer(Modifier.height(8.dp))
+            
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(horizontal = 4.dp)
+            ) {
+                items(grouped.achievements) { achievement ->
+                    AchievementBadgeItem(achievement, ON_ACHIEVEMENT_CLICK)
+                }
+            }
           }
         }
       }
     }
 
     Spacer(Modifier.height(16.dp))
-    CustomButton(
-      ON_CLICK  = ON_LOGOUT,
-      MODIFIER  = Modifier.fillMaxWidth(),
-      COLOR     = GameBoyColors.Error)
-    {
-      Row(
-        modifier                = Modifier
-          .fillMaxWidth()
-          .padding(horizontal = 12.dp),
-        verticalAlignment       = Alignment.CenterVertically,
-        horizontalArrangement   = Arrangement.Start)
-      {
-        Icon(
-          painterResource(R.drawable.trash),
-          null,
-          tint      = GameBoyColors.DarkGreen,
-          modifier  = Modifier.size(18.dp))
-        Spacer(Modifier.width(12.dp))
-        CustomText(stringResource(R.string.LOGOUT), FONT_SIZE = 14)
-      }
+    
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        CustomButton(
+          ON_CLICK  = ON_RESYNC,
+          MODIFIER  = Modifier.weight(1f),
+          COLOR     = GameBoyColors.Green)
+        {
+          Row(
+            verticalAlignment       = Alignment.CenterVertically,
+            horizontalArrangement   = Arrangement.Center)
+          {
+            Icon(
+              painterResource(R.drawable.settings),
+              null,
+              tint      = GameBoyColors.DarkGreen,
+              modifier  = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            CustomText("Resync", FONT_SIZE = 14, COLOR = GameBoyColors.DarkGreen)
+          }
+        }
+
+        CustomButton(
+          ON_CLICK  = ON_LOGOUT,
+          MODIFIER  = Modifier.weight(1f),
+          COLOR     = GameBoyColors.Error)
+        {
+          Row(
+            verticalAlignment       = Alignment.CenterVertically,
+            horizontalArrangement   = Arrangement.Center)
+          {
+            Icon(
+              painterResource(R.drawable.trash),
+              null,
+              tint      = GameBoyColors.DarkGreen,
+              modifier  = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            CustomText(stringResource(R.string.LOGOUT), FONT_SIZE = 14)
+          }
+        }
     }
   }
 }
 
 @Composable
-fun AchievementItem(ACHIEVEMENT: AchievementEntity)
-{
-  Row(
-    modifier = Modifier
-      .fillMaxWidth()
-      .border(2.dp, GameBoyColors.Green)
-      .background(GameBoyColors.MediumGreen.copy(alpha = 0.2f))
-      .padding(4.dp),
-    verticalAlignment = Alignment.CenterVertically)
-  {
+fun AchievementBadgeItem(ACHIEVEMENT: AchievementEntity, ON_CLICK: (AchievementEntity) -> Unit) {
+    val grayscale = ColorMatrix().apply { setToSaturation(0f) }
+    
     AsyncImage(
       model                 = ACHIEVEMENT.badgeUrl,
       contentDescription    = null,
       modifier              = Modifier
-        .size(96.dp)
+        .size(64.dp)
         .background(GameBoyColors.DarkGreen)
-        .border(1.dp, GameBoyColors.Green),
-      placeholder = painterResource(R.drawable.winner))
-
-    Spacer(Modifier.width(12.dp))
-
-    Column(modifier = Modifier.weight(1f))
-    {
-      CustomText(
-        ACHIEVEMENT.title,
-        FONT_SIZE   = 14,
-        COLOR       = GameBoyColors.LightGreen,
-        MODIFIER    = Modifier.padding(0.dp))
-      CustomText(
-        ACHIEVEMENT.description,
-        FONT_SIZE   = 10,
-        COLOR       = GameBoyColors.Green,
-        MODIFIER    = Modifier.padding(0.dp))
-            
-      val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(ACHIEVEMENT.unlockDate))
-      CustomText("${stringResource(R.string.Unlocked)} $date", FONT_SIZE = 9, COLOR = GameBoyColors.MediumGreen, MODIFIER = Modifier.padding(0.dp))
-    }
-
-    Column(
-      horizontalAlignment   = Alignment.End,
-      modifier              = Modifier.padding(end = 8.dp))
-    {
-      CustomText(
-        "${ACHIEVEMENT.points}",
-        FONT_SIZE   = 14,
-        COLOR       = GameBoyColors.LightGreen,
-        MODIFIER    = Modifier.padding(0.dp))
-      if (ACHIEVEMENT.isHardcore)
-      {
-        CustomText(
-          stringResource(R.string.HARDCORE),
-          FONT_SIZE = 10,
-          COLOR     = Color.Red,
-          MODIFIER  = Modifier.padding(0.dp))
-      }
-    }
-  }
+        .border(2.dp, if (ACHIEVEMENT.isUnlocked) GameBoyColors.LightGreen else GameBoyColors.MediumGreen)
+        .clickable { ON_CLICK(ACHIEVEMENT) },
+      placeholder = painterResource(R.drawable.winner),
+      colorFilter = if (!ACHIEVEMENT.isUnlocked) ColorFilter.colorMatrix(grayscale) else null,
+      alpha = if (!ACHIEVEMENT.isUnlocked) 0.5f else 1.0f
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -368,8 +507,13 @@ fun AchievementScreenProfilePreview() {
     Box(modifier = Modifier.fillMaxSize().background(GameBoyColors.DarkGreen)) {
         ProfileContent(
             USERNAME = "Gamer123",
+            AVATAR_URL = "",
+            TOTAL_POINTS = 30,
+            HARDCORE_POINTS = 25,
             GROUPED_ACHIEVEMENTS = mockGrouped,
-            ON_LOGOUT = {}
+            ON_RESYNC = {},
+            ON_LOGOUT = {},
+            ON_ACHIEVEMENT_CLICK = {}
         )
     }
 }
