@@ -9,6 +9,12 @@ interface AchievementDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAchievement(ACHIEVEMENT: AchievementEntity)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAchievements(ACHIEVEMENTS: List<AchievementEntity>)
+
+    @Query("SELECT * FROM achievements WHERE raGameId = :RA_GAME_ID ORDER BY raId ASC")
+    fun getAchievementsForRaGame(RA_GAME_ID: Int): Flow<List<AchievementEntity>>
+
     @Query("SELECT * FROM achievements WHERE gameId = :GAME_ID ORDER BY unlockDate DESC")
     fun getAchievementsForGame(GAME_ID: Long): Flow<List<AchievementEntity>>
 

@@ -96,23 +96,31 @@ static std::atomic<u32> g_audioWriteCursor{0};
 static std::atomic<u32> g_audioReadCursor{0};
 static f32 g_audioRingBuffer[AUDIO_RING_BUFFER_SIZE];
 
-// - - - Forward Declarations for Platform Hooks - - -
+// - - - Forward Declarations for RA - - -
 extern "C" {
-bool android_saveRam(const u8* RAM_DATA, u32 RAM_SIZE);
-bool android_loadRam(u8* RAM_DATA, u32 RAM_SIZE);
-u32  android_getExpectedSaveSize(void);
-u32* androidGetFrameBuffer(void);
-void androidSetPaletteByIndex(u8 index);
+    void android_ra_http_handler(const rc_api_request_t* request, rc_client_server_callback_t callback, void* callback_data, rc_client_t* client);
+    void android_ra_event_handler(const rc_client_event_t* event, rc_client_t* client);
+    void android_ra_login_callback(int result, const char* error_message, rc_client_t* client, void* userdata);
+    void android_ra_game_loaded_callback(int result, const char* error_message, rc_client_t* client, void* userdata);
+    void android_ra_fetch_progress_callback(int result, const char* error_message, rc_client_all_user_progress_t* list, rc_client_t* client, void* userdata);
+    uint32_t android_ra_read_memory(uint32_t address, uint8_t* buffer, uint32_t num_bytes, rc_client_t* client);
+
+    bool android_saveRam(const u8* RAM_DATA, u32 RAM_SIZE);
+    bool android_loadRam(u8* RAM_DATA, u32 RAM_SIZE);
+    u32  android_getExpectedSaveSize(void);
+    u32* androidGetFrameBuffer(void);
+    void androidSetPaletteByIndex(u8 index);
+}
 
 // RetroAchievements Memory Read
-uint32_t android_ra_read_memory(uint32_t address, uint8_t* buffer, uint32_t num_bytes, rc_client_t* client) {
+extern "C" uint32_t android_ra_read_memory(uint32_t address, uint8_t* buffer, uint32_t num_bytes, rc_client_t* client) {
     for (uint32_t i = 0; i < num_bytes; ++i) {
         buffer[i] = busRead((u16)(address + i));
     }
     return num_bytes;
 }
 
-void android_ra_login_callback(int result, const char* error_message, rc_client_t* client, void* userdata) {
+extern "C" void android_ra_login_callback(int result, const char* error_message, rc_client_t* client, void* userdata) {
     if (result == RC_OK) {
         const rc_client_user_t* user = rc_client_get_user_info(client);
         if (user) {
@@ -125,6 +133,10 @@ void android_ra_login_callback(int result, const char* error_message, rc_client_
                 env->DeleteLocalRef(jtoken);
             }
         }
+
+        // - - - Automatically trigger sync on login
+        rc_client_begin_fetch_all_user_progress(client, 4, android_ra_fetch_progress_callback, nullptr); // Game Boy
+        rc_client_begin_fetch_all_user_progress(client, 6, android_ra_fetch_progress_callback, nullptr); // Game Boy Color
     } else {
         LOGE("RetroAchievements Login failed: %s", error_message);
         JNIEnv* env;
@@ -141,13 +153,8 @@ typedef struct {
     void* callback_data;
 } android_ra_callback_context_t;
 
-void android_ra_http_handler(const rc_api_request_t* request, rc_client_server_callback_t callback, void* callback_data, rc_client_t* client);
-void android_ra_event_handler(const rc_client_event_t* event, rc_client_t* client);
-void android_ra_login_callback(int result, const char* error_message, rc_client_t* client, void* userdata);
-void android_ra_game_loaded_callback(int result, const char* error_message, rc_client_t* client, void* userdata);
-
 // RA HTTP Handler
-void android_ra_http_handler(const rc_api_request_t* request, rc_client_server_callback_t callback, void* callback_data, rc_client_t* client) {
+extern "C" void android_ra_http_handler(const rc_api_request_t* request, rc_client_server_callback_t callback, void* callback_data, rc_client_t* client) {
     JNIEnv* env;
     if (g_jvm->GetEnv((void**)&env, JNI_VERSION_1_6) != JNI_OK) {
         if (g_jvm->AttachCurrentThread(&env, nullptr) != JNI_OK) return;
@@ -167,8 +174,28 @@ void android_ra_http_handler(const rc_api_request_t* request, rc_client_server_c
     if (jpost) env->DeleteLocalRef(jpost);
 }
 
+extern "C" void android_ra_fetch_progress_callback(int result, const char* error_message, rc_client_all_user_progress_t* list, rc_client_t* client, void* userdata) {
+    if (result == RC_OK && list) {
+        LOGI("RetroAchievements Global progress fetched: %u games", list->num_entries);
+        for (uint32_t i = 0; i < list->num_entries; ++i) {
+            // - - - For each game, we'll fetch titles to show in the list.
+            // - - - Achievements for these games will be loaded when the user actually plays them,
+            // - - - OR we could trigger a background sync for each.
+        }
+
+        std::vector<uint32_t> ids;
+        for(uint32_t i = 0; i < list->num_entries; ++i) ids.push_back(list->entries[i].game_id);
+
+        if (!ids.empty()) {
+            rc_client_begin_fetch_game_titles(client, ids.data(), (uint32_t)ids.size(), nullptr, nullptr);
+        }
+    } else {
+        LOGE("RetroAchievements failed to fetch global progress: %s", error_message);
+    }
+}
+
 // RA Event Handler
-void android_ra_event_handler(const rc_client_event_t* event, rc_client_t* client) {
+extern "C" void android_ra_event_handler(const rc_client_event_t* event, rc_client_t* client) {
     JNIEnv* env;
     if (g_jvm->GetEnv((void**)&env, JNI_VERSION_1_6) != JNI_OK) {
         if (g_jvm->AttachCurrentThread(&env, nullptr) != JNI_OK) return;
@@ -176,12 +203,16 @@ void android_ra_event_handler(const rc_client_event_t* event, rc_client_t* clien
 
     switch (event->type) {
         case RC_CLIENT_EVENT_ACHIEVEMENT_TRIGGERED: {
+            uint32_t ra_game_id = 0;
+            const rc_client_game_t* game = rc_client_get_game_info(client);
+            if (game) ra_game_id = game->id;
+
             jstring title = env->NewStringUTF(event->achievement->title);
             jstring desc = env->NewStringUTF(event->achievement->description);
             jstring badge = env->NewStringUTF(event->achievement->badge_url);
             env->CallStaticVoidMethod(g_gameBoyClass, g_onAchievementUnlockedID,
-                (jint)event->achievement->id, title, desc, (jint)event->achievement->points, badge,
-                (jboolean)rc_client_get_hardcore_enabled(client), (jlong)0, (jboolean)false);
+                (jint)event->achievement->id, (jint)ra_game_id, title, desc, (jint)event->achievement->points, badge,
+                (jboolean)rc_client_get_hardcore_enabled(client), (jlong)0, (jboolean)false, (jboolean)true);
             env->DeleteLocalRef(title);
             env->DeleteLocalRef(desc);
             env->DeleteLocalRef(badge);
@@ -192,9 +223,12 @@ void android_ra_event_handler(const rc_client_event_t* event, rc_client_t* clien
     }
 }
 
-void android_ra_game_loaded_callback(int result, const char* error_message, rc_client_t* client, void* userdata) {
+extern "C" void android_ra_game_loaded_callback(int result, const char* error_message, rc_client_t* client, void* userdata) {
     if (result == RC_OK) {
         LOGI("RetroAchievements Game identified and loaded successfully");
+
+        const rc_client_game_t* game_info = rc_client_get_game_info(client);
+        uint32_t ra_game_id = game_info ? game_info->id : 0;
 
         rc_client_achievement_list_t* list = rc_client_create_achievement_list(client, RC_CLIENT_ACHIEVEMENT_CATEGORY_CORE, RC_CLIENT_ACHIEVEMENT_LIST_GROUPING_LOCK_STATE);
         if (list) {
@@ -204,21 +238,21 @@ void android_ra_game_loaded_callback(int result, const char* error_message, rc_c
                     for (uint32_t j = 0; j < list->buckets[i].num_achievements; ++j) {
                         const rc_client_achievement_t* ach = list->buckets[i].achievements[j];
 
-                        if (ach->unlocked != RC_CLIENT_ACHIEVEMENT_UNLOCKED_NONE) {
-                            jstring title = env->NewStringUTF(ach->title);
-                            jstring desc = env->NewStringUTF(ach->description);
-                            jstring badge = env->NewStringUTF(ach->badge_url);
+                        jstring title = env->NewStringUTF(ach->title);
+                        jstring desc = env->NewStringUTF(ach->description);
+                        jstring badge = env->NewStringUTF(ach->badge_url);
 
-                            bool isHC = (ach->unlocked & RC_CLIENT_ACHIEVEMENT_UNLOCKED_HARDCORE) != 0;
+                        bool isUnlocked = ach->unlocked != RC_CLIENT_ACHIEVEMENT_UNLOCKED_NONE;
+                        bool isHC = (ach->unlocked & RC_CLIENT_ACHIEVEMENT_UNLOCKED_HARDCORE) != 0;
 
-                            env->CallStaticVoidMethod(g_gameBoyClass, g_onAchievementUnlockedID,
-                                (jint)ach->id, title, desc, (jint)ach->points, badge,
-                                (jboolean)isHC, (jlong)((uint64_t)ach->unlock_time * 1000), (jboolean)true);
+                        env->CallStaticVoidMethod(g_gameBoyClass, g_onAchievementUnlockedID,
+                            (jint)ach->id, (jint)ra_game_id, title, desc, (jint)ach->points, badge,
+                            (jboolean)isHC, (jlong)((uint64_t)ach->unlock_time * 1000),
+                            (jboolean)true, (jboolean)isUnlocked);
 
-                            env->DeleteLocalRef(title);
-                            env->DeleteLocalRef(desc);
-                            env->DeleteLocalRef(badge);
-                        }
+                        env->DeleteLocalRef(title);
+                        env->DeleteLocalRef(desc);
+                        env->DeleteLocalRef(badge);
                     }
                 }
             }
@@ -227,7 +261,6 @@ void android_ra_game_loaded_callback(int result, const char* error_message, rc_c
     } else {
         LOGE("RetroAchievements Game identification failed: %s", error_message);
     }
-}
 }
 
 void audioLoop() {
@@ -524,7 +557,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
     g_initAudioID = env->GetStaticMethodID(g_gameBoyClass, "nativeInitAudio", "()V");
     g_playAudioID = env->GetStaticMethodID(g_gameBoyClass, "nativePlayAudio", "([F)V");
     g_stopAudioID = env->GetStaticMethodID(g_gameBoyClass, "nativeStopAudio", "()V");
-    g_onAchievementUnlockedID = env->GetStaticMethodID(g_gameBoyClass, "onAchievementUnlockedCallback", "(ILjava/lang/String;Ljava/lang/String;ILjava/lang/String;ZJZ)V");
+    g_onAchievementUnlockedID = env->GetStaticMethodID(g_gameBoyClass, "onAchievementUnlockedCallback", "(IILjava/lang/String;Ljava/lang/String;ILjava/lang/String;ZJZZ)V");
     g_onRaLoginSuccessID = env->GetStaticMethodID(g_gameBoyClass, "onRaLoginSuccess", "(Ljava/lang/String;Ljava/lang/String;)V");
     g_onRaLoginErrorID = env->GetStaticMethodID(g_gameBoyClass, "onRaLoginError", "(Ljava/lang/String;)V");
 
@@ -715,7 +748,7 @@ Java_just_somebody_templates_domain_GameBoy_nativeRaLoginWithToken(JNIEnv *env, 
     {
         std::lock_guard<std::mutex> lock(g_raMutex);
         if (g_rc_client) {
-            rc_client_begin_login_with_token(g_rc_client, user, tkn, nullptr, nullptr);
+            rc_client_begin_login_with_token(g_rc_client, user, tkn, android_ra_login_callback, nullptr);
         }
     }
 
@@ -729,6 +762,16 @@ Java_just_somebody_templates_domain_GameBoy_nativeRaLogout(JNIEnv *env, jobject 
     std::lock_guard<std::mutex> lock(g_raMutex);
     if (g_rc_client) {
         rc_client_logout(g_rc_client);
+    }
+}
+
+JNIEXPORT void JNICALL
+Java_just_somebody_templates_domain_GameBoy_nativeRaSyncProfile(JNIEnv *env, jobject thiz) {
+    LOGI("RetroAchievements Global Sync requested");
+    std::lock_guard<std::mutex> lock(g_raMutex);
+    if (g_rc_client) {
+        rc_client_begin_fetch_all_user_progress(g_rc_client, 4, android_ra_fetch_progress_callback, nullptr); // Game Boy
+        rc_client_begin_fetch_all_user_progress(g_rc_client, 6, android_ra_fetch_progress_callback, nullptr); // Game Boy Color
     }
 }
 

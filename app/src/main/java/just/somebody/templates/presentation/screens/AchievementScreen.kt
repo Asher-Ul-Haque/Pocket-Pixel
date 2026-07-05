@@ -339,8 +339,28 @@ fun RAInput(
 @Composable
 fun AchievementScreenProfilePreview() {
     val mockAchievements = listOf(
-        AchievementEntity(1, 1, "First Steps", "Started your first game", 5, "", System.currentTimeMillis(), false),
-        AchievementEntity(2, 1, "Hardcore Master", "Beat the first boss in HC", 25, "", System.currentTimeMillis(), true)
+        AchievementEntity(
+          raId            = 1,
+          raGameId        = 4,
+          gameId          = 1L,
+          title           = "First Steps",
+          description     = "Started your first game",
+          points          = 5,
+          badgeUrl        = "",
+          unlockDate      = System.currentTimeMillis(),
+          isUnlocked      = true,
+          isHardcore      = false),
+        AchievementEntity(
+          raId            = 2,
+          raGameId        = 4,
+          gameId          = 1L,
+          title           = "Hardcore Master",
+          description     = "Beat the first boss in HC",
+          points          = 25,
+          badgeUrl        = "",
+          unlockDate      = System.currentTimeMillis(),
+          isUnlocked      = true,
+          isHardcore      = true)
     )
     val mockGrouped = listOf(GroupedAchievements("Super Mario Land", mockAchievements))
     Box(modifier = Modifier.fillMaxSize().background(GameBoyColors.DarkGreen)) {

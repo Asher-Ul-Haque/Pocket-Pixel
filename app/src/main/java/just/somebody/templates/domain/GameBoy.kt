@@ -404,6 +404,9 @@ class GameBoy
   /** Native Retro achievement logout */
   private external fun nativeRaLogout()
 
+  /** Native Retro achievement sync profile */
+  private external fun nativeRaSyncProfile()
+
   /**
    * Native call to set hardcore mode (no save states)
    * @param ENABLED (Boolean) : whether the hardcore mode is enabled
@@ -421,6 +424,7 @@ class GameBoy
   /**
    * Handles achievement unlock events from the native core
    * @param ID (Int) : the id of the achievement
+   * @param RA_GAME_ID (Int) : the id of the game on RA
    * @param TITLE (String) : the title of the achievement
    * @param DESCRIPTION (String) : the description of the achievements
    * @param POINTS (Int) : the points earnt by this achievement
@@ -428,16 +432,19 @@ class GameBoy
    * @param IS_HARDCORE (Boolean) : whether the achievement was unlocked in hardcore mode (no save states)
    * @param TIMESTAMP (Long) : when the achievement was unlcoked
    * @param IS_SILENT (Boolean) : whether to trigger a notification
+   * @param IS_UNLOCKED (Boolean) : whether the achievement is unlocked
    */
   fun onAchievementUnlocked(
     ID          : Int,
+    RA_GAME_ID  : Int,
     TITLE       : String,
     DESCRIPTION : String,
     POINTS      : Int,
     BADGE_URL   : String,
     IS_HARDCORE : Boolean,
     TIMESTAMP   : Long,
-    IS_SILENT   : Boolean)
+    IS_SILENT   : Boolean,
+    IS_UNLOCKED : Boolean)
   {
     // - - - Filter out RetroAchievements emulator warnings
     if (TITLE.contains("Warning", ignoreCase = true) && 
@@ -452,25 +459,25 @@ class GameBoy
       val dao   = App.appModule.database.achievementDAO()
       val game  = App.appModule.repo.getGameByUri(staticCurrentRomUri ?: "")
       
-      if (game != null)
-      {
-        val achievement = AchievementEntity(
-          raId        = ID,
-          gameId      = game.id,
-          title       = TITLE,
-          description = DESCRIPTION,
-          points      = POINTS,
-          badgeUrl    = BADGE_URL,
-          unlockDate  =
-            if (TIMESTAMP > 0)  TIMESTAMP
-            else                System.currentTimeMillis(),
-          isHardcore  = IS_HARDCORE)
-        dao.insertAchievement(achievement)
-        sessionUnlockedTitles.add(TITLE)
-      }
+      val achievement = AchievementEntity(
+        raId             = ID,
+        raGameId         = RA_GAME_ID,
+        gameId           = game?.id,
+        title            = TITLE,
+        description      = DESCRIPTION,
+        points           = POINTS,
+        badgeUrl         = BADGE_URL,
+        unlockDate       =
+          if (TIMESTAMP > 0)  TIMESTAMP
+          else                if (IS_UNLOCKED) System.currentTimeMillis() else 0L,
+        isUnlocked       = IS_UNLOCKED,
+        isHardcore       = IS_HARDCORE)
+      
+      dao.insertAchievement(achievement)
+      if (IS_UNLOCKED) sessionUnlockedTitles.add(TITLE)
 
       // - - - Show Toast and Notification only if it's NOT a duplicate and NOT a silent sync
-      if (!IS_SILENT && !isAlreadyUnlocked)
+      if (!IS_SILENT && !isAlreadyUnlocked && IS_UNLOCKED)
       {
         ForgeLogger.info("RA: Showing notification for achievement: $TITLE")
         SnackbarController.sendEvent(SnackbarEvent("Achievement Unlocked: $TITLE"))
@@ -482,7 +489,7 @@ class GameBoy
           MESSAGE         = "$TITLE ($POINTS pts)",
           ICON_RES        = R.drawable.trophy)
       }
-      else if (!IS_SILENT)
+      else if (!IS_SILENT && IS_UNLOCKED)
       {
         ForgeLogger.info("RA: Skipping duplicate notification for: $TITLE")
       }
@@ -572,6 +579,7 @@ class GameBoy
     /**
      * Callback for Retro achievements unlock
      * @param ID (Int) : the id of the achievement
+     * @param RA_GAME_ID (Int) : the id of the game on RA
      * @param TITLE (String) : the title of the achievement
      * @param DESCRIPTION (String) : the description of the achievements
      * @param POINTS (Int) : the points earnt by this achievement
@@ -579,19 +587,22 @@ class GameBoy
      * @param IS_HARDCORE (Boolean) : whether the achievement was unlocked in hardcore mode (no save states)
      * @param TIMESTAMP (Long) : when the achievement was unlcoked
      * @param IS_SILENT (Boolean) : whether to trigger a notification
+     * @param IS_UNLOCKED (Boolean) : whether the achievement is unlocked
      */
     @JvmStatic
     fun onAchievementUnlockedCallback(
       ID          : Int,
+      RA_GAME_ID  : Int,
       TITLE       : String,
       DESCRIPTION : String,
       POINTS      : Int,
       BADGE_URL   : String,
       IS_HARDCORE : Boolean,
       TIMESTAMP   : Long,
-      IS_SILENT   : Boolean)
+      IS_SILENT   : Boolean,
+      IS_UNLOCKED : Boolean)
     {
-      App.appModule.gameBoy.onAchievementUnlocked(ID, TITLE, DESCRIPTION, POINTS, BADGE_URL, IS_HARDCORE, TIMESTAMP, IS_SILENT)
+      App.appModule.gameBoy.onAchievementUnlocked(ID, RA_GAME_ID, TITLE, DESCRIPTION, POINTS, BADGE_URL, IS_HARDCORE, TIMESTAMP, IS_SILENT, IS_UNLOCKED)
     }
 
     /** Deletes all the achievements for current game to load from the server */

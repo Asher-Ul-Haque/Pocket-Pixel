@@ -25,4 +25,7 @@ data class AppSettings
 	val raUsername              : String                  = "",
 	val raToken                 : String                  = "",
 	val isRaHardcoreEnabled     : Boolean                 = false,
+	val raAvatarUrl             : String                  = "",
+	val raTotalPoints           : Int                     = 0,
+	val raTotalHardcorePoints   : Int                     = 0,
 	val assetUrlMapping         : Map<String, String>     = emptyMap())
