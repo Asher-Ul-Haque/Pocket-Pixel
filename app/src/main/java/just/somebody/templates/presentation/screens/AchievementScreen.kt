@@ -290,45 +290,35 @@ fun ProfileContent(
   ON_LOGOUT             : () -> Unit,
   ON_ACHIEVEMENT_CLICK  : (AchievementEntity) -> Unit)
 {
+  val isLandscape = App.appModule.isLandscape()
+
+  if (isLandscape) {
+    LandscapeProfileContent(
+      USERNAME, AVATAR_URL, TOTAL_POINTS, HARDCORE_POINTS,
+      GROUPED_ACHIEVEMENTS, ON_RESYNC, ON_LOGOUT, ON_ACHIEVEMENT_CLICK
+    )
+  } else {
+    PortraitProfileContent(
+      USERNAME, AVATAR_URL, TOTAL_POINTS, HARDCORE_POINTS,
+      GROUPED_ACHIEVEMENTS, ON_RESYNC, ON_LOGOUT, ON_ACHIEVEMENT_CLICK
+    )
+  }
+}
+
+@Composable
+fun PortraitProfileContent(
+  USERNAME              : String,
+  AVATAR_URL            : String,
+  TOTAL_POINTS          : Int,
+  HARDCORE_POINTS       : Int,
+  GROUPED_ACHIEVEMENTS  : List<GroupedAchievements>,
+  ON_RESYNC             : () -> Unit,
+  ON_LOGOUT             : () -> Unit,
+  ON_ACHIEVEMENT_CLICK  : (AchievementEntity) -> Unit)
+{
   Column(modifier = Modifier.fillMaxSize())
   {
-    Row(
-      modifier              = Modifier.fillMaxWidth(),
-      horizontalArrangement = Arrangement.SpaceBetween,
-      verticalAlignment     = Alignment.CenterVertically)
-    {
-      Row(verticalAlignment = Alignment.CenterVertically) {
-          AsyncImage(
-              model = AVATAR_URL,
-              contentDescription = null,
-              modifier = Modifier
-                  .size(48.dp)
-                  .background(GameBoyColors.DarkGreen)
-                  .border(2.dp, GameBoyColors.LightGreen),
-              placeholder = painterResource(R.drawable.winner)
-          )
-          Spacer(Modifier.width(12.dp))
-          Column()
-          {
-            CustomText(
-              USERNAME,
-              FONT_SIZE   = 18,
-              COLOR       = GameBoyColors.LightGreen,
-              MODIFIER = Modifier.padding(0.dp))
-            CustomText(
-              "Points: $TOTAL_POINTS ($HARDCORE_POINTS HC)",
-              FONT_SIZE   = 12,
-              COLOR       = GameBoyColors.MediumGreen,
-              MODIFIER = Modifier.padding(0.dp))
-          }
-      }
-      
-      val totalCount = GROUPED_ACHIEVEMENTS.sumOf { it.achievements.size }
-      CustomText(
-        "$totalCount ${stringResource(R.string.Achievements)}",
-        FONT_SIZE   = 14,
-        COLOR       = GameBoyColors.MediumGreen)
-    }
+    HeaderSection(USERNAME, AVATAR_URL, TOTAL_POINTS, HARDCORE_POINTS, GROUPED_ACHIEVEMENTS.sumOf { it.achievements.size })
 
     Spacer(Modifier.height(16.dp))
     HorizontalDivider(color = GameBoyColors.MediumGreen)
@@ -336,47 +326,192 @@ fun ProfileContent(
 
     Box(modifier = Modifier.weight(1f))
     {
-      LazyColumn(
-        modifier            = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(24.dp))
-      {
-        GROUPED_ACHIEVEMENTS.forEach()
-        { grouped ->
-          item()
-          {
-            val isMastered = grouped.achievements.all { it.isUnlocked }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (isMastered && grouped.achievements.isNotEmpty()) {
-                    Icon(
-                        painter = painterResource(R.drawable.winner),
-                        contentDescription = null,
-                        tint = GameBoyColors.LightGreen,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(Modifier.width(8.dp))
-                }
-                CustomText(
-                  grouped.gameTitle,
-                  FONT_SIZE = 16,
-                  COLOR     = GameBoyColors.LightGreen)
-            }
-            Spacer(Modifier.height(8.dp))
-            
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(horizontal = 4.dp)
-            ) {
-                items(grouped.achievements) { achievement ->
-                    AchievementBadgeItem(achievement, ON_ACHIEVEMENT_CLICK)
-                }
-            }
-          }
-        }
-      }
+      AchievementList(GROUPED_ACHIEVEMENTS, ON_ACHIEVEMENT_CLICK)
     }
 
     Spacer(Modifier.height(16.dp))
+    ActionButtons(ON_RESYNC, ON_LOGOUT)
+  }
+}
+
+@Composable
+fun LandscapeProfileContent(
+  USERNAME              : String,
+  AVATAR_URL            : String,
+  TOTAL_POINTS          : Int,
+  HARDCORE_POINTS       : Int,
+  GROUPED_ACHIEVEMENTS  : List<GroupedAchievements>,
+  ON_RESYNC             : () -> Unit,
+  ON_LOGOUT             : () -> Unit,
+  ON_ACHIEVEMENT_CLICK  : (AchievementEntity) -> Unit)
+{
+  Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp))
+  {
+    // Sidebar with profile and actions
+    Column(
+      modifier = Modifier
+        .width(220.dp)
+        .fillMaxHeight()
+        .background(GameBoyColors.MediumGreen.copy(alpha = 0.1f))
+        .padding(8.dp),
+      horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+      AsyncImage(
+        model = AVATAR_URL,
+        contentDescription = null,
+        modifier = Modifier
+          .size(80.dp)
+          .background(GameBoyColors.DarkGreen)
+          .border(2.dp, GameBoyColors.LightGreen),
+        placeholder = painterResource(R.drawable.winner)
+      )
+      Spacer(Modifier.height(8.dp))
+      CustomText(USERNAME, FONT_SIZE = 16, COLOR = GameBoyColors.LightGreen, TEXT_ALIGN = TextAlign.Center)
+      CustomText("$TOTAL_POINTS pts", FONT_SIZE = 12, COLOR = GameBoyColors.LightGreen, TEXT_ALIGN = TextAlign.Center)
+      CustomText("($HARDCORE_POINTS HC)", FONT_SIZE = 10, COLOR = GameBoyColors.MediumGreen, TEXT_ALIGN = TextAlign.Center)
+      
+      Spacer(Modifier.weight(1f))
+      
+      ActionButtons(ON_RESYNC, ON_LOGOUT, isVertical = true)
+    }
+
+    // Main content area
+    Column(modifier = Modifier.weight(1f)) {
+      CustomText(
+        "${GROUPED_ACHIEVEMENTS.sumOf { it.achievements.size }} Total Achievements",
+        FONT_SIZE = 14,
+        COLOR = GameBoyColors.MediumGreen
+      )
+      Spacer(Modifier.height(8.dp))
+      AchievementList(GROUPED_ACHIEVEMENTS, ON_ACHIEVEMENT_CLICK)
+    }
+  }
+}
+
+@Composable
+fun HeaderSection(USERNAME: String, AVATAR_URL: String, TOTAL_POINTS: Int, HARDCORE_POINTS: Int, TOTAL_COUNT: Int) {
+  Row(
+    modifier              = Modifier.fillMaxWidth(),
+    horizontalArrangement = Arrangement.SpaceBetween,
+    verticalAlignment     = Alignment.CenterVertically)
+  {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        AsyncImage(
+            model = AVATAR_URL,
+            contentDescription = null,
+            modifier = Modifier
+                .size(48.dp)
+                .background(GameBoyColors.DarkGreen)
+                .border(2.dp, GameBoyColors.LightGreen),
+            placeholder = painterResource(R.drawable.winner)
+        )
+        Spacer(Modifier.width(12.dp))
+        Column()
+        {
+          CustomText(
+            USERNAME,
+            FONT_SIZE   = 18,
+            COLOR       = GameBoyColors.LightGreen,
+            MODIFIER = Modifier.padding(0.dp))
+          CustomText(
+            "Points: $TOTAL_POINTS ($HARDCORE_POINTS HC)",
+            FONT_SIZE   = 12,
+            COLOR       = GameBoyColors.MediumGreen,
+            MODIFIER = Modifier.padding(0.dp))
+        }
+    }
     
+    CustomText(
+      "$TOTAL_COUNT ${stringResource(R.string.Achievements)}",
+      FONT_SIZE   = 14,
+      COLOR       = GameBoyColors.MediumGreen)
+  }
+}
+
+@Composable
+fun AchievementList(GROUPED_ACHIEVEMENTS: List<GroupedAchievements>, ON_ACHIEVEMENT_CLICK: (AchievementEntity) -> Unit) {
+  LazyColumn(
+    modifier            = Modifier.fillMaxSize(),
+    verticalArrangement = Arrangement.spacedBy(24.dp))
+  {
+    GROUPED_ACHIEVEMENTS.forEach()
+    { grouped ->
+      item()
+      {
+        val isMastered = grouped.achievements.isNotEmpty() && grouped.achievements.all { it.isUnlocked }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (isMastered) {
+                Icon(
+                    painter = painterResource(R.drawable.winner),
+                    contentDescription = null,
+                    tint = GameBoyColors.LightGreen,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+            }
+            CustomText(
+              grouped.gameTitle,
+              FONT_SIZE = 16,
+              COLOR     = GameBoyColors.LightGreen)
+        }
+        Spacer(Modifier.height(8.dp))
+        
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(horizontal = 4.dp)
+        ) {
+            items(grouped.achievements) { achievement ->
+                AchievementBadgeItem(achievement, ON_ACHIEVEMENT_CLICK)
+            }
+        }
+      }
+    }
+  }
+}
+
+@Composable
+fun ActionButtons(ON_RESYNC: () -> Unit, ON_LOGOUT: () -> Unit, isVertical: Boolean = false) {
+  if (isVertical) {
+    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        CustomButton(
+          ON_CLICK  = ON_RESYNC,
+          MODIFIER  = Modifier.fillMaxWidth(),
+          COLOR     = GameBoyColors.Green)
+        {
+          Row(
+            verticalAlignment       = Alignment.CenterVertically,
+            horizontalArrangement   = Arrangement.Center)
+          {
+            Icon(
+              painterResource(R.drawable.settings),
+              null,
+              tint      = GameBoyColors.DarkGreen,
+              modifier  = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            CustomText("Resync", FONT_SIZE = 14, COLOR = GameBoyColors.DarkGreen, MODIFIER = Modifier.padding(0.dp))
+          }
+        }
+
+        CustomButton(
+          ON_CLICK  = ON_LOGOUT,
+          MODIFIER  = Modifier.fillMaxWidth(),
+          COLOR     = GameBoyColors.Error)
+        {
+          Row(
+            verticalAlignment       = Alignment.CenterVertically,
+            horizontalArrangement   = Arrangement.Center)
+          {
+            Icon(
+              painterResource(R.drawable.trash),
+              null,
+              tint      = GameBoyColors.DarkGreen,
+              modifier  = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            CustomText(stringResource(R.string.LOGOUT), FONT_SIZE = 14, MODIFIER = Modifier.padding(0.dp))
+          }
+        }
+    }
+  } else {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         CustomButton(
           ON_CLICK  = ON_RESYNC,
@@ -393,7 +528,7 @@ fun ProfileContent(
               tint      = GameBoyColors.DarkGreen,
               modifier  = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
-            CustomText("Resync", FONT_SIZE = 14, COLOR = GameBoyColors.DarkGreen)
+            CustomText("Resync", FONT_SIZE = 14, COLOR = GameBoyColors.DarkGreen, MODIFIER = Modifier.padding(0.dp))
           }
         }
 
@@ -412,7 +547,7 @@ fun ProfileContent(
               tint      = GameBoyColors.DarkGreen,
               modifier  = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
-            CustomText(stringResource(R.string.LOGOUT), FONT_SIZE = 14)
+            CustomText(stringResource(R.string.LOGOUT), FONT_SIZE = 14, MODIFIER = Modifier.padding(0.dp))
           }
         }
     }
