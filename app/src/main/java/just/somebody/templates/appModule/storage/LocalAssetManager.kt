@@ -21,6 +21,7 @@ class LocalAssetManager(private val CONTEXT: Context)
   private val CACHE_DIR_NAME        = ".pixel_cache"
   private val BOXARTS_DIR_NAME      = "boxarts"
   private val ACHIEVEMENTS_DIR_NAME = "achievements"
+  private val PROFILE_DIR_NAME      = "profile"
 
     /**
      * Stores a mapping of file name to its source URL to handle invalidation.
@@ -63,20 +64,30 @@ class LocalAssetManager(private val CONTEXT: Context)
     }
 
     /**
+     * Synchronously checks for a cached asset and returns its local URI if it exists.
+     * Does NOT trigger a download.
+     */
+    suspend fun getLocalAssetUri(FILE_NAME: String, CATEGORY: String): String? = withContext(Dispatchers.IO) {
+        val cacheDir = getCacheDirectory(CATEGORY) ?: return@withContext null
+        val file = cacheDir.findFile(FILE_NAME)
+        return@withContext if (file != null && file.exists()) file.uri.toString() else null
+    }
+
+    /**
      * Downloads an asset if it doesn't exist locally or if it needs to be updated.
      * @param URL The remote URL of the asset.
      * @param FILE_NAME The local filename to save as.
      * @param CATEGORY The subfolder category (boxarts or achievements).
-     * @return The local Uri of the cached asset, or the original URL if download fails.
+     * @return The local Uri of the cached asset, or null if download fails.
      */
-    suspend fun getCachedAsset(
+    suspend fun downloadToCache(
       URL       : String,
       FILE_NAME : String,
-      CATEGORY  : String): String = withContext(Dispatchers.IO)
+      CATEGORY  : String): String? = withContext(Dispatchers.IO)
     {
-      if (URL.isEmpty()) return@withContext ""
+      if (URL.isEmpty()) return@withContext null
 
-      val cacheDir  = getCacheDirectory(CATEGORY) ?: return@withContext URL
+      val cacheDir  = getCacheDirectory(CATEGORY) ?: return@withContext null
       val file      = cacheDir.findFile(FILE_NAME)
       val mappedUrl = getUrlMapping(FILE_NAME)
 
@@ -96,7 +107,7 @@ class LocalAssetManager(private val CONTEXT: Context)
       val result = App.appModule.networkService.get<ByteArray>(URL)
       if (result is NetworkResult.Success)
       {
-        val newFile = cacheDir.createFile("image/png", FILE_NAME) ?: return@withContext URL
+        val newFile = cacheDir.createFile("image/png", FILE_NAME) ?: return@withContext null
         CONTEXT
           .contentResolver
           .openOutputStream(newFile.uri)
@@ -108,8 +119,22 @@ class LocalAssetManager(private val CONTEXT: Context)
       else
       {
         ForgeLogger.error("Failed to download asset: $URL")
-        return@withContext URL
+        return@withContext null
       }
+    }
+
+    /**
+     * Deletes all cached assets and mappings.
+     */
+    suspend fun clearAllCache() = withContext(Dispatchers.IO) {
+        val storage = App.appModule.externalStorageManager
+        val romsDir = storage.getDirectory(App.appModule.gameRomsKey) ?: return@withContext
+        val pixelCacheDir = romsDir.findFile(CACHE_DIR_NAME)
+        pixelCacheDir?.delete()
+        
+        val dataStore = App.appModule.dataStoreManager
+        val settings = dataStore.getSettings()
+        dataStore.updateSettings(settings.copy(assetUrlMapping = emptyMap()))
     }
 
     /**
@@ -127,5 +152,6 @@ class LocalAssetManager(private val CONTEXT: Context)
     {
       const val CATEGORY_BOXARTS        = "boxarts"
       const val CATEGORY_ACHIEVEMENTS   = "achievements"
+      const val CATEGORY_PROFILE        = "profile"
     }
 }

@@ -128,9 +128,12 @@ extern "C" void android_ra_login_callback(int result, const char* error_message,
             if (g_jvm->GetEnv((void**)&env, JNI_VERSION_1_6) == JNI_OK || g_jvm->AttachCurrentThread(&env, nullptr) == JNI_OK) {
                 jstring juser = env->NewStringUTF(user->username);
                 jstring jtoken = env->NewStringUTF(user->token);
-                env->CallStaticVoidMethod(g_gameBoyClass, g_onRaLoginSuccessID, juser, jtoken);
+                jstring javatar = env->NewStringUTF(user->avatar_url);
+                env->CallStaticVoidMethod(g_gameBoyClass, g_onRaLoginSuccessID,
+                    juser, jtoken, javatar, (jint)user->score_softcore, (jint)user->score);
                 env->DeleteLocalRef(juser);
                 env->DeleteLocalRef(jtoken);
+                env->DeleteLocalRef(javatar);
             }
         }
 
@@ -210,12 +213,16 @@ extern "C" void android_ra_event_handler(const rc_client_event_t* event, rc_clie
             jstring title = env->NewStringUTF(event->achievement->title);
             jstring desc = env->NewStringUTF(event->achievement->description);
             jstring badge = env->NewStringUTF(event->achievement->badge_url);
+            jstring game_title = game ? env->NewStringUTF(game->title) : env->NewStringUTF("Unknown Game");
+
             env->CallStaticVoidMethod(g_gameBoyClass, g_onAchievementUnlockedID,
-                (jint)event->achievement->id, (jint)ra_game_id, title, desc, (jint)event->achievement->points, badge,
+                (jint)event->achievement->id, (jint)ra_game_id, game_title, title, desc, (jint)event->achievement->points, badge,
                 (jboolean)rc_client_get_hardcore_enabled(client), (jlong)0, (jboolean)false, (jboolean)true);
+
             env->DeleteLocalRef(title);
             env->DeleteLocalRef(desc);
             env->DeleteLocalRef(badge);
+            env->DeleteLocalRef(game_title);
             break;
         }
         default:
@@ -234,6 +241,8 @@ extern "C" void android_ra_game_loaded_callback(int result, const char* error_me
         if (list) {
             JNIEnv* env;
             if (g_jvm->GetEnv((void**)&env, JNI_VERSION_1_6) == JNI_OK || g_jvm->AttachCurrentThread(&env, nullptr) == JNI_OK) {
+                jstring game_title = game_info ? env->NewStringUTF(game_info->title) : env->NewStringUTF("Unknown Game");
+
                 for (uint32_t i = 0; i < list->num_buckets; ++i) {
                     for (uint32_t j = 0; j < list->buckets[i].num_achievements; ++j) {
                         const rc_client_achievement_t* ach = list->buckets[i].achievements[j];
@@ -246,7 +255,7 @@ extern "C" void android_ra_game_loaded_callback(int result, const char* error_me
                         bool isHC = (ach->unlocked & RC_CLIENT_ACHIEVEMENT_UNLOCKED_HARDCORE) != 0;
 
                         env->CallStaticVoidMethod(g_gameBoyClass, g_onAchievementUnlockedID,
-                            (jint)ach->id, (jint)ra_game_id, title, desc, (jint)ach->points, badge,
+                            (jint)ach->id, (jint)ra_game_id, game_title, title, desc, (jint)ach->points, badge,
                             (jboolean)isHC, (jlong)((uint64_t)ach->unlock_time * 1000),
                             (jboolean)true, (jboolean)isUnlocked);
 
@@ -255,6 +264,7 @@ extern "C" void android_ra_game_loaded_callback(int result, const char* error_me
                         env->DeleteLocalRef(badge);
                     }
                 }
+                env->DeleteLocalRef(game_title);
             }
             rc_client_destroy_achievement_list(list);
         }
@@ -557,8 +567,8 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
     g_initAudioID = env->GetStaticMethodID(g_gameBoyClass, "nativeInitAudio", "()V");
     g_playAudioID = env->GetStaticMethodID(g_gameBoyClass, "nativePlayAudio", "([F)V");
     g_stopAudioID = env->GetStaticMethodID(g_gameBoyClass, "nativeStopAudio", "()V");
-    g_onAchievementUnlockedID = env->GetStaticMethodID(g_gameBoyClass, "onAchievementUnlockedCallback", "(IILjava/lang/String;Ljava/lang/String;ILjava/lang/String;ZJZZ)V");
-    g_onRaLoginSuccessID = env->GetStaticMethodID(g_gameBoyClass, "onRaLoginSuccess", "(Ljava/lang/String;Ljava/lang/String;)V");
+    g_onAchievementUnlockedID = env->GetStaticMethodID(g_gameBoyClass, "onAchievementUnlockedCallback", "(IILjava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;ZJZZ)V");
+    g_onRaLoginSuccessID = env->GetStaticMethodID(g_gameBoyClass, "onRaLoginSuccess", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;II)V");
     g_onRaLoginErrorID = env->GetStaticMethodID(g_gameBoyClass, "onRaLoginError", "(Ljava/lang/String;)V");
 
     if (!g_requestRenderID || !g_saveRamID || !g_loadRamID || !g_getExpectedSaveSizeID || !g_initAudioID || !g_playAudioID || !g_stopAudioID || !g_onAchievementUnlockedID || !g_onRaLoginSuccessID || !g_onRaLoginErrorID) {

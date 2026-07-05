@@ -342,6 +342,7 @@ fun AchievementScreenProfilePreview() {
         AchievementEntity(
           raId            = 1,
           raGameId        = 4,
+          raGameTitle     = "Super Mario Land",
           gameId          = 1L,
           title           = "First Steps",
           description     = "Started your first game",
@@ -353,6 +354,7 @@ fun AchievementScreenProfilePreview() {
         AchievementEntity(
           raId            = 2,
           raGameId        = 4,
+          raGameTitle     = "Super Mario Land",
           gameId          = 1L,
           title           = "Hardcore Master",
           description     = "Beat the first boss in HC",

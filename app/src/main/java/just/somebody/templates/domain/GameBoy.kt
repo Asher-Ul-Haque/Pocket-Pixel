@@ -13,6 +13,7 @@ import kotlinx.coroutines.runBlocking // For synchronous file loading
 import kotlinx.coroutines.withContext
 import androidx.documentfile.provider.DocumentFile // Needed for DocumentFile operations
 import just.somebody.templates.appModule.storage.ExternalStorageManager
+import just.somebody.templates.appModule.storage.LocalAssetManager
 import just.somebody.templates.data.entities.AchievementEntity
 import just.somebody.templates.domain.models.Palette
 import just.somebody.templates.presentation.effects.SnackbarController
@@ -381,6 +382,9 @@ class GameBoy
   /** Kotlin side interface for loging out of retro achievements */
   fun raLogout() { nativeRaLogout() }
 
+  /** Kotlin side interface for syncing retro achievements profile */
+  fun raSyncProfile() { nativeRaSyncProfile() }
+
   /**
    * Kotlin side interface for setting hardcore mode
    * @param ENABLED (Boolean) : whether hardcore mode is enabled
@@ -425,6 +429,7 @@ class GameBoy
    * Handles achievement unlock events from the native core
    * @param ID (Int) : the id of the achievement
    * @param RA_GAME_ID (Int) : the id of the game on RA
+   * @param RA_GAME_TITLE (String) : the title of the game on RA
    * @param TITLE (String) : the title of the achievement
    * @param DESCRIPTION (String) : the description of the achievements
    * @param POINTS (Int) : the points earnt by this achievement
@@ -435,16 +440,17 @@ class GameBoy
    * @param IS_UNLOCKED (Boolean) : whether the achievement is unlocked
    */
   fun onAchievementUnlocked(
-    ID          : Int,
-    RA_GAME_ID  : Int,
-    TITLE       : String,
-    DESCRIPTION : String,
-    POINTS      : Int,
-    BADGE_URL   : String,
-    IS_HARDCORE : Boolean,
-    TIMESTAMP   : Long,
-    IS_SILENT   : Boolean,
-    IS_UNLOCKED : Boolean)
+    ID            : Int,
+    RA_GAME_ID    : Int,
+    RA_GAME_TITLE : String,
+    TITLE         : String,
+    DESCRIPTION   : String,
+    POINTS        : Int,
+    BADGE_URL     : String,
+    IS_HARDCORE   : Boolean,
+    TIMESTAMP     : Long,
+    IS_SILENT     : Boolean,
+    IS_UNLOCKED   : Boolean)
   {
     // - - - Filter out RetroAchievements emulator warnings
     if (TITLE.contains("Warning", ignoreCase = true) && 
@@ -459,14 +465,22 @@ class GameBoy
       val dao   = App.appModule.database.achievementDAO()
       val game  = App.appModule.repo.getGameByUri(staticCurrentRomUri ?: "")
       
+      // - - - Download badge to cache first
+      val localBadgeUri = App.appModule.localAssetManager.downloadToCache(
+          URL = BADGE_URL,
+          FILE_NAME = "badge_${ID}.png",
+          CATEGORY = LocalAssetManager.CATEGORY_ACHIEVEMENTS
+      ) ?: BADGE_URL
+
       val achievement = AchievementEntity(
         raId             = ID,
         raGameId         = RA_GAME_ID,
+        raGameTitle      = RA_GAME_TITLE,
         gameId           = game?.id,
         title            = TITLE,
         description      = DESCRIPTION,
         points           = POINTS,
-        badgeUrl         = BADGE_URL,
+        badgeUrl         = localBadgeUri,
         unlockDate       =
           if (TIMESTAMP > 0)  TIMESTAMP
           else                if (IS_UNLOCKED) System.currentTimeMillis() else 0L,
@@ -580,6 +594,7 @@ class GameBoy
      * Callback for Retro achievements unlock
      * @param ID (Int) : the id of the achievement
      * @param RA_GAME_ID (Int) : the id of the game on RA
+     * @param RA_GAME_TITLE (String) : the title of the game on RA
      * @param TITLE (String) : the title of the achievement
      * @param DESCRIPTION (String) : the description of the achievements
      * @param POINTS (Int) : the points earnt by this achievement
@@ -591,18 +606,19 @@ class GameBoy
      */
     @JvmStatic
     fun onAchievementUnlockedCallback(
-      ID          : Int,
-      RA_GAME_ID  : Int,
-      TITLE       : String,
-      DESCRIPTION : String,
-      POINTS      : Int,
-      BADGE_URL   : String,
-      IS_HARDCORE : Boolean,
-      TIMESTAMP   : Long,
-      IS_SILENT   : Boolean,
-      IS_UNLOCKED : Boolean)
+      ID            : Int,
+      RA_GAME_ID    : Int,
+      RA_GAME_TITLE : String,
+      TITLE         : String,
+      DESCRIPTION   : String,
+      POINTS        : Int,
+      BADGE_URL     : String,
+      IS_HARDCORE   : Boolean,
+      TIMESTAMP     : Long,
+      IS_SILENT     : Boolean,
+      IS_UNLOCKED   : Boolean)
     {
-      App.appModule.gameBoy.onAchievementUnlocked(ID, RA_GAME_ID, TITLE, DESCRIPTION, POINTS, BADGE_URL, IS_HARDCORE, TIMESTAMP, IS_SILENT, IS_UNLOCKED)
+      App.appModule.gameBoy.onAchievementUnlocked(ID, RA_GAME_ID, RA_GAME_TITLE, TITLE, DESCRIPTION, POINTS, BADGE_URL, IS_HARDCORE, TIMESTAMP, IS_SILENT, IS_UNLOCKED)
     }
 
     /** Deletes all the achievements for current game to load from the server */
@@ -628,14 +644,32 @@ class GameBoy
      * Retro achievements login success handler
      * @param USERNAME (String) : the username of the person
      * @param TOKEN (String) : the login token
+     * @param AVATAR_URL (String) : the avatar url
+     * @param SOFT_SCORE (Int) : total softcore points
+     * @param HARD_SCORE (Int) : total hardcore points
      */
     @JvmStatic
-    fun onRaLoginSuccess(USERNAME: String, TOKEN: String)
+    fun onRaLoginSuccess(USERNAME: String, TOKEN: String, AVATAR_URL: String, SOFT_SCORE: Int, HARD_SCORE: Int)
     {
       App.appModule.mainScope.launch()
       {
-        val current = App.appModule.dataStoreManager.getSettings()
-        App.appModule.dataStoreManager.updateSettings(current.copy(raUsername = USERNAME, raToken = TOKEN))
+        val dataStore = App.appModule.dataStoreManager
+        val current = dataStore.getSettings()
+        
+        // - - - Download avatar to cache
+        val localAvatarUri = App.appModule.localAssetManager.downloadToCache(
+            URL = AVATAR_URL,
+            FILE_NAME = "avatar_${USERNAME}.png",
+            CATEGORY = LocalAssetManager.CATEGORY_PROFILE
+        ) ?: current.raAvatarUrl
+
+        dataStore.updateSettings(current.copy(
+            raUsername = USERNAME, 
+            raToken = TOKEN,
+            raAvatarUrl = localAvatarUri,
+            raTotalPoints = SOFT_SCORE,
+            raTotalHardcorePoints = HARD_SCORE
+        ))
       }
     }
 

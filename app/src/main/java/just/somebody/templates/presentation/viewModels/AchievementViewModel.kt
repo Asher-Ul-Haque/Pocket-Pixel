@@ -33,38 +33,27 @@ class AchievementViewModel : ViewModel()
         .getAllAchievements()
         .map()
         { list ->
-          // - - - Download badges first
-          val listWithLocalBadges = list.map()
-          { achievement ->
-            if (!achievement.badgeUrl.startsWith("content://"))
-            {
-              val localUri = App.appModule.localAssetManager.getCachedAsset(
-                URL         = achievement.badgeUrl,
-                FILE_NAME   = "badge_${achievement.raId}.png",
-                CATEGORY    = LocalAssetManager.CATEGORY_ACHIEVEMENTS)
-              if (localUri != achievement.badgeUrl)
-              {
-                viewModelScope.launch()
-                  { db.achievementDAO().insertAchievement(achievement.copy(badgeUrl = localUri)) }
-              }
-                achievement.copy(badgeUrl = localUri)
+          // - - - Group by game
+          list.groupBy { it.raGameId }.map()
+          { (raGameId, achievements) ->
+            val first = achievements.first()
+            
+            // Trigger background downloads for missing badges
+            achievements.forEach { achievement ->
+                if (!achievement.badgeUrl.startsWith("content://")) {
+                    viewModelScope.launch {
+                        App.appModule.localAssetManager.downloadToCache(
+                            URL = achievement.badgeUrl,
+                            FILE_NAME = "badge_${achievement.raId}.png",
+                            CATEGORY = LocalAssetManager.CATEGORY_ACHIEVEMENTS
+                        )?.let { localUri ->
+                            db.achievementDAO().insertAchievement(achievement.copy(badgeUrl = localUri))
+                        }
+                    }
+                }
             }
-            else achievement
-        }
-
-        // - - - Group by game
-        val allGames = db.gameDAO().getAllGamesOnce()
-        listWithLocalBadges.filter()
-          { achievement ->
-            val isEmulatorWarning = achievement.title.contains("Warning", ignoreCase = true) &&
-              achievement.title.contains("Emulator", ignoreCase = true) &&
-              achievement.description.contains("Hardcore", ignoreCase = true)
-              !isEmulatorWarning
-          }
-          .groupBy { it.gameId }.map()
-          { (gameId, achievements) ->
-            val gameTitle = allGames.find { it.id == gameId }?.title ?: "Unknown Game"
-            GroupedAchievements(gameTitle, achievements)
+            
+            GroupedAchievements(first.raGameTitle, achievements)
           }
     }.stateIn(
       scope         = viewModelScope,
@@ -91,9 +80,25 @@ class AchievementViewModel : ViewModel()
       viewModelScope.launch()
       {
         val current = dataStore.getSettings()
-        dataStore.updateSettings(current.copy(raUsername = "", raToken = "", assetUrlMapping = emptyMap()))
+        dataStore.updateSettings(current.copy(
+            raUsername = "", 
+            raToken = "", 
+            raAvatarUrl = "",
+            raTotalPoints = 0,
+            raTotalHardcorePoints = 0,
+            assetUrlMapping = emptyMap()
+        ))
         App.appModule.gameBoy.raLogout()
         db.achievementDAO().deleteAllAchievements()
+        App.appModule.localAssetManager.clearAllCache()
       }
+    }
+
+    fun resync() {
+        viewModelScope.launch {
+            db.achievementDAO().deleteAllAchievements()
+            App.appModule.localAssetManager.clearAllCache()
+            App.appModule.gameBoy.raSyncProfile()
+        }
     }
 }

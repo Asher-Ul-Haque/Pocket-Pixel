@@ -20,6 +20,7 @@ data class AchievementEntity(
   @PrimaryKey
   val raId            : Int,     // - - - RetroAchievements internal ID
   val raGameId        : Int,     // - - - RA Game ID
+  val raGameTitle     : String,  // - - - Game Title from RA
   val gameId          : Long?,   // - - - Local Game ID (null if not on device)
   val title           : String,
   val description     : String,
