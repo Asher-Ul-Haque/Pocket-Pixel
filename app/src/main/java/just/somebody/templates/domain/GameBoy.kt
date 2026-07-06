@@ -660,7 +660,7 @@ class GameBoy
         val localAvatarUri = App.appModule.localAssetManager.downloadToCache(
             URL = AVATAR_URL,
             FILE_NAME = "avatar_${USERNAME}.png",
-            CATEGORY = LocalAssetManager.CATEGORY_PROFILE
+            CATEGORY = LocalAssetManager.CATEGORY_ACHIEVEMENTS
         ) ?: current.raAvatarUrl
 
         dataStore.updateSettings(current.copy(
@@ -670,6 +670,9 @@ class GameBoy
             raTotalPoints = SOFT_SCORE,
             raTotalHardcorePoints = HARD_SCORE
         ))
+        
+        // - - - Dismiss loading state
+        App.appModule.isRaSyncing.value = false
       }
     }
 
@@ -683,7 +686,23 @@ class GameBoy
       App.appModule.mainScope.launch()
       {
         SnackbarController.sendEvent(SnackbarEvent("Login Error: $MESSAGE"))
+        App.appModule.isRaSyncing.value = false
       }
+    }
+
+    @JvmStatic
+    fun onRaSyncFinished()
+    {
+        // This will be called when background sync is complete
+        ForgeLogger.info("RA: Background sync finished.")
+        App.appModule.isRaSyncing.value = false
+    }
+
+    @JvmStatic
+    fun onRaGameSynced(GAME_ID: Int, TITLE: String, BADGE_URL: String)
+    {
+        ForgeLogger.info("RA: Game identified during sync: $TITLE (ID: $GAME_ID)")
+        // We'll use this to trigger a background fetch of achievements for this game if needed
     }
 
 

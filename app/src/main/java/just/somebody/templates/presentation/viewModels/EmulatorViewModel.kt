@@ -311,12 +311,12 @@ class EmulatorViewModel : ViewModel()
     {
       val dataStore       : DataStoreManager  = App.appModule.dataStoreManager
       val currentSettings : AppSettings       = dataStore.getSettings()
-      val updatedSettings : AppSettings       = currentSettings.copy(shaderIndex = INDEX % 4)
+      val updatedSettings : AppSettings       = currentSettings.copy(shaderIndex = INDEX % 5)
 
       dataStore.updateSettings(updatedSettings)
       _settings.value = updatedSettings
 
-      App.appModule.gameBoy.setShader(INDEX % 4)
+      App.appModule.gameBoy.setShader(INDEX % 5)
     }
   }
 

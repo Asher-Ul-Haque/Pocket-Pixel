@@ -100,7 +100,7 @@ class CollectionsViewModel(
   fun getBoxArtFlow(game: Game): Flow<String?>
   {
     if (game.boxArtUrl != null) return flowOf(game.boxArtUrl)
-    return App.appModule.boxArtFetcher.fetchBoxArt(game.title).map { url ->
+    return App.appModule.boxArtFetcher.fetchBoxArt(game).map { url ->
       if (url != null && game.boxArtUrl == null) {
         viewModelScope.launch {
           gameRepo.updateGame(game.copy(boxArtUrl = url))

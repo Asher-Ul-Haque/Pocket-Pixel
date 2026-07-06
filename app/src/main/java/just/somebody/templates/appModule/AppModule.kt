@@ -104,6 +104,9 @@ interface AppModuleInterface
   /** Manager handling persistent asset caching (boxarts, badges). */
   val localAssetManager      : LocalAssetManager
 
+  /** Global RetroAchievements sync state. */
+  val isRaSyncing            : kotlinx.coroutines.flow.MutableStateFlow<Boolean>
+
   /** Global scope for background operations. */
   val mainScope              : CoroutineScope
 
@@ -140,6 +143,7 @@ class AppModule(private val APP_CONTEXT : Context) : AppModuleInterface
   override val saveStateManager       : SaveStateManager        by lazy { SaveStateManager(APP_CONTEXT, database.saveStateDAO()) }
   override val screenshotManager      : ScreenshotManager       by lazy { ScreenshotManager(APP_CONTEXT) }
   override val localAssetManager      : LocalAssetManager      by lazy { LocalAssetManager(APP_CONTEXT) }
+  override val isRaSyncing            : kotlinx.coroutines.flow.MutableStateFlow<Boolean> by lazy { kotlinx.coroutines.flow.MutableStateFlow(false) }
   override val mainScope              : CoroutineScope          by lazy { CoroutineScope(Dispatchers.Main + SupervisorJob()) }
 
   /**

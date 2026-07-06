@@ -70,7 +70,13 @@ class NetworkService
     {
       client.get(URL)
       {
-        contentType(ContentType.Application.Json)
+        if (HEADERS.isEmpty() || !HEADERS.containsKey(HttpHeaders.ContentType)) {
+            // Only set default JSON if not specified and not a binary request
+            if (T::class != ByteArray::class) {
+                contentType(ContentType.Application.Json)
+            }
+        }
+
         HEADERS.forEach()
         { (key, value) -> header(key, value) }
         url ()

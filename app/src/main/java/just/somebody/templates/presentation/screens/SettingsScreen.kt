@@ -62,6 +62,8 @@ fun SettingsScreen(
     ON_TOGGLE_IMMERSIVE   = { VIEW_MODEL.toggleImmersiveMode() },
     ON_TOGGLE_DEFERRED    = { VIEW_MODEL.toggleDeferredSaving() },
     ON_TOGGLE_RA_HARDCORE = { VIEW_MODEL.toggleRaHardcoreMode() },
+    ON_RA_LOGIN           = { VIEW_MODEL.raLogin() },
+    ON_RA_LOGOUT          = { VIEW_MODEL.raLogout() },
     ON_SET_VOLUME         =
       {
         vol, ch ->
@@ -75,21 +77,23 @@ fun SettingsScreen(
  */
 @Composable
 fun SettingsContent(
-  CONTROLLER_STATE    : GameControllerState,
-  SETTINGS            : AppSettings,
-  ON_REFRESH          : () -> Unit,
-  ON_DEADZONE_CHANGE  : (Float) -> Unit,
-  ON_SET_PALETTE      : (Int) -> Unit,
-  ON_SET_SHADER       : (Int) -> Unit,
-  ON_RESCAN           : () -> Unit,
-  ON_FACTORY_RESET    : () -> Unit,
-  ON_MAP_BUTTON       : (Int, Buttons?) -> Unit,
-  ON_MAP_AXIS         : (Int, Int, Buttons?) -> Unit,
-  ON_TOGGLE_IMMERSIVE : () -> Unit,
-  ON_TOGGLE_DEFERRED  : () -> Unit,
+  CONTROLLER_STATE      : GameControllerState,
+  SETTINGS              : AppSettings,
+  ON_REFRESH            : () -> Unit,
+  ON_DEADZONE_CHANGE    : (Float) -> Unit,
+  ON_SET_PALETTE        : (Int) -> Unit,
+  ON_SET_SHADER         : (Int) -> Unit,
+  ON_RESCAN             : () -> Unit,
+  ON_FACTORY_RESET      : () -> Unit,
+  ON_MAP_BUTTON         : (Int, Buttons?) -> Unit,
+  ON_MAP_AXIS           : (Int, Int, Buttons?) -> Unit,
+  ON_TOGGLE_IMMERSIVE   : () -> Unit,
+  ON_TOGGLE_DEFERRED    : () -> Unit,
   ON_TOGGLE_RA_HARDCORE : () -> Unit,
-  ON_SET_VOLUME       : (Float, Int) -> Unit,
-  MODIFIER            : Modifier = Modifier)
+  ON_RA_LOGIN           : () -> Unit,
+  ON_RA_LOGOUT          : () -> Unit,
+  ON_SET_VOLUME         : (Float, Int) -> Unit,
+  MODIFIER              : Modifier = Modifier)
 {
   var showMappingDialog by remember { mutableStateOf<Pair<Int, Int?>?>(null) }
 
@@ -261,6 +265,34 @@ fun SettingsContent(
         }
       }
 
+      // - - - Section: Retro Achievements
+      item()
+      {
+        SettingsSection(TITLE = stringResource(R.string.RA), ICON = R.drawable.trophy)
+        {
+          Column(verticalArrangement = Arrangement.spacedBy(8.dp))
+          {
+            CustomButton(ON_CLICK = ON_TOGGLE_RA_HARDCORE, MODIFIER = Modifier.fillMaxWidth())
+            {
+              CustomText(
+                if (SETTINGS.isRaHardcoreEnabled)  stringResource(R.string.HARDCORE_ON)
+                else                               stringResource(R.string.HARDCORE_OFF),
+                FONT_SIZE = 14,
+                MODIFIER  = Modifier)
+            }
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally))
+            {
+              CustomButton(ON_CLICK = ON_RA_LOGIN)
+              { CustomText("Re Login", FONT_SIZE = 14, MODIFIER = Modifier.padding(horizontal = 16.dp)) }
+
+              CustomButton(ON_CLICK = ON_RA_LOGOUT, COLOR = GameBoyColors.Error)
+              { CustomText("Logout", FONT_SIZE = 14, MODIFIER = Modifier.padding(horizontal = 16.dp)) }
+            }
+          }
+        }
+      }
+
       // -  -- Section: Misc
       item()
       {
@@ -309,22 +341,7 @@ fun SettingsContent(
                   FONT_SIZE = 14, MODIFIER = Modifier)
               }
             }
-            CustomButton(ON_CLICK = ON_TOGGLE_RA_HARDCORE, MODIFIER = Modifier.fillMaxWidth())
-            {
-              Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Start)
-              {
-                Icon(painterResource(R.drawable.trophy), null, tint = GameBoyColors.DarkGreen, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(12.dp))
-                CustomText(
-                  if (SETTINGS.isRaHardcoreEnabled)  "RA Hardcore: ON"
-                  else                               "RA Hardcore: OFF",
-                  FONT_SIZE = 14, MODIFIER = Modifier)
-              }
-            }
-            CustomButton(ON_CLICK = ON_RESCAN, MODIFIER = Modifier.fillMaxWidth())
+            CustomButton(ON_RESCAN, MODIFIER = Modifier.fillMaxWidth())
             { 
               Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
@@ -533,5 +550,7 @@ private fun SettingsPreview()
     ON_TOGGLE_IMMERSIVE = {},
     ON_TOGGLE_DEFERRED  = {},
     ON_TOGGLE_RA_HARDCORE = {},
+    ON_RA_LOGIN         = {},
+    ON_RA_LOGOUT        = {},
     ON_SET_VOLUME       = { _, _ -> })
 }

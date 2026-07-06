@@ -91,8 +91,8 @@ fun SettingsPanel(
             )
       {
         val tabs = mutableListOf(
-          R.string.audio  to R.drawable.speaker,
           R.string.visual to R.drawable.paint_blob,
+          R.string.audio  to R.drawable.speaker,
           R.string.states to R.drawable.gameboy,
           R.string.misc   to R.drawable.settings
         )
@@ -147,12 +147,12 @@ fun SettingsPanel(
 
             when (currentTab)
             {
-              0 -> AudioSettingsSection(settings.channelVolume) { vol, ch -> EMULATOR.setVolume(vol, ch) }
-              1 -> VisualSettingsSection(
+              0 -> VisualSettingsSection(
                 PALETTE_INDEX    = settings.paletteIndex,
                 SHADER_INDEX     = settings.shaderIndex,
                 ON_PALETTE_SELECT = { EMULATOR.setPaletteIndex(it) },
                 ON_SHADER_SELECT  = { EMULATOR.setShaderIndex(it) })
+              1 -> AudioSettingsSection(settings.channelVolume) { vol, ch -> EMULATOR.setVolume(vol, ch) }
               2 -> SaveStateSection(EMULATOR)
               3 -> MiscSettingsSection(EMULATOR)
             }

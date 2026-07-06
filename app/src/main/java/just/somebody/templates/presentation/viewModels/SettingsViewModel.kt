@@ -8,6 +8,8 @@ import just.somebody.templates.appModule.storage.dataStore.DataStoreManager
 import just.somebody.templates.appModule.storage.dataStore.GamepadMapping
 import just.somebody.templates.domain.Buttons
 import just.somebody.templates.domain.repositories.GameRepository
+import just.somebody.templates.presentation.effects.SnackbarController
+import just.somebody.templates.presentation.effects.SnackbarEvent
 import just.somebody.templates.presentation.effects.SoundController
 import just.somebody.templates.presentation.effects.SoundEffect
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -178,6 +180,53 @@ class SettingsViewModel(
       DATASTORE.updateSettings(updated)
       _settings.value = updated
       App.appModule.gameBoy.raSetHardcoreMode(updated.isRaHardcoreEnabled)
+      SoundController.playSound(SoundEffect.Ping2)
+    }
+  }
+
+  fun raLogout()
+  {
+    viewModelScope.launch {
+      val current = DATASTORE.getSettings()
+      if (current.raToken.isEmpty()) {
+          SnackbarController.sendEvent(SnackbarEvent("Not logged in"))
+          return@launch
+      }
+      
+      DATASTORE.updateSettings(current.copy(
+          raUsername = "", 
+          raToken = "", 
+          raAvatarUrl = "",
+          raTotalPoints = 0,
+          raTotalHardcorePoints = 0,
+          assetUrlMapping = emptyMap()
+      ))
+      _settings.value = DATASTORE.getSettings()
+      App.appModule.gameBoy.raLogout()
+      App.appModule.database.achievementDAO().deleteAllAchievements()
+      App.appModule.localAssetManager.clearAllCache()
+      SnackbarController.sendEvent(SnackbarEvent("Logged out of RetroAchievements"))
+      SoundController.playSound(SoundEffect.Ping)
+    }
+  }
+
+  fun raLogin()
+  {
+    viewModelScope.launch {
+      val current = DATASTORE.getSettings()
+      if (current.raUsername.isEmpty() || current.raToken.isEmpty()) {
+          SnackbarController.sendEvent(SnackbarEvent("No account found. Please log in from Badges screen first."))
+          return@launch
+      }
+      
+      if (App.appModule.isRaSyncing.value) {
+          SnackbarController.sendEvent(SnackbarEvent("Login already in progress"))
+          return@launch
+      }
+
+      App.appModule.isRaSyncing.value = true
+      App.appModule.gameBoy.raLoginWithToken(current.raUsername, current.raToken)
+      SnackbarController.sendEvent(SnackbarEvent("Syncing RetroAchievements..."))
       SoundController.playSound(SoundEffect.Ping2)
     }
   }

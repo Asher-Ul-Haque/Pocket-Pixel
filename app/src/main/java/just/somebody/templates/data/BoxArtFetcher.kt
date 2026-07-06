@@ -7,6 +7,7 @@ import just.somebody.templates.appModule.network.NetworkResult
 import just.somebody.templates.appModule.network.NetworkService
 import just.somebody.templates.appModule.storage.InternalStorageManager
 import just.somebody.templates.appModule.storage.LocalAssetManager
+import just.somebody.templates.domain.models.Game
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -27,10 +28,10 @@ interface BoxArtFetcher
   /**
    * Resolves a downloadable cover art resource path matching a targeted asset title context.
    *
-   * @param GAME_NAME Structural item filename used as the key for index resolution.
+   * @param game Targeted game object containing title and ROM URI.
    * @return Cold stream emission emitting the verified remote path layout or null if unresolved.
    */
-  fun fetchBoxArt(GAME_NAME: String): Flow<String?>
+  fun fetchBoxArt(game: Game): Flow<String?>
 
   /** Flushes persistent local string mapping lookups from disk storage entirely. */
   fun deleteCache()
@@ -214,37 +215,46 @@ class DefaultBoxArtFetcher(
       return@withContext bestMatch
     }
 
-  override fun fetchBoxArt(GAME_NAME: String): Flow<String?> =
+  override fun fetchBoxArt(game: Game): Flow<String?> =
     flow()
     {
+      val GAME_NAME = game.title
       ForgeLogger.info("Fetching box art for: $GAME_NAME")
+
+      // - - - Determine target filename from ROM name
+      val romUri = android.net.Uri.parse(game.romUri)
+      val docFile = androidx.documentfile.provider.DocumentFile.fromSingleUri(App.appModule.context, romUri)
+      val romFileName = docFile?.name ?: game.title
+      val targetFileName = romFileName.replace(Regex("\\.gbc?$", RegexOption.IGNORE_CASE), "") + ".png"
 
       // - - - Load the cache once at the start
       val cacheJson       = loadCache()
       val cachedUrl       = cacheJson[GAME_NAME]
 
-      // - - - Check if a result is already in the cache
-      if (cachedUrl == "")
-      {
-        ForgeLogger.info("Previously not found (negative cache): $GAME_NAME")
-        emit(null)
-        return@flow
+      // - - - Check if already exists in boxarts folder (Primary check)
+      val existingLocal = App.appModule.localAssetManager.getLocalAssetUri(targetFileName, LocalAssetManager.CATEGORY_BOXARTS)
+      if (existingLocal != null) {
+          ForgeLogger.info("Box art already exists locally: $existingLocal")
+          emit(existingLocal)
+          return@flow
       }
 
-      if (!cachedUrl.isNullOrBlank())
+      // - - - Check if we have a cached local URI in the lookup table
+      if (!cachedUrl.isNullOrBlank() && cachedUrl.startsWith("content://"))
       {
-        ForgeLogger.info("Found in cache: $cachedUrl")
-        emit(cachedUrl)
-        return@flow
+          emit(cachedUrl)
+          return@flow
       }
 
-      ForgeLogger.info("Cache miss for: $GAME_NAME")
+      ForgeLogger.info("Box art missing locally for: $GAME_NAME. Searching online...")
 
       // - - - Loop through all the defined base URLs
       for (baseUrl in BASE_URLS)
       {
         ForgeLogger.info("Checking for box art in: $baseUrl")
-        val possibleExactName = stripExtension(GAME_NAME) + ".png"
+        
+        // Use the ROM filename (clean) as the first choice for finding on server
+        val possibleExactName = romFileName.replace(Regex("\\.gbc?$", RegexOption.IGNORE_CASE), "") + ".png"
 
         val boxArtFiles = listAvailableBoxArtFilesForUrl(baseUrl)
 
@@ -258,17 +268,19 @@ class DefaultBoxArtFetcher(
           
           val localUri = App.appModule.localAssetManager.downloadToCache(
             URL = foundUrl,
-            FILE_NAME = "${normalize(GAME_NAME)}.png",
+            FILE_NAME = targetFileName,
             CATEGORY = LocalAssetManager.CATEGORY_BOXARTS
-          ) ?: foundUrl
+          )
           
-          cacheJson[GAME_NAME] = localUri
-          saveCache(cacheJson)
-          emit(localUri)
-          return@flow
+          if (localUri != null) {
+              cacheJson[GAME_NAME] = localUri
+              saveCache(cacheJson)
+              emit(localUri)
+              return@flow
+          }
         }
 
-        // - - - If no exact match, try fuzzy search
+        // - - - If no exact match, try fuzzy search based on Title
         ForgeLogger.info("Starting fuzzy search for: $GAME_NAME in $baseUrl")
         val candidates = boxArtFiles.map { stripExtension(it) }
 
@@ -283,21 +295,21 @@ class DefaultBoxArtFetcher(
             
             val localUri = App.appModule.localAssetManager.downloadToCache(
               URL       = foundUrl,
-              FILE_NAME = "${normalize(GAME_NAME)}.png",
-              CATEGORY  = LocalAssetManager.CATEGORY_BOXARTS) ?: foundUrl
+              FILE_NAME = targetFileName,
+              CATEGORY  = LocalAssetManager.CATEGORY_BOXARTS)
 
-            cacheJson[GAME_NAME] = localUri
-            saveCache(cacheJson)
-            emit(localUri)
-            return@flow
+            if (localUri != null) {
+                cacheJson[GAME_NAME] = localUri
+                saveCache(cacheJson)
+                emit(localUri)
+                return@flow
+            }
           }
         }
       }
 
-      // - - - If the loop finishes without finding a box art, mark it as not found in the cache
-      ForgeLogger.info("No box art found for: $GAME_NAME")
-      cacheJson[GAME_NAME] = ""
-      saveCache(cacheJson)
+      // - - - If the loop finishes without finding/downloading, emit null
+      ForgeLogger.info("No box art found or download failed for: $GAME_NAME")
       emit(null)
     }
 

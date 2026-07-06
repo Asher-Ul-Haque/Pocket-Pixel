@@ -47,8 +47,7 @@ class ScreenshotManager(private val context: Context)
 
       val storage = App.appModule.externalStorageManager
       val root    = storage.getDirectory(App.appModule.gameRomsKey) ?: return@withContext false
-      
-      val screenshotsDir = storage.getOrCreateDirectory(root, screenshotDir) ?: return@withContext false
+      val screenshotsDir = root.findFile(screenshotDir) ?: return@withContext false
       val gameDir        = storage.getOrCreateDirectory(screenshotsDir, GAME_TITLE.filter { it.isLetterOrDigit() || it.isWhitespace() }) ?: return@withContext false
 
       val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
@@ -76,7 +75,7 @@ class ScreenshotManager(private val context: Context)
     {
       val storage         = App.appModule.externalStorageManager
       val root            = storage.getDirectory(App.appModule.gameRomsKey) ?: return@launch
-      val screenshotsDir  = storage.getOrCreateDirectory(root, screenshotDir) ?: return@launch
+      val screenshotsDir  = root.findFile(screenshotDir) ?: return@launch
       val gameDir         = storage.getOrCreateDirectory(screenshotsDir, GAME_TITLE.filter()
         { it.isLetterOrDigit() || it.isWhitespace() }) ?: return@launch
       
@@ -93,7 +92,7 @@ class ScreenshotManager(private val context: Context)
     {
       val storage         = App.appModule.externalStorageManager
       val root            = storage.getDirectory(App.appModule.gameRomsKey) ?: return@launch
-      val screenshotsDir  = storage.getOrCreateDirectory(root, screenshotDir) ?: return@launch
+      val screenshotsDir  = root.findFile(screenshotDir) ?: return@launch
       
       openDirectory(screenshotsDir.uri)
     }

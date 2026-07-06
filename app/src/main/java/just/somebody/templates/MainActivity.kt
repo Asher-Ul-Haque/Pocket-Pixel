@@ -27,6 +27,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import just.somebody.templates.ui.theme.TemplateTheme
+import just.somebody.templates.appModule.storage.StorageInitializer
 import just.somebody.templates.presentation.effects.ObserveAsEvents
 import just.somebody.templates.presentation.effects.SnackbarController
 import just.somebody.templates.presentation.effects.SoundController
@@ -54,6 +55,15 @@ class MainActivity : ComponentActivity()
   override fun onCreate(savedInstanceState: Bundle?)
   {
     super.onCreate(savedInstanceState)
+    
+    // - - - Centralized Storage Initialization: Triggered whenever ROMs URI is updated or loaded
+    lifecycleScope.launch {
+        App.appModule.dataStoreManager.settingsFlow.collect { settings ->
+            if (settings.externalUris.containsKey("GAME_BOY_ROMS")) {
+                StorageInitializer.initialize(this@MainActivity)
+            }
+        }
+    }
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
       if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {

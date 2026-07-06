@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import just.somebody.templates.App
 import just.somebody.templates.appModule.ForgeLogger
 import just.somebody.templates.appModule.NetworkStatus
+import just.somebody.templates.appModule.storage.LocalAssetManager
 import just.somebody.templates.domain.models.Game
 import just.somebody.templates.domain.models.GameCollection
 import just.somebody.templates.domain.repositories.GameRepository
@@ -167,7 +168,29 @@ class GamesViewModel(private val REPO : GameRepository) : ViewModel()
   {
     viewModelScope.launch ()
     {
-      REPO.updateGame(GAME.copy(boxArtUrl = URL))
+      if (URL.isBlank()) {
+          REPO.updateGame(GAME.copy(boxArtUrl = null))
+          _selectedGame.emit(null)
+          return@launch
+      }
+
+      val romUri = android.net.Uri.parse(GAME.romUri)
+      val docFile = androidx.documentfile.provider.DocumentFile.fromSingleUri(App.appModule.context, romUri)
+      val romFileName = docFile?.name ?: GAME.title
+      val targetFileName = romFileName.replace(Regex("\\.gbc?$", RegexOption.IGNORE_CASE), "") + ".png"
+
+      val localUri = App.appModule.localAssetManager.downloadToCache(
+          URL = URL,
+          FILE_NAME = targetFileName,
+          CATEGORY = LocalAssetManager.CATEGORY_BOXARTS
+      )
+
+      if (localUri != null) {
+          REPO.updateGame(GAME.copy(boxArtUrl = localUri))
+      } else {
+          ForgeLogger.error("Manual box art download failed for: $URL")
+      }
+
       _selectedGame.emit(null)
     }
   }
@@ -213,7 +236,7 @@ class GamesViewModel(private val REPO : GameRepository) : ViewModel()
   private val _boxArtMap  : MutableStateFlow<Map<String, String?>> = MutableStateFlow(emptyMap())
   val boxArtMap           : StateFlow<Map<String, String?>> = _boxArtMap
 
-  private val boxArtQueue  = Channel<String>(capacity = Channel.UNLIMITED)
+  private val boxArtQueue  = Channel<Game>(capacity = Channel.UNLIMITED)
   private val queuedTitles = Collections.synchronizedSet(mutableSetOf<String>())
 
   /**
@@ -256,46 +279,48 @@ class GamesViewModel(private val REPO : GameRepository) : ViewModel()
     // Deprecated
   }
 
-  private fun fetchBoxArt(GAME: Game)
+  private fun fetchBoxArt(game: Game)
   {
-    val title = GAME.title
+    val title = game.title
     if (_boxArtMap.value.containsKey(title)) return
     if (queuedTitles.contains(title)) return
 
     _boxArtMap.update { it + (title to null) }
     queuedTitles.add(title)
 
-    viewModelScope.launch { boxArtQueue.send(title) }
+    viewModelScope.launch { boxArtQueue.send(game) }
   }
 
   private fun startBoxArtWorker()
   {
-    viewModelScope.launch(Dispatchers.Default)
-    {
-      for (title in boxArtQueue)
+    // Non-sequential box art fetching (2 parallel workers)
+    repeat(2) {
+      viewModelScope.launch(Dispatchers.IO)
       {
-        try
+        for (game in boxArtQueue)
         {
-          boxArtFetcher.fetchBoxArt(title).collect()
-          { url ->
-            _boxArtMap.update { it + (title to url) }
-            if (url != null)
-            {
-              // - - - Cache to DB if found
-              REPO.getGameByTitle(title)?.let()
-              { game ->
-                if (game.boxArtUrl == null)
-                { REPO.updateGame(game.copy(boxArtUrl = url)) }
+          val title = game.title
+          try
+          {
+            boxArtFetcher.fetchBoxArt(game).collect()
+            { url ->
+              _boxArtMap.update { it + (title to url) }
+              if (url != null)
+              {
+                REPO.getGameByTitle(title)?.let()
+                { g ->
+                  if (g.boxArtUrl == null) { REPO.updateGame(g.copy(boxArtUrl = url)) }
+                }
               }
             }
           }
+          catch (e: Exception)
+          {
+            ForgeLogger.error("Failed to fetch box art for $title: $e")
+            _boxArtMap.update { it + (title to null) }
+          }
+          finally { queuedTitles.remove(title) }
         }
-        catch (e: Exception)
-        {
-          ForgeLogger.error("Failed to fetch box art for $title: $e")
-          _boxArtMap.update { it + (title to null) }
-        }
-        finally { queuedTitles.remove(title) }
       }
     }
   }
