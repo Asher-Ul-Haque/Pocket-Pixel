@@ -157,6 +157,14 @@
     <string name="PROGRESSION">Progression</string>
     <string name="WIN_COND">Win Condition</string>
     <string name="STANDARD">Standard</string>
+    <string name="TYPE">Type</string>
+    <string name="MODE">Mode</string>
+    <string name="HARD">Hardcore</string>
+    <string name="SOFT">Softcore</string>
+    <string name="STATUS">Status</string>
+    <string name="LOCKED">Locked</string>
+    <string name="PROGRESS">Progress</string>
+    <string name="ACHIEVEMENT_UNLOCKED">Badge Unlocked!</string>
 
     <string name="FAQ">FAQ</string>
     <string name="FAQ_1">How do I add a game?</string>

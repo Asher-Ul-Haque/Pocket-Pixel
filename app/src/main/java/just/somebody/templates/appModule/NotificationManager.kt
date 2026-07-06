@@ -49,7 +49,8 @@ interface NotificationManager
 		TITLE           : String,
 		MESSAGE         : String,
 		@DrawableRes
-		ICON_RES        : Int)
+		ICON_RES        : Int,
+		LARGE_ICON_URI  : String? = null)
 
 	/**
 	 * Cancels and flushes a previously dispatched asynchronous user-facing interruption payload.
@@ -94,7 +95,8 @@ class DefaultNotificationManager : NotificationManager
 		TITLE           : String,
 		MESSAGE         : String,
 		@DrawableRes
-		ICON_RES        : Int)
+		ICON_RES        : Int,
+		LARGE_ICON_URI  : String?)
 	{
 		val builder = NotificationCompat.Builder(CONTEXT, CHANNEL_ID)
 			.setSmallIcon(ICON_RES)
@@ -102,6 +104,20 @@ class DefaultNotificationManager : NotificationManager
 			.setContentText(MESSAGE)
 			.setPriority(NotificationCompat.PRIORITY_HIGH)
 			.setAutoCancel(true)
+
+		if (LARGE_ICON_URI != null) {
+			try {
+				val uri = android.net.Uri.parse(LARGE_ICON_URI)
+				CONTEXT.contentResolver.openInputStream(uri)?.use { stream ->
+					val bitmap = android.graphics.BitmapFactory.decodeStream(stream)
+					if (bitmap != null) {
+						builder.setLargeIcon(bitmap)
+					}
+				}
+			} catch (e: Exception) {
+				ForgeLogger.error("Failed to load large icon for notification: $e")
+			}
+		}
 
 		val notificationManager = NotificationManagerCompat.from(CONTEXT)
 

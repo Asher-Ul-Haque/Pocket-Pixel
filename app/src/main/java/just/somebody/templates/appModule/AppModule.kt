@@ -142,7 +142,7 @@ class AppModule(private val APP_CONTEXT : Context) : AppModuleInterface
   override val gameControllerManager  : GameControllerManager   by lazy { DefaultGameControllerManager(APP_CONTEXT) }
   override val saveStateManager       : SaveStateManager        by lazy { SaveStateManager(APP_CONTEXT, database.saveStateDAO()) }
   override val screenshotManager      : ScreenshotManager       by lazy { ScreenshotManager(APP_CONTEXT) }
-  override val localAssetManager      : LocalAssetManager      by lazy { LocalAssetManager(APP_CONTEXT) }
+  override val localAssetManager      : LocalAssetManager       by lazy { LocalAssetManager(APP_CONTEXT) }
   override val isRaSyncing            : kotlinx.coroutines.flow.MutableStateFlow<Boolean> by lazy { kotlinx.coroutines.flow.MutableStateFlow(false) }
   override val mainScope              : CoroutineScope          by lazy { CoroutineScope(Dispatchers.Main + SupervisorJob()) }
 

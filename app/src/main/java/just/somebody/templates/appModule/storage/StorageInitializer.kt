@@ -31,7 +31,7 @@ object StorageInitializer {
         }
 
         if (!isInitialized.get()) {
-            val folders = listOf("saves", "screenshots", "achievements", "boxarts")
+            val folders = listOf("saves", "screenshots", ".achievements", ".boxarts")
             
             ForgeLogger.info("StorageInitializer: Verifying root directory structure...")
             

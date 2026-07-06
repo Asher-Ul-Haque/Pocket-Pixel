@@ -286,7 +286,7 @@ fun SettingsContent(
               CustomText(
                 stringResource(R.string.RELOGIN),
                 FONT_SIZE = 14,
-                MODIFIER  = Modifier)
+                MODIFIER  = Modifier.fillMaxWidth())
             }
 
             CustomButton(ON_CLICK = ON_RA_LOGOUT, COLOR = GameBoyColors.Error)
@@ -294,7 +294,7 @@ fun SettingsContent(
               CustomText(
                 stringResource(R.string.LOGOUT),
                 FONT_SIZE = 14,
-                MODIFIER  = Modifier)
+                MODIFIER  = Modifier.fillMaxWidth())
             }
           }
         }

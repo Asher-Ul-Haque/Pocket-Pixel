@@ -177,38 +177,60 @@ fun BadgeDetailContent(ACHIEVEMENT: AchievementEntity, ON_DISMISS: () -> Unit)
       Spacer(Modifier.height(16.dp))
     }
 
-        item { DetailRow("Points", "${ACHIEVEMENT.points}") }
+    item { DetailRow(stringResource(R.string.POINTS), "${ACHIEVEMENT.points}") }
         
-        val typeStr = when (ACHIEVEMENT.type) {
-            1 -> "Missable"
-            2 -> "Progression"
-            3 -> "Win Condition"
-            else -> "Standard"
-        }
-        item { DetailRow("Type", typeStr) }
-        
-        if (ACHIEVEMENT.isUnlocked) {
-            val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(ACHIEVEMENT.unlockDate))
-            item { DetailRow("Unlocked", date) }
-            item { DetailRow("Mode", if (ACHIEVEMENT.isHardcore) "Hardcore" else "Softcore") }
-        } else {
-            item { DetailRow("Status", "Locked") }
-            if (ACHIEVEMENT.measuredProgress.isNotEmpty()) {
-                item { DetailRow("Progress", ACHIEVEMENT.measuredProgress) }
-            }
-        }
+    val typeStr = when (ACHIEVEMENT.type)
+    {
+      1     -> "Missable"
+      2     -> "Progression"
+      3     -> "Win Condition"
+      else  -> "Standard"
     }
+    item { DetailRow(stringResource(R.string.TYPE), typeStr) }
+        
+    if (ACHIEVEMENT.isUnlocked)
+    {
+      val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(ACHIEVEMENT.unlockDate))
+      item { DetailRow(stringResource(R.string.Unlocked), date) }
+      item()
+      {
+        DetailRow(
+          stringResource(R.string.MODE),
+          if (ACHIEVEMENT.isHardcore) stringResource(R.string.HARD)
+          else                        stringResource(R.string.SOFT))
+      }
+    }
+    else
+    {
+      item { DetailRow(stringResource(R.string.STATUS), stringResource(R.string.LOCKED)) }
+      if (ACHIEVEMENT.measuredProgress.isNotEmpty())
+      {
+        item { DetailRow(stringResource(R.string.PROGRESS), ACHIEVEMENT.measuredProgress) }
+      }
+    }
+  }
 }
 
 @Composable
-fun DetailRow(LABEL: String, VALUE: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        CustomText(LABEL, FONT_SIZE = 12, COLOR = GameBoyColors.MediumGreen, MODIFIER = Modifier.padding(0.dp))
-        CustomText(VALUE, FONT_SIZE = 12, COLOR = GameBoyColors.LightGreen, MODIFIER = Modifier.padding(0.dp))
-    }
+fun DetailRow(LABEL: String, VALUE: String)
+{
+  Row(
+    modifier              = Modifier
+      .fillMaxWidth()
+      .padding(vertical = 4.dp),
+    horizontalArrangement = Arrangement.SpaceBetween)
+  {
+    CustomText(
+      LABEL,
+      FONT_SIZE = 12,
+      COLOR     = GameBoyColors.MediumGreen,
+      MODIFIER  = Modifier.padding(0.dp))
+    CustomText(
+      VALUE,
+      FONT_SIZE = 12,
+      COLOR     = GameBoyColors.LightGreen,
+      MODIFIER  = Modifier.padding(0.dp))
+  }
 }
 
 @Composable
@@ -314,15 +336,28 @@ fun ProfileContent(
 {
   val isLandscape = App.appModule.isLandscape()
 
-  if (isLandscape) {
+  if (isLandscape)
+  {
     LandscapeProfileContent(
-      USERNAME, AVATAR_URL, TOTAL_POINTS, HARDCORE_POINTS,
-      GROUPED_ACHIEVEMENTS, IS_DOWNLOADING, ON_ACHIEVEMENT_CLICK
+      USERNAME,
+      AVATAR_URL,
+      TOTAL_POINTS,
+      HARDCORE_POINTS,
+      GROUPED_ACHIEVEMENTS,
+      IS_DOWNLOADING,
+      ON_ACHIEVEMENT_CLICK
     )
-  } else {
+  }
+  else
+  {
     PortraitProfileContent(
-      USERNAME, AVATAR_URL, TOTAL_POINTS, HARDCORE_POINTS,
-      GROUPED_ACHIEVEMENTS, IS_DOWNLOADING, ON_ACHIEVEMENT_CLICK
+      USERNAME,
+      AVATAR_URL,
+      TOTAL_POINTS,
+      HARDCORE_POINTS,
+      GROUPED_ACHIEVEMENTS,
+      IS_DOWNLOADING,
+      ON_ACHIEVEMENT_CLICK
     )
   }
 }
@@ -348,7 +383,10 @@ fun PortraitProfileContent(
 
     Box(modifier = Modifier.weight(1f))
     {
-      AchievementList(GROUPED_ACHIEVEMENTS, IS_DOWNLOADING, ON_ACHIEVEMENT_CLICK)
+      AchievementList(
+        GROUPED_ACHIEVEMENTS,
+        IS_DOWNLOADING,
+        ON_ACHIEVEMENT_CLICK)
     }
   }
 }
@@ -363,73 +401,99 @@ fun LandscapeProfileContent(
   IS_DOWNLOADING        : Boolean,
   ON_ACHIEVEMENT_CLICK  : (AchievementEntity) -> Unit)
 {
-  Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp))
+  Row(
+    modifier              = Modifier.fillMaxSize(),
+    horizontalArrangement = Arrangement.spacedBy(16.dp))
   {
-    // Sidebar with profile
+    // - - - Sidebar with profile
     Column(
       modifier = Modifier
         .width(220.dp)
         .fillMaxHeight()
         .background(GameBoyColors.MediumGreen.copy(alpha = 0.1f))
         .padding(8.dp),
-      horizontalAlignment = Alignment.CenterHorizontally
-    ) {
+      horizontalAlignment = Alignment.CenterHorizontally)
+    {
       AsyncImage(
-        model = AVATAR_URL,
-        contentDescription = null,
-        modifier = Modifier
+        model               = AVATAR_URL,
+        contentDescription  = null,
+        modifier            = Modifier
           .size(80.dp)
           .background(GameBoyColors.DarkGreen)
           .border(2.dp, GameBoyColors.LightGreen),
-        placeholder = painterResource(R.drawable.winner)
-      )
+        placeholder = painterResource(R.drawable.winner))
       Spacer(Modifier.height(8.dp))
-      CustomText(USERNAME, FONT_SIZE = 16, COLOR = GameBoyColors.LightGreen, TEXT_ALIGN = TextAlign.Center, MODIFIER = Modifier.padding(0.dp))
+      CustomText(
+        USERNAME,
+        FONT_SIZE   = 16,
+        COLOR       = GameBoyColors.LightGreen,
+        TEXT_ALIGN  = TextAlign.Center,
+        MODIFIER    = Modifier.padding(0.dp))
       
       val totalUnlocked = GROUPED_ACHIEVEMENTS.sumOf { it.achievements.count { a -> a.isUnlocked } }
-      CustomText("$totalUnlocked Badges", FONT_SIZE = 12, COLOR = GameBoyColors.MediumGreen, TEXT_ALIGN = TextAlign.Center, MODIFIER = Modifier.padding(top = 4.dp))
+      CustomText(
+        "$totalUnlocked ${stringResource(R.string.ACHIEVEMENTS)}",
+        FONT_SIZE   = 12,
+        COLOR       = GameBoyColors.MediumGreen,
+        TEXT_ALIGN  = TextAlign.Center,
+        MODIFIER    = Modifier.padding(top = 4.dp))
       
-      CustomText("$TOTAL_POINTS pts ($HARDCORE_POINTS HC)", FONT_SIZE = 11, COLOR = GameBoyColors.LightGreen, TEXT_ALIGN = TextAlign.Center, MODIFIER = Modifier.padding(top = 8.dp))
+      CustomText(
+        "$TOTAL_POINTS pts ($HARDCORE_POINTS HC)",
+        FONT_SIZE   = 11,
+        COLOR       = GameBoyColors.LightGreen,
+        TEXT_ALIGN  = TextAlign.Center,
+        MODIFIER    = Modifier.padding(top = 8.dp))
     }
 
-    // Main content area
-    Column(modifier = Modifier.weight(1f)) {
-      AchievementList(GROUPED_ACHIEVEMENTS, IS_DOWNLOADING, ON_ACHIEVEMENT_CLICK)
+    // - - - Main content area
+    Column(modifier = Modifier.weight(1f))
+    {
+      AchievementList(
+        GROUPED_ACHIEVEMENTS,
+        IS_DOWNLOADING,
+        ON_ACHIEVEMENT_CLICK)
     }
   }
 }
 
 @Composable
-fun HeaderSection(USERNAME: String, AVATAR_URL: String, TOTAL_POINTS: Int, HARDCORE_POINTS: Int, TOTAL_UNLOCKED: Int) {
+fun HeaderSection(
+  USERNAME        : String,
+  AVATAR_URL      : String,
+  TOTAL_POINTS    : Int,
+  HARDCORE_POINTS : Int,
+  TOTAL_UNLOCKED  : Int)
+{
   Row(
     modifier              = Modifier.fillMaxWidth(),
     horizontalArrangement = Arrangement.SpaceBetween,
     verticalAlignment     = Alignment.CenterVertically)
   {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        AsyncImage(
-            model = AVATAR_URL,
-            contentDescription = null,
-            modifier = Modifier
-                .size(48.dp)
-                .background(GameBoyColors.DarkGreen)
-                .border(2.dp, GameBoyColors.LightGreen),
-            placeholder = painterResource(R.drawable.winner)
-        )
-        Spacer(Modifier.width(12.dp))
-        Column()
-        {
-          CustomText(
-            USERNAME,
-            FONT_SIZE   = 18,
-            COLOR       = GameBoyColors.LightGreen,
-            MODIFIER = Modifier.padding(0.dp))
-          CustomText(
-            "Points: $TOTAL_POINTS ($HARDCORE_POINTS HC)",
-            FONT_SIZE   = 12,
-            COLOR       = GameBoyColors.MediumGreen,
-            MODIFIER = Modifier.padding(0.dp))
-        }
+    Row(verticalAlignment = Alignment.CenterVertically)
+    {
+      AsyncImage(
+        model               = AVATAR_URL,
+        contentDescription  = null,
+        modifier            = Modifier
+          .size(48.dp)
+          .background(GameBoyColors.DarkGreen)
+          .border(2.dp, GameBoyColors.LightGreen),
+        placeholder = painterResource(R.drawable.winner))
+      Spacer(Modifier.width(12.dp))
+      Column()
+      {
+        CustomText(
+          USERNAME,
+          FONT_SIZE   = 18,
+          COLOR       = GameBoyColors.LightGreen,
+          MODIFIER = Modifier.padding(0.dp))
+        CustomText(
+          "${stringResource(R.string.POINTS)}: $TOTAL_POINTS ($HARDCORE_POINTS HC)",
+          FONT_SIZE   = 12,
+          COLOR       = GameBoyColors.MediumGreen,
+          MODIFIER = Modifier.padding(0.dp))
+      }
     }
     
     CustomText(
@@ -441,18 +505,22 @@ fun HeaderSection(USERNAME: String, AVATAR_URL: String, TOTAL_POINTS: Int, HARDC
 
 @Composable
 fun AchievementList(
-    GROUPED_ACHIEVEMENTS  : List<GroupedAchievements>,
-    IS_DOWNLOADING        : Boolean,
-    ON_ACHIEVEMENT_CLICK  : (AchievementEntity) -> Unit) {
-  if (GROUPED_ACHIEVEMENTS.isEmpty() && !IS_DOWNLOADING) {
+  GROUPED_ACHIEVEMENTS  : List<GroupedAchievements>,
+  IS_DOWNLOADING        : Boolean,
+  ON_ACHIEVEMENT_CLICK  : (AchievementEntity) -> Unit)
+{
+  if (GROUPED_ACHIEVEMENTS.isEmpty() && !IS_DOWNLOADING)
+  {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
       CustomText(
         stringResource(R.string.PLAY_TO_LOAD),
-        COLOR = GameBoyColors.MediumGreen,
-        TEXT_ALIGN = TextAlign.Center
+        COLOR       = GameBoyColors.MediumGreen,
+        TEXT_ALIGN  = TextAlign.Center
       )
     }
-  } else {
+  }
+  else
+  {
     LazyColumn(
       modifier            = Modifier.fillMaxSize(),
       verticalArrangement = Arrangement.spacedBy(16.dp))
@@ -461,82 +529,97 @@ fun AchievementList(
       { grouped ->
         item()
         {
-          val unlockedInGame = grouped.achievements.count { it.isUnlocked }
-          val isMastered = grouped.achievements.isNotEmpty() && unlockedInGame == grouped.achievements.size
+          val unlockedInGame  = grouped.achievements.count { it.isUnlocked }
+          val isMastered      = grouped.achievements.isNotEmpty() && unlockedInGame == grouped.achievements.size
           
           Column(
-              modifier = Modifier
-                  .fillMaxWidth()
-                  .background(GameBoyColors.Green.copy(alpha = 0.1f))
-                  .border(1.dp, GameBoyColors.Green.copy(alpha = 0.2f))
-                  .padding(8.dp)
-          ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (isMastered) {
-                    Icon(
-                        painter = painterResource(R.drawable.winner),
-                        contentDescription = null,
-                        tint = GameBoyColors.LightGreen,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(Modifier.width(8.dp))
-                }
-                CustomText(
-                  grouped.gameTitle,
-                  FONT_SIZE = 16,
-                  COLOR     = GameBoyColors.LightGreen,
-                  MODIFIER = Modifier.weight(1f).padding(0.dp))
+            modifier = Modifier
+              .fillMaxWidth()
+              .background(GameBoyColors.Green.copy(alpha = 0.1f))
+              .border(1.dp, GameBoyColors.Green.copy(alpha = 0.2f))
+              .padding(8.dp))
+          {
+            Row(verticalAlignment = Alignment.CenterVertically)
+            {
+              if (isMastered)
+              {
+                Icon(
+                  painter             = painterResource(R.drawable.winner),
+                  contentDescription  = null,
+                  tint                = GameBoyColors.LightGreen,
+                  modifier            = Modifier.size(16.dp))
+                Spacer(Modifier.width(8.dp))
+              }
+              CustomText(
+                grouped.gameTitle,
+                FONT_SIZE = 16,
+                COLOR     = GameBoyColors.LightGreen,
+                MODIFIER  = Modifier.weight(1f).padding(0.dp))
                 
-                CustomText(
-                  "$unlockedInGame/${grouped.achievements.size}",
-                  FONT_SIZE = 12,
-                  COLOR = GameBoyColors.MediumGreen,
-                  MODIFIER = Modifier.padding(0.dp)
-                )
+              CustomText(
+                "$unlockedInGame/${grouped.achievements.size}",
+                FONT_SIZE = 12,
+                COLOR = GameBoyColors.MediumGreen,
+                MODIFIER = Modifier.padding(0.dp))
             }
             Spacer(Modifier.height(12.dp))
             
             LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(horizontal = 4.dp)
-            ) {
-                items(grouped.achievements) { achievement ->
-                    AchievementBadgeItem(achievement, ON_ACHIEVEMENT_CLICK)
-                }
+              horizontalArrangement = Arrangement.spacedBy(12.dp),
+              contentPadding        = PaddingValues(horizontal = 4.dp))
+            {
+              items(grouped.achievements) { achievement -> AchievementBadgeItem(achievement, ON_ACHIEVEMENT_CLICK) }
             }
           }
         }
       }
 
-      if (IS_DOWNLOADING) {
-          item {
-              Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
-                  CircularProgressIndicator(color = GameBoyColors.LightGreen, modifier = Modifier.size(32.dp))
-              }
+      if (IS_DOWNLOADING)
+      {
+        item()
+        {
+          Box(
+            modifier = Modifier
+              .fillMaxWidth()
+              .padding(16.dp),
+            contentAlignment = Alignment.Center)
+          {
+            CircularProgressIndicator(
+              color     = GameBoyColors.LightGreen,
+              modifier  = Modifier.size(32.dp))
           }
+        }
       }
     }
   }
 }
 
 @Composable
-fun AchievementBadgeItem(ACHIEVEMENT: AchievementEntity, ON_CLICK: (AchievementEntity) -> Unit) {
-    val grayscale = ColorMatrix().apply { setToSaturation(0f) }
-    val model = if (ACHIEVEMENT.badgeUrl.isEmpty()) R.drawable.winner else ACHIEVEMENT.badgeUrl
+fun AchievementBadgeItem(ACHIEVEMENT: AchievementEntity, ON_CLICK: (AchievementEntity) -> Unit)
+{
+  val grayscale = ColorMatrix().apply { setToSaturation(0f) }
+  val model     =
+    if (ACHIEVEMENT.badgeUrl.isEmpty()) R.drawable.winner
+    else                                ACHIEVEMENT.badgeUrl
     
-    AsyncImage(
-      model                 = model,
-      contentDescription    = null,
-      modifier              = Modifier
-        .size(96.dp)
-        .background(GameBoyColors.DarkGreen)
-        .border(2.dp, if (ACHIEVEMENT.isUnlocked) GameBoyColors.LightGreen else GameBoyColors.MediumGreen)
-        .clickable { ON_CLICK(ACHIEVEMENT) },
-      placeholder = painterResource(R.drawable.winner),
-      error = painterResource(R.drawable.winner),
-      colorFilter = if (!ACHIEVEMENT.isUnlocked) ColorFilter.colorMatrix(grayscale) else null,
-      alpha = if (!ACHIEVEMENT.isUnlocked) 0.5f else 1.0f
-    )
+  AsyncImage(
+    model                 = model,
+    contentDescription    = null,
+    modifier              = Modifier
+      .size(96.dp)
+      .background(GameBoyColors.DarkGreen)
+      .border(2.dp,
+              if (ACHIEVEMENT.isUnlocked) GameBoyColors.LightGreen
+              else                        GameBoyColors.MediumGreen)
+      .clickable { ON_CLICK(ACHIEVEMENT) },
+    placeholder = painterResource(R.drawable.winner),
+    error       = painterResource(R.drawable.winner),
+    colorFilter =
+      if (!ACHIEVEMENT.isUnlocked) ColorFilter.colorMatrix(grayscale)
+      else                         null,
+    alpha       =
+      if (!ACHIEVEMENT.isUnlocked)  0.5f
+      else                          1.0f)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

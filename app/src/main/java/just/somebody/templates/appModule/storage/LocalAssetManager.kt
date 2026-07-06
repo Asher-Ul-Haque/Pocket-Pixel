@@ -123,7 +123,7 @@ class LocalAssetManager(private val CONTEXT: Context)
 
     companion object
     {
-      const val CATEGORY_BOXARTS        = "boxarts"
-      const val CATEGORY_ACHIEVEMENTS   = "achievements"
+      const val CATEGORY_BOXARTS        = ".boxarts"
+      const val CATEGORY_ACHIEVEMENTS   = ".achievements"
     }
 }

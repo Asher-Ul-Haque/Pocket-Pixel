@@ -504,7 +504,8 @@ class GameBoy
           NOTIFICATION_ID = ID,
           TITLE           = "Achievement Unlocked!",
           MESSAGE         = "$TITLE ($POINTS pts)",
-          ICON_RES        = R.drawable.trophy)
+          ICON_RES        = R.drawable.trophy,
+          LARGE_ICON_URI  = localBadgeUri)
       }
       else if (!IS_SILENT && IS_UNLOCKED)
       {
