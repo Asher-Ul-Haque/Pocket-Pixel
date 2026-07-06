@@ -49,6 +49,7 @@ static jmethodID g_stopAudioID = nullptr;
 static jmethodID g_onAchievementUnlockedID = nullptr;
 static jmethodID g_onRaLoginSuccessID = nullptr;
 static jmethodID g_onRaLoginErrorID = nullptr;
+static jmethodID g_onRaSyncFinishedID = nullptr;
 static jfloatArray g_audioArray = nullptr;
 static u32 g_audioArraySize = 0;
 
@@ -136,10 +137,6 @@ extern "C" void android_ra_login_callback(int result, const char* error_message,
                 env->DeleteLocalRef(javatar);
             }
         }
-
-        // - - - Automatically trigger sync on login
-        rc_client_begin_fetch_all_user_progress(client, 4, android_ra_fetch_progress_callback, nullptr); // Game Boy
-        rc_client_begin_fetch_all_user_progress(client, 6, android_ra_fetch_progress_callback, nullptr); // Game Boy Color
     } else {
         LOGE("RetroAchievements Login failed: %s", error_message);
         JNIEnv* env;
@@ -177,23 +174,55 @@ extern "C" void android_ra_http_handler(const rc_api_request_t* request, rc_clie
     if (jpost) env->DeleteLocalRef(jpost);
 }
 
-extern "C" void android_ra_fetch_progress_callback(int result, const char* error_message, rc_client_all_user_progress_t* list, rc_client_t* client, void* userdata) {
+extern "C" void android_ra_fetch_game_titles_callback(int result, const char* error_message, rc_client_game_title_list_t* list, rc_client_t* client, void* userdata) {
+    if (result == RC_OK && list) {
+        LOGI("RetroAchievements fetched titles for %u games", list->num_entries);
+        JNIEnv* env;
+        if (g_jvm->GetEnv((void**)&env, JNI_VERSION_1_6) == JNI_OK || g_jvm->AttachCurrentThread(&env, nullptr) == JNI_OK) {
+            jclass gameBoyClass = g_gameBoyClass;
+            jmethodID onGameSyncID = env->GetStaticMethodID(gameBoyClass, "onRaGameSynced", "(ILjava/lang/String;Ljava/lang/String;)V");
+
+            if (onGameSyncID) {
+                for (uint32_t i = 0; i < list->num_entries; ++i) {
+                    jstring title = env->NewStringUTF(list->entries[i].title);
+                    jstring badge = env->NewStringUTF(list->entries[i].badge_url);
+                    env->CallStaticVoidMethod(gameBoyClass, onGameSyncID, (jint)list->entries[i].game_id, title, badge);
+                    env->DeleteLocalRef(title);
+                    env->DeleteLocalRef(badge);
+                }
+            }
+            env->CallStaticVoidMethod(gameBoyClass, g_onRaSyncFinishedID);
+        }
+    } else {
+        LOGE("RetroAchievements failed to fetch game titles: %s", error_message);
+        JNIEnv* env;
+        if (g_jvm->GetEnv((void**)&env, JNI_VERSION_1_6) == JNI_OK || g_jvm->AttachCurrentThread(&env, nullptr) == JNI_OK) {
+            env->CallStaticVoidMethod(g_gameBoyClass, g_onRaSyncFinishedID);
+        }
+    }
+}
+
+void android_ra_fetch_progress_callback(int result, const char* error_message, rc_client_all_user_progress_t* list, rc_client_t* client, void* userdata) {
     if (result == RC_OK && list) {
         LOGI("RetroAchievements Global progress fetched: %u games", list->num_entries);
-        for (uint32_t i = 0; i < list->num_entries; ++i) {
-            // - - - For each game, we'll fetch titles to show in the list.
-            // - - - Achievements for these games will be loaded when the user actually plays them,
-            // - - - OR we could trigger a background sync for each.
-        }
 
         std::vector<uint32_t> ids;
         for(uint32_t i = 0; i < list->num_entries; ++i) ids.push_back(list->entries[i].game_id);
 
         if (!ids.empty()) {
-            rc_client_begin_fetch_game_titles(client, ids.data(), (uint32_t)ids.size(), nullptr, nullptr);
+            rc_client_begin_fetch_game_titles(client, ids.data(), (uint32_t)ids.size(), android_ra_fetch_game_titles_callback, nullptr);
+        } else {
+            JNIEnv* env;
+            if (g_jvm->GetEnv((void**)&env, JNI_VERSION_1_6) == JNI_OK || g_jvm->AttachCurrentThread(&env, nullptr) == JNI_OK) {
+                env->CallStaticVoidMethod(g_gameBoyClass, g_onRaSyncFinishedID);
+            }
         }
     } else {
         LOGE("RetroAchievements failed to fetch global progress: %s", error_message);
+        JNIEnv* env;
+        if (g_jvm->GetEnv((void**)&env, JNI_VERSION_1_6) == JNI_OK || g_jvm->AttachCurrentThread(&env, nullptr) == JNI_OK) {
+            env->CallStaticVoidMethod(g_gameBoyClass, g_onRaSyncFinishedID);
+        }
     }
 }
 
@@ -439,6 +468,7 @@ const char* fShaderSrc = R"(
     }
 
     void main() {
+        // - - - Sharp retro
         if (u_shaderType == 0) {
             vec4 current = texture2D(s_texture, v_texCoord);
             vec4 previous = texture2D(s_prevTexture, v_texCoord);
@@ -446,6 +476,7 @@ const char* fShaderSrc = R"(
             return;
         }
 
+        // - - - CRT
         if (u_shaderType == 1) {
             vec2 uv = barrelDistort(v_texCoord);
             if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
@@ -462,6 +493,7 @@ const char* fShaderSrc = R"(
             return;
         }
 
+        // - - - lcd
         if (u_shaderType == 2) {
             vec2 uv = v_texCoord;
             vec4 color = texture2D(s_texture, uv);
@@ -479,10 +511,11 @@ const char* fShaderSrc = R"(
             return;
         }
 
+        // - - - CHROMATIC ABERATION
         if (u_shaderType == 3) {
             vec2 uv = v_texCoord;
             vec2 distFromCenter = uv - vec2(0.5);
-            float strength = 0.015 * length(distFromCenter);
+            float strength = 0.03 * length(distFromCenter);
             float r = texture2D(s_texture, uv + distFromCenter * strength).r;
             float g = texture2D(s_texture, uv).g;
             float b = texture2D(s_texture, uv - distFromCenter * strength).b;
@@ -570,8 +603,9 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
     g_onAchievementUnlockedID = env->GetStaticMethodID(g_gameBoyClass, "onAchievementUnlockedCallback", "(IILjava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;ZJZZ)V");
     g_onRaLoginSuccessID = env->GetStaticMethodID(g_gameBoyClass, "onRaLoginSuccess", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;II)V");
     g_onRaLoginErrorID = env->GetStaticMethodID(g_gameBoyClass, "onRaLoginError", "(Ljava/lang/String;)V");
+    g_onRaSyncFinishedID = env->GetStaticMethodID(g_gameBoyClass, "onRaSyncFinished", "()V");
 
-    if (!g_requestRenderID || !g_saveRamID || !g_loadRamID || !g_getExpectedSaveSizeID || !g_initAudioID || !g_playAudioID || !g_stopAudioID || !g_onAchievementUnlockedID || !g_onRaLoginSuccessID || !g_onRaLoginErrorID) {
+    if (!g_requestRenderID || !g_saveRamID || !g_loadRamID || !g_getExpectedSaveSizeID || !g_initAudioID || !g_playAudioID || !g_stopAudioID || !g_onAchievementUnlockedID || !g_onRaLoginSuccessID || !g_onRaLoginErrorID || !g_onRaSyncFinishedID) {
         LOGE("Could not find all JNI method IDs");
         return JNI_ERR;
     }
@@ -778,11 +812,8 @@ Java_just_somebody_templates_domain_GameBoy_nativeRaLogout(JNIEnv *env, jobject 
 JNIEXPORT void JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeRaSyncProfile(JNIEnv *env, jobject thiz) {
     LOGI("RetroAchievements Global Sync requested");
-    std::lock_guard<std::mutex> lock(g_raMutex);
-    if (g_rc_client) {
-        rc_client_begin_fetch_all_user_progress(g_rc_client, 4, android_ra_fetch_progress_callback, nullptr); // Game Boy
-        rc_client_begin_fetch_all_user_progress(g_rc_client, 6, android_ra_fetch_progress_callback, nullptr); // Game Boy Color
-    }
+    // Removed global progress fetch to speed up sync.
+    // Data is now loaded game-by-game.
 }
 
 JNIEXPORT void JNICALL
