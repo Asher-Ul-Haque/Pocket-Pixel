@@ -438,6 +438,7 @@ class GameBoy
    * @param TIMESTAMP (Long) : when the achievement was unlcoked
    * @param IS_SILENT (Boolean) : whether to trigger a notification
    * @param IS_UNLOCKED (Boolean) : whether the achievement is unlocked
+   * @param TYPE (Int) : the type of achievement (0: Standard, 1: Missable, 2: Progression, 3: Win)
    */
   fun onAchievementUnlocked(
     ID            : Int,
@@ -450,7 +451,8 @@ class GameBoy
     IS_HARDCORE   : Boolean,
     TIMESTAMP     : Long,
     IS_SILENT     : Boolean,
-    IS_UNLOCKED   : Boolean)
+    IS_UNLOCKED   : Boolean,
+    TYPE          : Int)
   {
     // - - - Filter out RetroAchievements emulator warnings
     if (TITLE.contains("Warning", ignoreCase = true) && 
@@ -485,7 +487,8 @@ class GameBoy
           if (TIMESTAMP > 0)  TIMESTAMP
           else                if (IS_UNLOCKED) System.currentTimeMillis() else 0L,
         isUnlocked       = IS_UNLOCKED,
-        isHardcore       = IS_HARDCORE)
+        isHardcore       = IS_HARDCORE,
+        type             = TYPE)
       
       dao.insertAchievement(achievement)
       if (IS_UNLOCKED) sessionUnlockedTitles.add(TITLE)
@@ -616,9 +619,10 @@ class GameBoy
       IS_HARDCORE   : Boolean,
       TIMESTAMP     : Long,
       IS_SILENT     : Boolean,
-      IS_UNLOCKED   : Boolean)
+      IS_UNLOCKED   : Boolean,
+      TYPE          : Int)
     {
-      App.appModule.gameBoy.onAchievementUnlocked(ID, RA_GAME_ID, RA_GAME_TITLE, TITLE, DESCRIPTION, POINTS, BADGE_URL, IS_HARDCORE, TIMESTAMP, IS_SILENT, IS_UNLOCKED)
+      App.appModule.gameBoy.onAchievementUnlocked(ID, RA_GAME_ID, RA_GAME_TITLE, TITLE, DESCRIPTION, POINTS, BADGE_URL, IS_HARDCORE, TIMESTAMP, IS_SILENT, IS_UNLOCKED, TYPE)
     }
 
     /** Deletes all the achievements for current game to load from the server */

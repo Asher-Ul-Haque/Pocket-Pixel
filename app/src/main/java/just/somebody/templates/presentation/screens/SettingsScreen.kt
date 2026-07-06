@@ -281,13 +281,20 @@ fun SettingsContent(
                 MODIFIER  = Modifier)
             }
 
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally))
+            CustomButton(ON_CLICK = ON_RA_LOGIN)
             {
-              CustomButton(ON_CLICK = ON_RA_LOGIN)
-              { CustomText("Re Login", FONT_SIZE = 14, MODIFIER = Modifier.padding(horizontal = 16.dp)) }
+              CustomText(
+                stringResource(R.string.RELOGIN),
+                FONT_SIZE = 14,
+                MODIFIER  = Modifier)
+            }
 
-              CustomButton(ON_CLICK = ON_RA_LOGOUT, COLOR = GameBoyColors.Error)
-              { CustomText("Logout", FONT_SIZE = 14, MODIFIER = Modifier.padding(horizontal = 16.dp)) }
+            CustomButton(ON_CLICK = ON_RA_LOGOUT, COLOR = GameBoyColors.Error)
+            {
+              CustomText(
+                stringResource(R.string.LOGOUT),
+                FONT_SIZE = 14,
+                MODIFIER  = Modifier)
             }
           }
         }

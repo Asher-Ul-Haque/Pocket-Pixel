@@ -35,6 +35,9 @@ class AchievementViewModel : ViewModel()
 
     val isLoading: StateFlow<Boolean> = App.appModule.isRaSyncing
 
+    private val _isDownloading = MutableStateFlow(false)
+    val isDownloading: StateFlow<Boolean> = _isDownloading
+
     private val badgeQueue = Channel<AchievementEntity>(capacity = Channel.UNLIMITED)
     private val queuedIds  = Collections.synchronizedSet(mutableSetOf<Int>())
 
@@ -61,6 +64,8 @@ class AchievementViewModel : ViewModel()
                         ForgeLogger.error("Failed to download badge ${achievement.raId}: $e")
                     } finally {
                         queuedIds.remove(achievement.raId)
+                        // Use atomic count or set check to be safer
+                        _isDownloading.value = queuedIds.isNotEmpty()
                     }
                 }
             }
@@ -73,12 +78,15 @@ class AchievementViewModel : ViewModel()
         .getAllAchievements()
         .onEach { list ->
             // Trigger background downloads for missing badges
+            var hasNewQueued = false
             list.forEach { achievement ->
                 if (!achievement.badgeUrl.startsWith("content://") && !queuedIds.contains(achievement.raId)) {
                     queuedIds.add(achievement.raId)
                     viewModelScope.launch { badgeQueue.send(achievement) }
+                    hasNewQueued = true
                 }
             }
+            if (hasNewQueued) _isDownloading.value = true
         }
         .map()
         { list ->

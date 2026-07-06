@@ -49,14 +49,15 @@ fun AchievementScreen(VIEW_MODEL: AchievementViewModel)
   val groupedAchievements   by VIEW_MODEL.groupedAchievements.collectAsState()
   val loginError            by VIEW_MODEL.loginError.collectAsState()
   val isLoading             by VIEW_MODEL.isLoading.collectAsState()
+  val isDownloading         by VIEW_MODEL.isDownloading.collectAsState()
   val isConnected           by App
     .appModule.hardwareManager
     .isConnectedToInternet
     .collectAsState(initial = NetworkStatus.Lost)
 
   var selectedAchievement by remember { mutableStateOf<AchievementEntity?>(null) }
-  val sheetState = rememberModalBottomSheetState()
-  var showBottomSheet by remember { mutableStateOf(false) }
+  val sheetState          = rememberModalBottomSheetState()
+  var showBottomSheet     by remember { mutableStateOf(false) }
 
     Box(
       modifier = Modifier
@@ -82,91 +83,109 @@ fun AchievementScreen(VIEW_MODEL: AchievementViewModel)
           TOTAL_POINTS          = settings.raTotalPoints,
           HARDCORE_POINTS       = settings.raTotalHardcorePoints,
           GROUPED_ACHIEVEMENTS  = groupedAchievements,
-          ON_ACHIEVEMENT_CLICK  = { 
+          IS_DOWNLOADING        = isDownloading,
+          ON_ACHIEVEMENT_CLICK  =
+            {
               selectedAchievement = it
               showBottomSheet = true
-          })
+            })
       }
       
-      if (showBottomSheet && selectedAchievement != null) {
-          ModalBottomSheet(
-              onDismissRequest = { showBottomSheet = false },
-              sheetState = sheetState,
-              containerColor = GameBoyColors.DarkGreen,
-              contentColor = GameBoyColors.LightGreen,
-              shape = RectangleShape,
-              dragHandle = { BottomSheetDefaults.DragHandle(color = GameBoyColors.Green) }
-          ) {
-              BadgeDetailContent(
-                  ACHIEVEMENT = selectedAchievement!!,
-                  ON_DISMISS = { showBottomSheet = false }
-              )
-          }
+      if (showBottomSheet && selectedAchievement != null)
+      {
+        ModalBottomSheet(
+          onDismissRequest  = { showBottomSheet = false },
+          sheetState        = sheetState,
+          containerColor    = GameBoyColors.DarkGreen,
+          contentColor      = GameBoyColors.LightGreen,
+          shape             = RectangleShape,
+          dragHandle        = { BottomSheetDefaults.DragHandle(color = GameBoyColors.Green) }
+          )
+        {
+          BadgeDetailContent(
+            ACHIEVEMENT = selectedAchievement!!,
+            ON_DISMISS = { showBottomSheet = false })
+        }
       }
     }
 }
 
 @Composable
-fun LoadingContent() {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        CircularProgressIndicator(color = GameBoyColors.LightGreen)
-        Spacer(Modifier.height(16.dp))
-        CustomText("Syncing RetroAchievements...", COLOR = GameBoyColors.LightGreen)
-    }
+fun LoadingContent()
+{
+  Column(
+    modifier            = Modifier.fillMaxSize(),
+    horizontalAlignment = Alignment.CenterHorizontally,
+    verticalArrangement = Arrangement.Center)
+  {
+    CircularProgressIndicator(color = GameBoyColors.LightGreen)
+    Spacer(Modifier.height(16.dp))
+    CustomText(stringResource(R.string.SYNC), COLOR = GameBoyColors.LightGreen)
+  }
 }
 
 @Composable
-fun BadgeDetailContent(ACHIEVEMENT: AchievementEntity, ON_DISMISS: () -> Unit) {
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        item {
-            val grayscale = ColorMatrix().apply { setToSaturation(0f) }
-            val model = if (ACHIEVEMENT.badgeUrl.isEmpty()) R.drawable.winner else ACHIEVEMENT.badgeUrl
+fun BadgeDetailContent(ACHIEVEMENT: AchievementEntity, ON_DISMISS: () -> Unit)
+{
+  LazyColumn(
+      modifier = Modifier
+        .fillMaxWidth()
+        .padding(16.dp),
+      horizontalAlignment = Alignment.CenterHorizontally)
+  {
+    item ()
+    {
+      val grayscale = ColorMatrix().apply { setToSaturation(0f) }
+      val model     =
+        if (ACHIEVEMENT.badgeUrl.isEmpty()) R.drawable.winner
+        else                                ACHIEVEMENT.badgeUrl
 
-            AsyncImage(
-                model = model,
-                contentDescription = null,
-                modifier = Modifier
-                    .size(144.dp)
-                    .background(GameBoyColors.DarkGreen)
-                    .border(2.dp, GameBoyColors.LightGreen),
-                placeholder = painterResource(R.drawable.winner),
-                error = painterResource(R.drawable.winner),
-                colorFilter = if (!ACHIEVEMENT.isUnlocked) ColorFilter.colorMatrix(grayscale) else null,
-                alpha = if (!ACHIEVEMENT.isUnlocked) 0.5f else 1.0f
-            )
+      AsyncImage(
+        model               = model,
+        contentDescription  = null,
+        modifier            = Modifier
+          .size(144.dp)
+          .background(GameBoyColors.DarkGreen)
+          .border(2.dp, GameBoyColors.LightGreen),
+        placeholder         = painterResource(R.drawable.winner),
+        error               = painterResource(R.drawable.winner),
+        colorFilter         =
+          if (!ACHIEVEMENT.isUnlocked)  ColorFilter.colorMatrix(grayscale)
+          else                          null,
+        alpha =
+          if (!ACHIEVEMENT.isUnlocked)  0.5f
+          else                          1.0f)
             
-            Spacer(Modifier.height(16.dp))
-            CustomText(
-                ACHIEVEMENT.title,
-                FONT_SIZE = 20,
-                COLOR = GameBoyColors.LightGreen,
-                MODIFIER = Modifier.fillMaxWidth(),
-                TEXT_ALIGN = TextAlign.Center
-            )
-            Spacer(Modifier.height(8.dp))
-            CustomText(
-                ACHIEVEMENT.description,
-                FONT_SIZE = 14,
-                COLOR = GameBoyColors.Green,
-                TEXT_ALIGN = TextAlign.Center,
-                MODIFIER = Modifier.fillMaxWidth()
-            )
+      Spacer(Modifier.height(16.dp))
+      CustomText(
+        ACHIEVEMENT.title,
+        FONT_SIZE   = 20,
+        COLOR       = GameBoyColors.LightGreen,
+        MODIFIER    = Modifier.fillMaxWidth(),
+        TEXT_ALIGN  = TextAlign.Center)
 
-            Spacer(Modifier.height(16.dp))
-            HorizontalDivider(color = GameBoyColors.MediumGreen, thickness = 2.dp)
-            Spacer(Modifier.height(16.dp))
-        }
+      Spacer(Modifier.height(8.dp))
+      CustomText(
+        ACHIEVEMENT.description,
+        FONT_SIZE   = 14,
+        COLOR       = GameBoyColors.Green,
+        TEXT_ALIGN  = TextAlign.Center,
+        MODIFIER    = Modifier.fillMaxWidth())
+
+      Spacer(Modifier.height(16.dp))
+      HorizontalDivider(color = GameBoyColors.MediumGreen, thickness = 2.dp)
+      Spacer(Modifier.height(16.dp))
+    }
 
         item { DetailRow("Points", "${ACHIEVEMENT.points}") }
+        
+        val typeStr = when (ACHIEVEMENT.type) {
+            1 -> "Missable"
+            2 -> "Progression"
+            3 -> "Win Condition"
+            else -> "Standard"
+        }
+        item { DetailRow("Type", typeStr) }
         
         if (ACHIEVEMENT.isUnlocked) {
             val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(ACHIEVEMENT.unlockDate))
@@ -177,18 +196,6 @@ fun BadgeDetailContent(ACHIEVEMENT: AchievementEntity, ON_DISMISS: () -> Unit) {
             if (ACHIEVEMENT.measuredProgress.isNotEmpty()) {
                 item { DetailRow("Progress", ACHIEVEMENT.measuredProgress) }
             }
-        }
-
-        item {
-            Spacer(Modifier.height(32.dp))
-            CustomButton(
-                ON_CLICK = ON_DISMISS,
-                MODIFIER = Modifier.fillMaxWidth(),
-                COLOR = GameBoyColors.MediumGreen
-            ) {
-                CustomText("Back", COLOR = GameBoyColors.LightGreen)
-            }
-            Spacer(Modifier.height(32.dp))
         }
     }
 }
@@ -302,6 +309,7 @@ fun ProfileContent(
   TOTAL_POINTS          : Int,
   HARDCORE_POINTS       : Int,
   GROUPED_ACHIEVEMENTS  : List<GroupedAchievements>,
+  IS_DOWNLOADING        : Boolean,
   ON_ACHIEVEMENT_CLICK  : (AchievementEntity) -> Unit)
 {
   val isLandscape = App.appModule.isLandscape()
@@ -309,12 +317,12 @@ fun ProfileContent(
   if (isLandscape) {
     LandscapeProfileContent(
       USERNAME, AVATAR_URL, TOTAL_POINTS, HARDCORE_POINTS,
-      GROUPED_ACHIEVEMENTS, ON_ACHIEVEMENT_CLICK
+      GROUPED_ACHIEVEMENTS, IS_DOWNLOADING, ON_ACHIEVEMENT_CLICK
     )
   } else {
     PortraitProfileContent(
       USERNAME, AVATAR_URL, TOTAL_POINTS, HARDCORE_POINTS,
-      GROUPED_ACHIEVEMENTS, ON_ACHIEVEMENT_CLICK
+      GROUPED_ACHIEVEMENTS, IS_DOWNLOADING, ON_ACHIEVEMENT_CLICK
     )
   }
 }
@@ -326,6 +334,7 @@ fun PortraitProfileContent(
   TOTAL_POINTS          : Int,
   HARDCORE_POINTS       : Int,
   GROUPED_ACHIEVEMENTS  : List<GroupedAchievements>,
+  IS_DOWNLOADING        : Boolean,
   ON_ACHIEVEMENT_CLICK  : (AchievementEntity) -> Unit)
 {
   Column(modifier = Modifier.fillMaxSize())
@@ -339,7 +348,7 @@ fun PortraitProfileContent(
 
     Box(modifier = Modifier.weight(1f))
     {
-      AchievementList(GROUPED_ACHIEVEMENTS, ON_ACHIEVEMENT_CLICK)
+      AchievementList(GROUPED_ACHIEVEMENTS, IS_DOWNLOADING, ON_ACHIEVEMENT_CLICK)
     }
   }
 }
@@ -351,6 +360,7 @@ fun LandscapeProfileContent(
   TOTAL_POINTS          : Int,
   HARDCORE_POINTS       : Int,
   GROUPED_ACHIEVEMENTS  : List<GroupedAchievements>,
+  IS_DOWNLOADING        : Boolean,
   ON_ACHIEVEMENT_CLICK  : (AchievementEntity) -> Unit)
 {
   Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp))
@@ -384,7 +394,7 @@ fun LandscapeProfileContent(
 
     // Main content area
     Column(modifier = Modifier.weight(1f)) {
-      AchievementList(GROUPED_ACHIEVEMENTS, ON_ACHIEVEMENT_CLICK)
+      AchievementList(GROUPED_ACHIEVEMENTS, IS_DOWNLOADING, ON_ACHIEVEMENT_CLICK)
     }
   }
 }
@@ -430,8 +440,11 @@ fun HeaderSection(USERNAME: String, AVATAR_URL: String, TOTAL_POINTS: Int, HARDC
 }
 
 @Composable
-fun AchievementList(GROUPED_ACHIEVEMENTS: List<GroupedAchievements>, ON_ACHIEVEMENT_CLICK: (AchievementEntity) -> Unit) {
-  if (GROUPED_ACHIEVEMENTS.isEmpty()) {
+fun AchievementList(
+    GROUPED_ACHIEVEMENTS  : List<GroupedAchievements>,
+    IS_DOWNLOADING        : Boolean,
+    ON_ACHIEVEMENT_CLICK  : (AchievementEntity) -> Unit) {
+  if (GROUPED_ACHIEVEMENTS.isEmpty() && !IS_DOWNLOADING) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
       CustomText(
         stringResource(R.string.PLAY_TO_LOAD),
@@ -493,6 +506,14 @@ fun AchievementList(GROUPED_ACHIEVEMENTS: List<GroupedAchievements>, ON_ACHIEVEM
             }
           }
         }
+      }
+
+      if (IS_DOWNLOADING) {
+          item {
+              Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                  CircularProgressIndicator(color = GameBoyColors.LightGreen, modifier = Modifier.size(32.dp))
+              }
+          }
       }
     }
   }
@@ -592,6 +613,7 @@ fun AchievementScreenProfilePreview() {
             TOTAL_POINTS = 30,
             HARDCORE_POINTS = 25,
             GROUPED_ACHIEVEMENTS = mockGrouped,
+            IS_DOWNLOADING = false,
             ON_ACHIEVEMENT_CLICK = {}
         )
     }

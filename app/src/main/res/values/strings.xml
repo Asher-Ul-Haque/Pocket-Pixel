@@ -145,11 +145,18 @@
     <string name="USER">User : </string>
     <string name="Achievements">Achievements: </string>
     <string name="LOGOUT">Logout</string>
+    <string name="RELOGIN">Re Login</string>
     <string name="Unlocked">Unlocked:</string>
     <string name="HARDCORE">HC</string>
     <string name="PLAY_TO_LOAD">Play a game to load or earn badges</string>
     <string name="HARDCORE_ON">Hardcore Mode : ON</string>
     <string name="HARDCORE_OFF">Hardcore Mode : OFF</string>
+    <string name="SYNC">Syncing Retro Achievements...</string>
+    <string name="POINTS">Points</string>
+    <string name="MISSABLE">Missable</string>
+    <string name="PROGRESSION">Progression</string>
+    <string name="WIN_COND">Win Condition</string>
+    <string name="STANDARD">Standard</string>
 
     <string name="FAQ">FAQ</string>
     <string name="FAQ_1">How do I add a game?</string>

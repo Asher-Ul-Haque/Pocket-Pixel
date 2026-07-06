@@ -58,7 +58,7 @@ static std::thread g_emulatorThread;
 static std::atomic<bool> g_running{false};
 static std::atomic<bool> g_paused{false};
 static std::mutex g_pauseMutex;
-static std::mutex g_stateMutex;
+static std::recursive_mutex g_stateMutex;
 static std::condition_variable g_pauseCv;
 
 static std::atomic<bool> g_fastForward{false};
@@ -115,6 +115,7 @@ extern "C" {
 
 // RetroAchievements Memory Read
 extern "C" uint32_t android_ra_read_memory(uint32_t address, uint8_t* buffer, uint32_t num_bytes, rc_client_t* client) {
+    std::lock_guard<std::recursive_mutex> lock(g_stateMutex);
     for (uint32_t i = 0; i < num_bytes; ++i) {
         buffer[i] = busRead((u16)(address + i));
     }
@@ -246,7 +247,7 @@ extern "C" void android_ra_event_handler(const rc_client_event_t* event, rc_clie
 
             env->CallStaticVoidMethod(g_gameBoyClass, g_onAchievementUnlockedID,
                 (jint)event->achievement->id, (jint)ra_game_id, game_title, title, desc, (jint)event->achievement->points, badge,
-                (jboolean)rc_client_get_hardcore_enabled(client), (jlong)0, (jboolean)false, (jboolean)true);
+                (jboolean)rc_client_get_hardcore_enabled(client), (jlong)0, (jboolean)false, (jboolean)true, (jint)event->achievement->type);
 
             env->DeleteLocalRef(title);
             env->DeleteLocalRef(desc);
@@ -286,7 +287,7 @@ extern "C" void android_ra_game_loaded_callback(int result, const char* error_me
                         env->CallStaticVoidMethod(g_gameBoyClass, g_onAchievementUnlockedID,
                             (jint)ach->id, (jint)ra_game_id, game_title, title, desc, (jint)ach->points, badge,
                             (jboolean)isHC, (jlong)((uint64_t)ach->unlock_time * 1000),
-                            (jboolean)true, (jboolean)isUnlocked);
+                            (jboolean)true, (jboolean)isUnlocked, (jint)ach->type);
 
                         env->DeleteLocalRef(title);
                         env->DeleteLocalRef(desc);
@@ -375,7 +376,7 @@ void emulatorLoop() {
         }
 
         {
-            std::lock_guard<std::mutex> lock(g_stateMutex);
+            std::lock_guard<std::recursive_mutex> lock(g_stateMutex);
             // Run until frame is ready
             while (g_running && !g_paused && !ppu->frameReady) {
                 cpuTick();
@@ -395,35 +396,35 @@ void emulatorLoop() {
                     ppuTick();
                 }
             }
-        }
 
-        if (ppu->frameReady) {
-            ppu->frameReady = false;
+            if (ppu->frameReady) {
+                ppu->frameReady = false;
 
-            PlatformContext* platform = platformGetContext();
-            if (platform && platform->video.renderFrame) {
-                platform->video.renderFrame(&ppu->frameBuffer);
-            }
+                PlatformContext* platform = platformGetContext();
+                if (platform && platform->video.renderFrame) {
+                    platform->video.renderFrame(&ppu->frameBuffer);
+                }
 
-            // Request render on GL thread
-            env->CallStaticVoidMethod(g_gameBoyClass, g_requestRenderID);
+                // Request render on GL thread
+                env->CallStaticVoidMethod(g_gameBoyClass, g_requestRenderID);
 
-            // --- RETROACHIEVEMENTS FRAME UPDATE ---
-            {
-                std::lock_guard<std::mutex> lock(g_raMutex);
+                // --- RETROACHIEVEMENTS FRAME UPDATE ---
+                // Held inside state mutex to prevent bank-switching crashes during memory reads
                 if (g_rc_client) rc_client_do_frame(g_rc_client);
-            }
 
-            // --- AUTO-SAVE HEARTBEAT ---
-            autoSaveFrameCounter++;
-            if (autoSaveFrameCounter >= 300) {
-                autoSaveFrameCounter = 0;
-                CartContext* ctx = cartridgeGetContext();
-                if (ctx && ctx->initialized && ctx->ramDirty) {
-                    cartridgeFlushRAM();
+                // --- AUTO-SAVE HEARTBEAT ---
+                autoSaveFrameCounter++;
+                if (autoSaveFrameCounter >= 300) {
+                    autoSaveFrameCounter = 0;
+                    CartContext* ctx = cartridgeGetContext();
+                    if (ctx && ctx->initialized && ctx->ramDirty) {
+                        cartridgeFlushRAM();
+                    }
                 }
             }
+        }
 
+        if (!ppu->frameReady) { // Frame was processed above
             // --- PERFECT 60 FPS PACER ---
             double targetFrameTime = g_fastForward ? (TARGET_FRAME_TIME / 2.0) : TARGET_FRAME_TIME;
             auto now = std::chrono::steady_clock::now();
@@ -432,8 +433,6 @@ void emulatorLoop() {
                 now = std::chrono::steady_clock::now();
             }
             lastFrameTime = std::chrono::steady_clock::now();
-
-
         }
     }
 
@@ -600,7 +599,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
     g_initAudioID = env->GetStaticMethodID(g_gameBoyClass, "nativeInitAudio", "()V");
     g_playAudioID = env->GetStaticMethodID(g_gameBoyClass, "nativePlayAudio", "([F)V");
     g_stopAudioID = env->GetStaticMethodID(g_gameBoyClass, "nativeStopAudio", "()V");
-    g_onAchievementUnlockedID = env->GetStaticMethodID(g_gameBoyClass, "onAchievementUnlockedCallback", "(IILjava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;ZJZZ)V");
+    g_onAchievementUnlockedID = env->GetStaticMethodID(g_gameBoyClass, "onAchievementUnlockedCallback", "(IILjava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;ZJZZI)V");
     g_onRaLoginSuccessID = env->GetStaticMethodID(g_gameBoyClass, "onRaLoginSuccess", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;II)V");
     g_onRaLoginErrorID = env->GetStaticMethodID(g_gameBoyClass, "onRaLoginError", "(Ljava/lang/String;)V");
     g_onRaSyncFinishedID = env->GetStaticMethodID(g_gameBoyClass, "onRaSyncFinished", "()V");
@@ -850,6 +849,7 @@ Java_just_somebody_templates_domain_GameBoy_nativeNotifyHttpResponse(JNIEnv *env
 
 JNIEXPORT jintArray JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeCaptureFrame(JNIEnv *env, jobject thiz) {
+    std::lock_guard<std::recursive_mutex> lock(g_stateMutex);
     u32* pixels = androidGetFrameBuffer();
     if (!pixels) return nullptr;
 
@@ -860,7 +860,7 @@ Java_just_somebody_templates_domain_GameBoy_nativeCaptureFrame(JNIEnv *env, jobj
 
 JNIEXPORT jbyteArray JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeSaveState(JNIEnv *env, jobject thiz) {
-    std::lock_guard<std::mutex> lock(g_stateMutex);
+    std::lock_guard<std::recursive_mutex> lock(g_stateMutex);
     u32 size = 0;
     u8* data = systemSaveStateToMemory(&size);
     if (!data) return nullptr;
@@ -872,8 +872,14 @@ Java_just_somebody_templates_domain_GameBoy_nativeSaveState(JNIEnv *env, jobject
 
 JNIEXPORT jboolean JNICALL
 Java_just_somebody_templates_domain_GameBoy_nativeLoadState(JNIEnv *env, jobject thiz, jbyteArray data, jint size) {
-    std::lock_guard<std::mutex> lock(g_stateMutex);
+    std::lock_guard<std::recursive_mutex> lock(g_stateMutex);
+
+    // Simple validation: Ensure size is non-zero
+    if (size <= 0) return JNI_FALSE;
+
     u8* buffer = (u8*)malloc(size);
+    if (!buffer) return JNI_FALSE;
+
     env->GetByteArrayRegion(data, 0, size, (jbyte*)buffer);
     bool success = systemLoadStateFromMemory(buffer, size);
     free(buffer);
