@@ -281,20 +281,20 @@ fun SettingsContent(
                 MODIFIER  = Modifier)
             }
 
-            CustomButton(ON_CLICK = ON_RA_LOGIN)
+            CustomButton(ON_CLICK = ON_RA_LOGIN, MODIFIER = Modifier.fillMaxWidth())
             {
               CustomText(
                 stringResource(R.string.RELOGIN),
                 FONT_SIZE = 14,
-                MODIFIER  = Modifier.fillMaxWidth())
+                MODIFIER  = Modifier)
             }
 
-            CustomButton(ON_CLICK = ON_RA_LOGOUT, COLOR = GameBoyColors.Error)
+            CustomButton(ON_CLICK = ON_RA_LOGOUT, COLOR = GameBoyColors.Error, MODIFIER = Modifier.fillMaxWidth())
             {
               CustomText(
                 stringResource(R.string.LOGOUT),
                 FONT_SIZE = 14,
-                MODIFIER  = Modifier.fillMaxWidth())
+                MODIFIER  = Modifier)
             }
           }
         }
