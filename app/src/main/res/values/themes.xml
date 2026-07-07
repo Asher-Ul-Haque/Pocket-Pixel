@@ -11,6 +11,8 @@
         parent = "Theme.SplashScreen">
 
         <item name = "windowSplashScreenIconBackgroundColor">  #FF0F380F               </item>
+        <item name = "windowSplashScreenAnimatedIcon">          @drawable/animated_logo </item>
+        <item name = "windowSplashScreenBackground">          #FF0F380F               </item>
         <item name = "postSplashScreenTheme">                  @style/Theme.Template   </item>
 
     </style>

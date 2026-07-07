@@ -54,8 +54,40 @@ class MainActivity : ComponentActivity()
 
   override fun onCreate(savedInstanceState: Bundle?)
   {
+    val splashViewModel by viewModels<SplashViewModel>()
+
+    installSplashScreen().apply()
+    {
+      setKeepOnScreenCondition { !splashViewModel.isReady.value }
+
+      setOnExitAnimationListener()
+      { splash ->
+        // - - - Play splash sound
+        SoundController.play(SoundEffect.Splash)
+
+        splash.iconView.let()
+        { iconView ->
+          // - - - Scale X animation
+          val scaleX = ObjectAnimator.ofFloat(iconView, View.SCALE_X, 1.0f, 0.4f).apply { duration = 100L }
+          // - - - Scale Y animation
+          val scaleY = ObjectAnimator.ofFloat(iconView, View.SCALE_Y, 1.0f, 0.4f).apply { duration = 100L }
+          // - - - fade out
+          val fade = ObjectAnimator.ofFloat(iconView, View.ALPHA, 1f, 0f).apply { duration = 100L }
+
+          // - - - Run animations together
+          AnimatorSet().apply()
+          {
+            playTogether(scaleX, scaleY, fade)
+            interpolator = OvershootInterpolator()
+            doOnEnd { splash.remove() }
+            start()
+          }
+        }
+      }
+    }
+
     super.onCreate(savedInstanceState)
-    
+
     // - - - Centralized Storage Initialization: Triggered whenever ROMs URI is updated or loaded
     lifecycleScope.launch {
         App.appModule.dataStoreManager.settingsFlow.collect { settings ->
@@ -68,38 +100,6 @@ class MainActivity : ComponentActivity()
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
       if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
         requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-      }
-    }
-
-    val splashViewModel by viewModels<SplashViewModel>()
-
-    installSplashScreen().apply()
-    {
-      //setKeepOnScreenCondition { !splashViewModel.isReady.value }
-
-      setOnExitAnimationListener()
-      { splash ->
-        // - - - Play splash sound
-        SoundController.play(SoundEffect.Splash)
-
-				splash.iconView.let()
-				{ iconView ->
-					// - - - Scale X animation
-					val scaleX = ObjectAnimator.ofFloat(iconView, View.SCALE_X, 1.0f, 0.4f).apply { duration = 250L }
-					// - - - Scale Y animation
-					val scaleY = ObjectAnimator.ofFloat(iconView, View.SCALE_Y, 1.0f, 0.4f).apply { duration = 250L }
-					// - - - fade out
-					val fade = ObjectAnimator.ofFloat(iconView, View.ALPHA, 1f, 0f).apply { duration = 500L }
-
-					// - - - Run animations together
-					AnimatorSet().apply()
-					{
-						playTogether(scaleX, scaleY, fade)
-						interpolator = OvershootInterpolator()
-						doOnEnd { splash.remove() }
-						start()
-					}
-				}
       }
     }
 

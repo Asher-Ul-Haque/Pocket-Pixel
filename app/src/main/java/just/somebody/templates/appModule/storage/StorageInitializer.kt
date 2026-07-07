@@ -1,6 +1,7 @@
 package just.somebody.templates.appModule.storage
 
 import android.content.Context
+import androidx.annotation.Keep
 import androidx.documentfile.provider.DocumentFile
 import just.somebody.templates.App
 import just.somebody.templates.appModule.ForgeLogger
@@ -12,6 +13,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  * Static utility used to pre-allocate required system directories in the ROMs root folder.
  * Ensures 'saves', 'screenshots', 'achievements', and 'boxarts' exist exactly once.
  */
+@Keep
 object StorageInitializer {
 
     private val isInitialized = AtomicBoolean(false)
