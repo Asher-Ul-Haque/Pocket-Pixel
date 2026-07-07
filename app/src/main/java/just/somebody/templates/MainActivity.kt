@@ -54,9 +54,22 @@ class MainActivity : ComponentActivity()
 
   override fun onCreate(savedInstanceState: Bundle?)
   {
+    val splashScreen    = installSplashScreen()
     val splashViewModel by viewModels<SplashViewModel>()
 
-    installSplashScreen().apply()
+    super.onCreate(savedInstanceState)
+
+    // - - - Fix for the common "Installer launch" bug where the app restarts from a new task
+    if (!isTaskRoot &&
+        intent.hasCategory(Intent.CATEGORY_LAUNCHER) &&
+        intent.action != null &&
+        intent.action == Intent.ACTION_MAIN)
+    {
+      finish()
+      return
+    }
+
+    splashScreen.apply()
     {
       setKeepOnScreenCondition { !splashViewModel.isReady.value }
 
@@ -65,14 +78,18 @@ class MainActivity : ComponentActivity()
         // - - - Play splash sound
         SoundController.play(SoundEffect.Splash)
 
-        splash.iconView.let()
-        { iconView ->
+        // - - - Safely attempt to access iconView, as it can occasionally be null on specific
+        //       devices or unique cold-start scenarios (like launching from an installer).
+        val iconView = try { splash.iconView } catch (e: Exception) { null }
+
+        if (iconView != null)
+        {
           // - - - Scale X animation
           val scaleX = ObjectAnimator.ofFloat(iconView, View.SCALE_X, 1.0f, 0.4f).apply { duration = 100L }
           // - - - Scale Y animation
           val scaleY = ObjectAnimator.ofFloat(iconView, View.SCALE_Y, 1.0f, 0.4f).apply { duration = 100L }
           // - - - fade out
-          val fade = ObjectAnimator.ofFloat(iconView, View.ALPHA, 1f, 0f).apply { duration = 100L }
+          val fade   = ObjectAnimator.ofFloat(iconView, View.ALPHA,   1f,   0f).apply { duration = 100L }
 
           // - - - Run animations together
           AnimatorSet().apply()
@@ -83,10 +100,12 @@ class MainActivity : ComponentActivity()
             start()
           }
         }
+        else
+        {
+          splash.remove()
+        }
       }
     }
-
-    super.onCreate(savedInstanceState)
 
     // - - - Centralized Storage Initialization: Triggered whenever ROMs URI is updated or loaded
     lifecycleScope.launch {

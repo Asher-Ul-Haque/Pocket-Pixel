@@ -5,8 +5,10 @@ import just.somebody.templates.appModule.ForgeLogger
 import just.somebody.templates.data.daos.GameDao
 import just.somebody.templates.data.entities.GameEntity
 import just.somebody.templates.domain.models.Game
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 
 /**
  * Concrete domain broker data controller managing mapping bridges over database data access operations.
@@ -121,7 +123,7 @@ class DefaultGameRepository(private val DAO : GameDao) : GameRepository
     App.appModule.boxArtFetcher.deleteCache()
   }
 
-  override suspend fun syncGamesWithStorage(KEY : String)
+  override suspend fun syncGamesWithStorage(KEY : String) = withContext(Dispatchers.IO)
   {
     val storeManager = App.appModule.externalStorageManager
     val directory    = storeManager.getDirectory(KEY)
@@ -130,13 +132,15 @@ class DefaultGameRepository(private val DAO : GameDao) : GameRepository
     {
       factoryReset()
       ForgeLogger.warn("Directory with key '$KEY' is missing or invalid, factory resetting")
-      return
+      return@withContext
     }
 
-    // - - - Step 1: Scan external storage for all .gb files
-    val gbFiles  = storeManager.listFiles(KEY, EXTENSION = "gb", RECURSIVE = true)
-    val gbcFiles = storeManager.listFiles(KEY, EXTENSION = "gbc", RECURSIVE = true)
-    val docFiles = gbFiles + gbcFiles
+    // - - - Step 1: Scan external storage for all .gb and .gbc files in a single pass
+    val extensions = setOf("gb", "gbc")
+    val docFiles   = storeManager.listFiles(KEY, RECURSIVE = true).filter { file ->
+        val name = file.name.orEmpty()
+        extensions.any { name.endsWith(".$it", ignoreCase = true) }
+    }
 
     // - - - Step 2: Convert to Game domain objects
     val scannedGames = docFiles.mapNotNull()

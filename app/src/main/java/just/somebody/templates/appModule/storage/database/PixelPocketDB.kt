@@ -25,7 +25,7 @@ import just.somebody.templates.data.entities.SaveStateEntity
     CollectionEntity::class,
     CollectionGameCrossRef::class,
     AchievementEntity::class ],
-  version  = 9)
+  version  = 10)
 abstract class PixelPocketDB : RoomDatabase()
 {
   /**

@@ -1,7 +1,7 @@
 [versions]
 agp = "8.8.2"
 coilCompose = "2.4.0"
-coreSplashscreen = "1.0.1"
+coreSplashscreen = "1.2.0"
 datastore = "1.1.7"
 kotlin = "2.0.0"
 coreKtx = "1.16.0"
