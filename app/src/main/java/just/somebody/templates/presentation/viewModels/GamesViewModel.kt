@@ -11,6 +11,8 @@ import just.somebody.templates.domain.models.GameCollection
 import just.somebody.templates.domain.repositories.GameRepository
 import just.somebody.templates.presentation.effects.SoundController
 import just.somebody.templates.presentation.effects.SoundEffect
+import just.somebody.templates.presentation.effects.SnackbarController
+import just.somebody.templates.presentation.effects.SnackbarEvent
 import just.somebody.templates.presentation.screens.Destination
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -182,13 +184,19 @@ class GamesViewModel(private val REPO : GameRepository) : ViewModel()
       val localUri = App.appModule.localAssetManager.downloadToCache(
           URL = URL,
           FILE_NAME = targetFileName,
-          CATEGORY = LocalAssetManager.CATEGORY_BOXARTS
+          CATEGORY = LocalAssetManager.CATEGORY_BOXARTS,
+          FORCE = true
       )
 
       if (localUri != null) {
-          REPO.updateGame(GAME.copy(boxArtUrl = localUri))
+          // Append a timestamp to the URI to bust Coil's image cache, ensuring the new image
+          // is loaded immediately in the UI without requiring an app restart.
+          val bustedUri = "${localUri.substringBefore("?")}?t=${System.currentTimeMillis()}"
+          REPO.updateGame(GAME.copy(boxArtUrl = bustedUri))
       } else {
           ForgeLogger.error("Manual box art download failed for: $URL")
+          SoundController.playSound(SoundEffect.Error)
+          SnackbarController.sendEvent(SnackbarEvent("Failed to download box art"))
       }
 
       _selectedGame.emit(null)

@@ -42,7 +42,10 @@ class DefaultGameRepository(private val DAO : GameDao) : GameRepository
   {
     val storeManager  = App.appModule.externalStorageManager
     val docFiles      = storeManager
-      .listFiles(KEY)
+      .listFiles(
+        KEY          = KEY,
+        RECURSIVE    = true,
+        IGNORED_DIRS = setOf("saves", "screenshots", ".achievements", ".boxarts"))
       .filter ()
       { file ->
         val name = file.name ?: return@filter false
@@ -137,7 +140,11 @@ class DefaultGameRepository(private val DAO : GameDao) : GameRepository
 
     // - - - Step 1: Scan external storage for all .gb and .gbc files in a single pass
     val extensions = setOf("gb", "gbc")
-    val docFiles   = storeManager.listFiles(KEY, RECURSIVE = true).filter { file ->
+    val docFiles   = storeManager.listFiles(
+      KEY          = KEY,
+      RECURSIVE    = true,
+      IGNORED_DIRS = setOf("saves", "screenshots", ".achievements", ".boxarts")
+    ).filter { file ->
         val name = file.name.orEmpty()
         extensions.any { name.endsWith(".$it", ignoreCase = true) }
     }

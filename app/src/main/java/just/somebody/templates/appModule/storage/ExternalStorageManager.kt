@@ -65,15 +65,17 @@ interface ExternalStorageManager
 
   /** Scans, collects, and yields [DocumentFile] structural maps found inside a registered storage container. */
   suspend fun listFiles(
-    KEY       : String,
-    EXTENSION : String? = null,
-    RECURSIVE  : Boolean = true) : List<DocumentFile>
+    KEY          : String,
+    EXTENSION    : String?     = null,
+    RECURSIVE    : Boolean     = true,
+    IGNORED_DIRS : Set<String> = emptySet()) : List<DocumentFile>
 
   /** Resolves and returns file structures found within an explicit workspace directory [URI]. */
   suspend fun listFilesFromUri(
-    URI       : Uri,
-    EXTENSION : String? = null,
-    RECURSIVE  : Boolean = true) : List<DocumentFile>
+    URI          : Uri,
+    EXTENSION    : String?     = null,
+    RECURSIVE    : Boolean     = true,
+    IGNORED_DIRS : Set<String> = emptySet()) : List<DocumentFile>
 
   /** Materializes a new file asset inside a tracked target directory and stream-writes content into it. */
   suspend fun saveFile(
@@ -217,15 +219,23 @@ class DefaultExternalStorageManager(
   }
 
   private fun collectFilesRecursively(
-    DIRECTORY : DocumentFile,
-    EXTENSION : String?
+    DIRECTORY    : DocumentFile,
+    EXTENSION    : String?,
+    IGNORED_DIRS : Set<String>
                                      ): List<DocumentFile>
   {
     val result = mutableListOf<DocumentFile>()
 
     DIRECTORY.listFiles().forEach()
     { file ->
-      if (file.isDirectory) result += collectFilesRecursively(file, EXTENSION)
+      if (file.isDirectory)
+      {
+        val dirName = file.name.orEmpty()
+        if (dirName !in IGNORED_DIRS)
+        {
+          result += collectFilesRecursively(file, EXTENSION, IGNORED_DIRS)
+        }
+      }
       else
       {
         val name = file.name.orEmpty()
@@ -238,9 +248,10 @@ class DefaultExternalStorageManager(
   }
 
   override suspend fun listFiles(
-    KEY       : String,
-    EXTENSION : String?,
-    RECURSIVE : Boolean
+    KEY          : String,
+    EXTENSION    : String?,
+    RECURSIVE    : Boolean,
+    IGNORED_DIRS : Set<String>
                                 ): List<DocumentFile>
   {
     val dir = getDirectory(KEY)
@@ -251,7 +262,7 @@ class DefaultExternalStorageManager(
     }
 
     val files =
-      if (RECURSIVE) collectFilesRecursively(dir, EXTENSION)
+      if (RECURSIVE) collectFilesRecursively(dir, EXTENSION, IGNORED_DIRS)
       else
       {
         dir.listFiles().filter()
@@ -266,9 +277,10 @@ class DefaultExternalStorageManager(
   }
 
   override suspend fun listFilesFromUri(
-    URI       : Uri,
-    EXTENSION : String?,
-    RECURSIVE : Boolean
+    URI          : Uri,
+    EXTENSION    : String?,
+    RECURSIVE    : Boolean,
+    IGNORED_DIRS : Set<String>
                                        ): List<DocumentFile>
   {
     val dir = DocumentFile.fromTreeUri(CONTEXT, URI)
@@ -279,7 +291,7 @@ class DefaultExternalStorageManager(
     }
 
     val files =
-      if (RECURSIVE) collectFilesRecursively(dir, EXTENSION)
+      if (RECURSIVE) collectFilesRecursively(dir, EXTENSION, IGNORED_DIRS)
       else
       {
         dir.listFiles().filter()

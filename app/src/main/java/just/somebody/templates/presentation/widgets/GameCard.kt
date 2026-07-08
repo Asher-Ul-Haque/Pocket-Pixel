@@ -199,7 +199,8 @@ fun GameActionBottomSheet(
   ON_REMOVE_FROM_COLLECTION : (Long) -> Unit = {},
   IN_COLLECTION_ID          : Long? = null)
 {
-  var boxArtUrl by remember { mutableStateOf(GAME.boxArtUrl ?: "") }
+  // - - - We strip the cache-busting timestamp for the display field to keep it clean for the user.
+  var boxArtUrl by remember { mutableStateOf(GAME.boxArtUrl?.substringBefore("?") ?: "") }
   var showCollectionPicker by remember { mutableStateOf(false) }
 
   ModalBottomSheet(onDismissRequest = ON_DISMISS, containerColor = GameBoyColors.DarkGreen)

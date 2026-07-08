@@ -59,11 +59,15 @@ class LocalAssetManager(private val CONTEXT: Context)
     suspend fun downloadToCache(
       URL       : String,
       FILE_NAME : String,
-      CATEGORY  : String): String? {
+      CATEGORY  : String,
+      FORCE     : Boolean = false): String? {
       if (URL.isEmpty()) return null
 
       // 1. QUICK CHECK: If file already exists, return local URI immediately (no lock)
-      getLocalAssetUri(FILE_NAME, CATEGORY)?.let { return it }
+      if (!FORCE)
+      {
+        getLocalAssetUri(FILE_NAME, CATEGORY)?.let { return it }
+      }
 
       // 2. NETWORK FETCH (Parallel allowed, no lock)
       val result = App.appModule.networkService.get<ByteArray>(URL)
@@ -85,8 +89,8 @@ class LocalAssetManager(private val CONTEXT: Context)
           val existingFile = targetDir.findFile(FILE_NAME)
           val mappedUrl = getUrlMapping(FILE_NAME)
 
-          // - - - Invalidate if URL changed
-          if (existingFile != null && mappedUrl != null && mappedUrl != URL)
+          // - - - Invalidate if URL changed OR FORCE is true
+          if (existingFile != null && (FORCE || (mappedUrl != null && mappedUrl != URL)))
           {
             existingFile.delete()
           }
