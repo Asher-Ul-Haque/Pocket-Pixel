@@ -144,6 +144,8 @@ void apuWrite(u16 ADDR, u8 VALUE)
         ctx->panningMap                 = 0;
         ctx->masterVolumeLeft           = 0;
         ctx->masterVolumeRight          = 0;
+        ctx->frameSequencerStep         = 0;
+        ctx->frameSequencerTimer        = 0;
         ctx->channel1.hasSweepHardware  = true;
       }
       break;
@@ -159,16 +161,103 @@ u8 apuRead(u16 ADDR)
     return waveReadRam(&ctx->channel3, ADDR);
   }
 
-  if (ADDR == REG_NR52)
+  switch (ADDR)
   {
-    u8 val = ctx->audioEnabled ? NR52_AUDIO_ENABLE_MASK : 0x00;
+    // - - - Channel 1 - - - 
 
-    if (ctx->channel1.enabled) val |= NR52_CH1_ACTIVE_MASK;
-    if (ctx->channel2.enabled) val |= NR52_CH2_ACTIVE_MASK;
-    if (ctx->channel3.enabled) val |= NR52_CH3_ACTIVE_MASK;
-    if (ctx->channel4.enabled) val |= NR52_CH4_ACTIVE_MASK; 
+    case REG_NR10:
+      return 0x80 | (ctx->channel1.sweepPace << NR10_PACE_SHIFT) |
+        (ctx->channel1.sweepDecrease ? NR10_DIR_MASK : 0) |
+        ctx->channel1.sweepShift;
 
-    return val | NR52_UNUSED_BITS_MASK;
+    case REG_NR11:
+      return 0x3F | (ctx->channel1.dutyPattern << NR21_DUTY_SHIFT);
+
+    case REG_NR12:
+      return (ctx->channel1.initialVolume << NR22_VOL_SHIFT) |
+        (ctx->channel1.envelopeIncrease ? NR22_ENV_DIR_MASK : 0) |
+        ctx->channel1.envelopePace;
+
+    case REG_NR13: 
+      return 0xFF; // Write-only
+    
+    case REG_NR14:
+      return 0xBF | (ctx->channel1.lengthEnabled ? NR24_LEN_ENABLE_MASK : 0);
+
+
+    // - - - Channel 2 - - - 
+
+    case REG_NR21:
+      return 0x3F | (ctx->channel2.dutyPattern << NR21_DUTY_SHIFT);
+
+    case REG_NR22:
+      return (ctx->channel2.initialVolume << NR22_VOL_SHIFT) |
+        (ctx->channel2.envelopeIncrease ? NR22_ENV_DIR_MASK : 0) |
+        ctx->channel2.envelopePace;
+
+    case REG_NR23: 
+      return 0xFF; // Write-only
+
+    case REG_NR24:
+      return 0xBF | (ctx->channel2.lengthEnabled ? NR24_LEN_ENABLE_MASK : 0);
+
+
+    // - - - Channel 3 (Wave) - - -
+
+    case REG_NR30:
+      return 0x7F | (ctx->channel3.dacEnabled ? NR30_DAC_ENABLE_MASK : 0);
+
+    case REG_NR31: 
+      return 0xFF; // Write-only
+    
+    case REG_NR32:
+      return 0x9F | (ctx->channel3.volumeCode << NR32_VOL_SHIFT);
+
+    case REG_NR33: 
+      return 0xFF; // Write-only
+
+    case REG_NR34:
+      return 0xBF | (ctx->channel3.lengthEnabled ? NR34_LEN_ENABLE_MASK : 0);
+
+
+    // - - - Channel 4 (Noise) - - -
+
+    case REG_NR41: 
+      return 0xFF; // Write-only
+
+    case REG_NR42:
+      return (ctx->channel4.initialVolume << NR22_VOL_SHIFT) |
+        (ctx->channel4.envelopeIncrease ? NR22_ENV_DIR_MASK : 0) |
+        ctx->channel4.envelopePace;
+
+    case REG_NR43:
+      return (ctx->channel4.clockShift << NR43_CLOCK_SHIFT_OFFSET) |
+        (ctx->channel4.shortMode ? NR43_LFSR_WIDTH_MASK : 0) |
+        ctx->channel4.clockDivider;
+
+    case REG_NR44:
+      return 0xBF | (ctx->channel4.lengthEnabled ? NR44_LEN_ENABLE_MASK : 0);
+
+
+    // - - - Master Controls - - -
+
+    case REG_NR50:
+      // - - - Bits 3 and 7 are VIN routing,
+      return (ctx->masterVolumeLeft << NR50_VOL_LEFT_SHIFT) | ctx->masterVolumeRight;
+        
+    case REG_NR51:
+      return ctx->panningMap;
+        
+    case REG_NR52:
+    {
+      u8 val = ctx->audioEnabled ? NR52_AUDIO_ENABLE_MASK : 0x00;
+      if (ctx->channel1.enabled) val |= NR52_CH1_ACTIVE_MASK;
+      if (ctx->channel2.enabled) val |= NR52_CH2_ACTIVE_MASK;
+      if (ctx->channel3.enabled) val |= NR52_CH3_ACTIVE_MASK;
+      if (ctx->channel4.enabled) val |= NR52_CH4_ACTIVE_MASK; 
+      return val | NR52_UNUSED_BITS_MASK;
   }
+  }
+
   return OPEN_BUS_VALUE;
 }

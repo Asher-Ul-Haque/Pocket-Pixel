@@ -36,8 +36,9 @@ void ppuInit(void)
   }
 
   // - - - Internal State Machine Defaults - - -
-  ctx.mode = PPU_MODE_VBLANK;
-  ctx.dotCount = 0;
+  ctx.mode                = PPU_MODE_VBLANK;
+  ctx.dotCount            = 0;
+  ctx.statInterruptDelay  = false;
   
   // - - - Flush internal queue memory - - -
   ppuResetFifos();
@@ -47,6 +48,12 @@ void ppuInit(void)
 void ppuUpdateInterrupts(void)
 {
   PpuContext* ctx = ppuGetContext();
+
+  if (ctx->statInterruptDelay)
+  {
+    cpuRequestInterrupt(CPU_INT_LCD);
+    ctx->statInterruptDelay = false;
+  }
 
   // - - - If the LCD is turned off, the internal signal is 0
   if ((ctx->registers.lcdc & LCDC_ENABLE_MASK) == 0)
@@ -79,7 +86,7 @@ void ppuUpdateInterrupts(void)
   // - - - The STAT IRQ triggers when this combined signal hits a 0->1 rising edge
   if (!ctx->statLineState && currentHardwareLine)
   {
-    cpuRequestInterrupt(CPU_INT_LCD); 
+    ctx->statInterruptDelay = true;
   }
 
   // - - - V-Blank Hardware Intercept: Trigger standard V-Blank interrupt line pulse the exact dot cycle we cross the visible threshold boundary into line 144

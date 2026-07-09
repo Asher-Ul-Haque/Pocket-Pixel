@@ -16,12 +16,12 @@
       "-O1",
       "-c",
       "-o",
-      ".build/ppu/timing.o",
-      "src/ppu/timing.c"
+      ".build/timer.o",
+      "src/timer.c"
     ],
     "directory": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp",
-    "file": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/src/ppu/timing.c",
-    "output": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/.build/ppu/timing.o"
+    "file": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/src/timer.c",
+    "output": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/.build/timer.o"
   },
   {
     "arguments": [
@@ -40,12 +40,12 @@
       "-O1",
       "-c",
       "-o",
-      ".build/ppu/fifo.o",
-      "src/ppu/fifo.c"
+      ".build/platform/desktop.o",
+      "src/platform/desktop.c"
     ],
     "directory": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp",
-    "file": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/src/ppu/fifo.c",
-    "output": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/.build/ppu/fifo.o"
+    "file": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/src/platform/desktop.c",
+    "output": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/.build/platform/desktop.o"
   },
   {
     "arguments": [
@@ -64,12 +64,36 @@
       "-O1",
       "-c",
       "-o",
-      ".build/ppu/mixer.o",
-      "src/ppu/mixer.c"
+      ".build/joypad.o",
+      "src/joypad.c"
     ],
     "directory": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp",
-    "file": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/src/ppu/mixer.c",
-    "output": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/.build/ppu/mixer.o"
+    "file": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/src/joypad.c",
+    "output": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/.build/joypad.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/clang++",
+      "-Iinclude",
+      "-I/usr/include/pipewire-0.3",
+      "-I/usr/include/spa-0.2",
+      "-D_REENTRANT",
+      "-I/usr/include/libdrm",
+      "-I/usr/include/libdecor-0",
+      "-Wall",
+      "-Werror",
+      "-Wextra",
+      "-Wpedantic",
+      "-DDEBUG",
+      "-O1",
+      "-c",
+      "-o",
+      ".build/platform/android.o",
+      "src/platform/android.cpp"
+    ],
+    "directory": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp",
+    "file": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/src/platform/android.cpp",
+    "output": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/.build/platform/android.o"
   },
   {
     "arguments": [
@@ -88,11 +112,11 @@
       "-O1",
       "-c",
       "-o",
-      ".build/ppu/fetcher.o",
-      "src/ppu/fetcher.c"
+      ".build/main.o",
+      "main.c"
     ],
     "directory": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp",
-    "file": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/src/ppu/fetcher.c",
-    "output": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/.build/ppu/fetcher.o"
+    "file": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/main.c",
+    "output": "/home/asher/StudioProjects/Pocket-Pixel/app/src/main/cpp/.build/main.o"
   }
 ]

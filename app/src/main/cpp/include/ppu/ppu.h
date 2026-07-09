@@ -167,7 +167,8 @@ typedef struct PpuContext
   u16     mode3Duration;      ///< Calculated elastic length for current line (172 to 289 dots) 
   bool    frameReady;         ///< Flag signaling completed vertical sweep 
   bool    statLineState;      ///< Interrupt blocking single-wire logic gate tracker
-  bool    windowTriggered;    ///< Screen row visibility flag 
+  bool    statInterruptDelay; ///< Flag to delay STAT interrupt by 1 dot
+  bool    windowTriggered;    ///< Screen row visibility flag
   u8      windowLineCounter;  ///< Internal hidden vertical window row tracker
 } PpuContext;
 
