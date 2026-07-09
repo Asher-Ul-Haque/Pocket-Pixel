@@ -103,18 +103,18 @@ void cpuTick(void)
   // - - - 2. Handle Interrupt Sampling
   if (ctx->mCycle == M1)
   {
+    // - - - EI delay logic: IME is enabled after one subsequent instruction completes
+    if (ctx->imeDelay && ctx->currentOpcode != OP_ENABLE_INTERRUPT)
+    {
+      ctx->ime      = true;
+      ctx->imeDelay = false;
+    }
+
     if (ctx->ime && cpuInterruptPending())
     {
       ctx->servicingInt = cpuInterruptGetHighest();
       ctx->ime          = false;
       ctx->mCycle       = M2;
-    }
-
-    // - - - EI delay logic: IME Is enabled one instruction after EI
-    if (ctx->imeDelay)
-    {
-      ctx->ime      = true;
-      ctx->imeDelay = false;
     }
   }
 

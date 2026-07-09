@@ -38,15 +38,15 @@ void ppuTick(void)
     }
     else if (ctx->dotCount < DOT_OAM_SCAN) 
     { ctx->mode = PPU_MODE_OAM_SCAN; }
-    else if (ctx->dotCount == DOT_OAM_SCAN)
+    else if (ctx->dotCount < DOTS_HBLANK_START)
     {
       ctx->mode = PPU_MODE_DRAWING;
-    }
-
-    if (ctx->mode == PPU_MODE_DRAWING) 
-    {
       ppuStepPixelFetcher();
       ppuStepPixelMixer(); 
+    }
+    else 
+    {
+      ctx->mode = PPU_MODE_HBLANK;
     }
   }
   else ctx->mode = PPU_MODE_VBLANK;

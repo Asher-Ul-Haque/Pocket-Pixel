@@ -39,7 +39,8 @@ CpuInterrupt cpuInterruptGetHighest(void)
 
 void cpuInterruptAcknowledge(CpuInterrupt INT)
 {
-  ctx.interruptFlag &= ~(1 << (u8) INT);
+  ctx.interruptFlag &= (u8)~(1 << (u8) INT);
+  ctx.interruptFlag &= 0x1Fu;
 }
 
 u16 cpuInterruptVector(CpuInterrupt INT)
@@ -57,7 +58,8 @@ u16 cpuInterruptVector(CpuInterrupt INT)
 
 void cpuRequestInterrupt(CpuInterrupt INT)
 {
-  ctx.interruptFlag |= (1 << (u8)INT);
+  ctx.interruptFlag |= (u8)(1 << (u8)INT);
+  ctx.interruptFlag &= 0x1Fu;
 }
 
 u8 cpuReadInterrupt(u16 ADDRESS)
@@ -65,7 +67,7 @@ u8 cpuReadInterrupt(u16 ADDRESS)
   switch (ADDRESS)
   {
     case ADDR_IF: return ctx.interruptFlag | 0xE0; /// Top 3 bits are unused 
-    case ADDR_IE: return ctx.interruptEnable;
+    case ADDR_IE: return ctx.interruptEnable | 0xE0;
     default:
       FORGE_LOG_ERROR("Attempted to read from invalid interrupt address: 0x%04X", ADDRESS);
       FORGE_ASSERT_DEBUG(false, "Invalid interrupt read address");
@@ -76,8 +78,8 @@ void cpuWriteInterrupt(u16 ADDRESS, u8 VALUE)
 {
   switch (ADDRESS)
   {
-    case ADDR_IF: ctx.interruptFlag   = VALUE; break;
-    case ADDR_IE: ctx.interruptEnable = VALUE; break;
+    case ADDR_IF: ctx.interruptFlag   = (u8)(VALUE & 0x1Fu); break;
+    case ADDR_IE: ctx.interruptEnable = (u8)(VALUE & 0x1Fu); break;
     default:
       FORGE_LOG_ERROR("Attempted to write to invalid interrupt address: 0x%04X", ADDRESS);
       FORGE_ASSERT_DEBUG(false, "Invalid interrupt write address");
