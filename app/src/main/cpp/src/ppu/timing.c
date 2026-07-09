@@ -38,15 +38,26 @@ void ppuTick(void)
     }
     else if (ctx->dotCount < DOT_OAM_SCAN) 
     { ctx->mode = PPU_MODE_OAM_SCAN; }
-    else if (ctx->dotCount < DOTS_HBLANK_START)
+    else
     {
-      ctx->mode = PPU_MODE_DRAWING;
-      ppuStepPixelFetcher();
-      ppuStepPixelMixer(); 
-    }
-    else 
-    {
-      ctx->mode = PPU_MODE_HBLANK;
+      bool scanlineComplete = ctx->screenX >= MAX_SCREEN_X;
+      bool drawingWindowOpen = ctx->dotCount < (DOT_OAM_SCAN + DOTS_DRAWING_MAX);
+
+      if (!scanlineComplete && drawingWindowOpen)
+      {
+        ctx->mode = PPU_MODE_DRAWING;
+        ppuStepPixelFetcher();
+        ppuStepPixelMixer(); 
+      }
+      else 
+      {
+        ctx->mode = PPU_MODE_HBLANK;
+
+        if (!scanlineComplete)
+        {
+          ppuCheckHblankDma();
+        }
+      }
     }
   }
   else ctx->mode = PPU_MODE_VBLANK;
