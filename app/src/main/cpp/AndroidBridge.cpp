@@ -368,6 +368,8 @@ void emulatorLoop() {
 
     auto lastFrameTime = std::chrono::steady_clock::now();
 
+    bool apuDoubleSpeedToggle = false;
+
     while (g_running) {
         if (g_paused) {
             std::unique_lock<std::mutex> lock(g_pauseMutex);
@@ -389,7 +391,13 @@ void emulatorLoop() {
                 }
 
                 timerStepMCycle();
-                apuTick();
+
+                if (ppu->registers.key1 & 0x80)
+                {
+                  if (apuDoubleSpeedToggle) apuTick();
+                  apuDoubleSpeedToggle = !apuDoubleSpeedToggle;
+                }
+                else apuTick();
 
                 u8 dotsToTick = (ppu->registers.key1 & 0x80) ? 2 : 4;
                 for (u8 i = 0; i < dotsToTick; ++i) {

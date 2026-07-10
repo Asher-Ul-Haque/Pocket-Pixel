@@ -111,7 +111,17 @@ void emscripten_main_loop(void) {
                     }
                 }
                 timerStepMCycle();
-                apuTick();
+                static bool apuDoubleSpeedToggle = false;
+
+                if (ppu->registers.key1 & 0x80)
+                {
+                  if (apuDoubleSpeedToggle) apuTick();
+                  apuDoubleSpeedToggle = !apuDoubleSpeedToggle;
+                }
+                else 
+                {       
+                  apuTick();
+                }
 
                 u8 dotsToTick = (ppu->registers.key1 & 0x80) ? 2 : 4;
                 for (u8 i = 0; i < dotsToTick; ++i) {
