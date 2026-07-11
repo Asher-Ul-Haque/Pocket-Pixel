@@ -12,15 +12,15 @@ val properties = Properties().apply {
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.android)
+  alias(libs.plugins.kotlin.serialization)
+  alias(libs.plugins.ksp)
   alias(libs.plugins.kotlin.compose)
-  id("com.google.devtools.ksp") // Apply KSP plugin
-  kotlin("plugin.serialization") version "2.2.0"
-  id("org.jetbrains.dokka") version "1.9.20" // <-- 1. ADDED DOKKA PLUGIN
+  id("org.jetbrains.dokka")
 }
 
 android {
   namespace = "just.somebody.templates"
-  compileSdk = 35
+  compileSdk = 37
 
   signingConfigs {
     create("release") {
@@ -35,8 +35,8 @@ android {
     applicationId = "just.somebody.templates"
     minSdk = 24
     targetSdk = 35
-    versionCode = 20
-    versionName = "2.1.9"
+    versionCode = 23
+    versionName = "2.1.10"
     androidResources {
       localeFilters.add("en") // Keep only English
     }
@@ -72,12 +72,20 @@ android {
     sourceCompatibility = JavaVersion.VERSION_11
     targetCompatibility = JavaVersion.VERSION_11
   }
-  kotlinOptions {
-    jvmTarget = "11"
+  kotlin {
+    compilerOptions {
+      jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
+    }
   }
   buildFeatures {
     compose = true
     prefab = true
+  }
+  packaging {
+    resources {
+      excludes += "/META-INF/{AL2.0,LGPL2.1}"
+      excludes += "/META-INF/versions/9/previous-compilation-data.bin"
+    }
   }
   externalNativeBuild {
     cmake {
@@ -98,13 +106,12 @@ dependencies {
   implementation(libs.androidx.material3)
   implementation(libs.androidx.lifecycle.viewmodel.compose)
   implementation(libs.androidx.datastore)
-  implementation("io.socket:socket.io-client:2.1.0") {
+  implementation("io.socket:socket.io-client:2.1.2") {
     exclude(group = "org.json", module = "json") // prevent version conflicts
   }
 
   implementation(libs.kotlinx.serialization.json)
   implementation(libs.kotlinx.collections.immutable)
-  implementation(libs.kotlinx.serialization.json.v132)
 
   implementation(libs.androidx.core.splashscreen)
   implementation(libs.androidx.navigation.compose)
@@ -135,15 +142,15 @@ dependencies {
   debugImplementation(libs.androidx.ui.test.manifest)
 }
 
-// <-- 2. ADDED DOKKA CONFIGURATION TASK
-tasks.dokkaHtml {
+dokka {
   dokkaSourceSets {
     configureEach {
       skipDeprecated.set(true)
 
-      // Link to standard Android documentation so your Android classes are clickable
-      externalDocumentationLink {
-        url.set(URI.create("https://developer.android.com/reference/kotlin/").toURL())
+      externalDocumentationLinks {
+        create("android") {
+          url.set(URI("https://developer.android.com/reference/kotlin/"))
+        }
       }
     }
   }

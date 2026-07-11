@@ -108,8 +108,21 @@ class DefaultNotificationManager : NotificationManager
 		if (LARGE_ICON_URI != null) {
 			try {
 				val uri = android.net.Uri.parse(LARGE_ICON_URI)
+				val options = android.graphics.BitmapFactory.Options().apply {
+					inJustDecodeBounds = true
+				}
 				CONTEXT.contentResolver.openInputStream(uri)?.use { stream ->
-					val bitmap = android.graphics.BitmapFactory.decodeStream(stream)
+					android.graphics.BitmapFactory.decodeStream(stream, null, options)
+				}
+
+				val targetWidth = CONTEXT.resources.getDimensionPixelSize(android.R.dimen.notification_large_icon_width)
+				val targetHeight = CONTEXT.resources.getDimensionPixelSize(android.R.dimen.notification_large_icon_height)
+
+				options.inSampleSize = calculateInSampleSize(options, targetWidth, targetHeight)
+				options.inJustDecodeBounds = false
+
+				CONTEXT.contentResolver.openInputStream(uri)?.use { stream ->
+					val bitmap = android.graphics.BitmapFactory.decodeStream(stream, null, options)
 					if (bitmap != null) {
 						builder.setLargeIcon(bitmap)
 					}
@@ -125,6 +138,21 @@ class DefaultNotificationManager : NotificationManager
 		{ notificationManager.notify(NOTIFICATION_ID, builder.build()) }
 		catch (e: SecurityException)
 		{ ForgeLogger.error(e); }
+	}
+
+	private fun calculateInSampleSize(options: android.graphics.BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
+		val (height: Int, width: Int) = options.outHeight to options.outWidth
+		var inSampleSize = 1
+
+		if (height > reqHeight || width > reqWidth) {
+			val halfHeight: Int = height / 2
+			val halfWidth: Int = width / 2
+
+			while (halfHeight / inSampleSize >= reqHeight && halfWidth / inSampleSize >= reqWidth) {
+				inSampleSize *= 2
+			}
+		}
+		return inSampleSize
 	}
 
 	override fun cancelNotification(

@@ -1,77 +1,95 @@
-# Keep your main activity
+# Pocket-Pixel ProGuard Rules
+# Optimized for size and performance while ensuring JNI and reflection stability.
+
+# ---------------------------------------------------------------------------------
+# 1. JNI & Native Bridge (libPocketPixel.so)
+# ---------------------------------------------------------------------------------
+
+# Keep the main entry point
 -keep class just.somebody.templates.MainActivity { *; }
 
-# Keep your application class (if you have one)
--keep class just.somebody.templates.**Application { *; }
-# Keep the specific class accessed by FindClass in JNI
--keep class just.somebody.templates.appModule.network.NetworkService { *; }
+# Keep the Application class and its appModule field (accessed by JNI_OnLoad)
+-keep class just.somebody.templates.App {
+    public static just.somebody.templates.appModule.AppModuleInterface appModule;
+    *;
+}
 
-# Keep the GameBoy class (which JNI_OnLoad uses to find methods)
--keep class just.somebody.templates.domain.GameBoy { *; }
+# Keep classes and methods used by the C++ native bridge
+-keep class just.somebody.templates.domain.GameBoy {
+    # Keep all members to ensure @JvmStatic methods are preserved in the outer class
+    *;
+}
 
-# Keep the AppModule interface and any implementers
--keep class just.somebody.templates.appModule.AppModuleInterface { *; }
+# Keep NetworkService for JNI-initiated HTTP requests (RetroAchievements)
+-keep class just.somebody.templates.appModule.network.NetworkService {
+    public void makeRaRequest(java.lang.String, java.lang.String, long);
+    *;
+}
 
-# Keep all native methods
+# Keep the interface used by JNI to access the network service instance
+-keep interface just.somebody.templates.appModule.AppModuleInterface {
+    just.somebody.templates.appModule.network.NetworkService getNetworkService();
+    *;
+}
+
+# Preserve all native method declarations
 -keepclasseswithmembernames class * {
     native <methods>;
 }
 
-# Keep members accessed via JNI
--keepclassmembers class just.somebody.templates.domain.GameBoy {
-    static <methods>;
-}
-# Keep Kotlin metadata
--keep class kotlin.Metadata { *; }
+# ---------------------------------------------------------------------------------
+# 2. Frameworks & Serialization
+# ---------------------------------------------------------------------------------
 
-# Needed for reflection
+# Kotlinx Serialization: Keep @Serializable members and support classes
 -keepclassmembers class ** {
     @kotlinx.serialization.Serializable *;
 }
--keepclassmembers class ** {
-    @androidx.room.* <methods>;
-}
-
-# Keep Kotlinx serialization classes
 -keep class kotlinx.serialization.** { *; }
 -dontwarn kotlinx.serialization.**
 
-# Keep Room
--keep class androidx.room.** { *; }
+# Room Database: Keep @Dao and @Entity related methods
+-keepclassmembers class ** {
+    @androidx.room.* <methods>;
+}
 -dontwarn androidx.room.**
 
-# Keep Ktor (for HTTP + WebSocket)
--keep class io.ktor.** { *; }
+# Ktor: Suppress warnings for various engines and features
 -dontwarn io.ktor.**
 
-# Keep Socket.IO client
+# Socket.IO: Keep the library classes
 -keep class io.socket.** { *; }
 -dontwarn io.socket.**
 
-# Prevent Compose classes from being stripped
--keep class androidx.compose.** { *; }
--dontwarn androidx.compose.**
+# ---------------------------------------------------------------------------------
+# 3. Android System & UI
+# ---------------------------------------------------------------------------------
 
-# Optional: keep your logger
--keep class just.somebody.templates.appModule.ForgeLogger { *; }
-
-##############################
-# ✅ Android-specific
-##############################
-
-# Keep classes with entry points
--keepclassmembers class * {
-    public <init>(android.content.Context);
-}
-
-# Keep all custom views
+# Custom Views: Needed for XML layout inflation
 -keep public class * extends android.view.View {
     public <init>(android.content.Context);
     public <init>(android.content.Context, android.util.AttributeSet);
 }
 
-# Keep data classes (for JSON, DB, etc.)
+# Reflection: Keep constructors used for dynamic instantiation (e.g., Workers, Fragments)
 -keepclassmembers class * {
-    <fields>;
-    <methods>;
+    public <init>(android.content.Context);
 }
+
+# ---------------------------------------------------------------------------------
+# 4. Miscellaneous
+# ---------------------------------------------------------------------------------
+
+# Internal Logger
+-keep class just.somebody.templates.appModule.ForgeLogger { *; }
+
+# Suppress warnings from common libraries that provide their own rules
+-dontwarn androidx.compose.**
+-dontwarn kotlinx.coroutines.**
+-dontwarn io.coil.**
+
+# ---------------------------------------------------------------------------------
+# Optimization Notes:
+# Removed broad "keep members" rules that were preventing code shrinking.
+# Fixed the Application class rule which was causing JNI_OnLoad failures.
+# ---------------------------------------------------------------------------------
