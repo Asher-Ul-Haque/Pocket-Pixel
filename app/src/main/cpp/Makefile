@@ -137,13 +137,13 @@ tests: sources
 		name=$$(basename $$test | sed 's/\.[^.]*$$//'); \
 		echo " |_ Linking test : $$test"; \
 		if echo $$test | grep -q '\.c$$'; then \
-			$(CC) $(CFLAGS) $$test $(OBJ_FILES) -o $(TEST_BIN_DIR)/$$name $(LDFLAGS) $(RPATH_TEST) >/dev/null 2>&1 \
+			$(CC) $(CFLAGS) $$test $(OBJ_FILES) -o $(TEST_BIN_DIR)/$$name $(LDFLAGS) $(shell pkg-config --libs check 2>/dev/null || echo -lcheck -lsubunit -lm -lpthread) $(RPATH_TEST) >/dev/null 2>&1 \
 				&& echo "    $(GREEN)✓ Built test: $(TEST_BIN_DIR)/$$name$(RESET)" \
-				|| (echo "    $(RED)✗ Error building test $$test$(RESET)"; $(CC) $(CFLAGS) $$test $(OBJ_FILES) $(MAIN_OBJ) -o $(TEST_BIN_DIR)/$$name $(LDFLAGS) $(RPATH_TEST); exit 1); \
+				|| (echo "    $(RED)✗ Error building test $$test$(RESET)"; $(CC) $(CFLAGS) $$test $(OBJ_FILES) $(MAIN_OBJ) -o $(TEST_BIN_DIR)/$$name $(LDFLAGS) $(shell pkg-config --libs check 2>/dev/null || echo -lcheck -lsubunit -lm -lpthread) $(RPATH_TEST); exit 1); \
 		else \
-			$(CXX) $(CXXFLAGS) $$test $(OBJ_FILES) $(MAIN_OBJ) -o $(TEST_BIN_DIR)/$$name $(LDFLAGS) $(RPATH) >/dev/null 2>&1 \
+			$(CXX) $(CXXFLAGS) $$test $(OBJ_FILES) $(MAIN_OBJ) -o $(TEST_BIN_DIR)/$$name $(LDFLAGS) $(shell pkg-config --libs check 2>/dev/null || echo -lcheck -lsubunit -lm -lpthread) $(RPATH) >/dev/null 2>&1 \
 				&& echo "    $(GREEN)✓ Built test: $(TEST_BIN_DIR)/$$name$(RESET)" \
-				|| (echo "    $(RED)✗ Error building test $$test$(RESET)"; $(CXX) $(CXXFLAGS) $$test $(OBJ_FILES) $(MAIN_OBJ) -o $(TEST_BIN_DIR)/$$name $(LDFLAGS) $(RPATH_TEST); exit 1); \
+				|| (echo "    $(RED)✗ Error building test $$test$(RESET)"; $(CXX) $(CXXFLAGS) $$test $(OBJ_FILES) $(MAIN_OBJ) -o $(TEST_BIN_DIR)/$$name $(LDFLAGS) $(shell pkg-config --libs check 2>/dev/null || echo -lcheck -lsubunit -lm -lpthread) $(RPATH_TEST); exit 1); \
 		fi; \
 	done
 	@echo "$(GREEN)- - - Finished Building Tests - - -$(RESET)"
